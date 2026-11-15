@@ -1,0 +1,154 @@
+﻿{
+    "metadata":  {
+                     "suiteName":  "Rohit Bhai Mac OS",
+                     "version":  "1.0.0",
+                     "exportedAt":  "2026-11-15 21:13:57",
+                     "author":  "Rohit Bhai",
+                     "description":  "Complete macOS UI Suite for Windows 11 with exact ratios, colors, and animations."
+                 },
+    "mods":  {
+                 "invisible-borders":  {
+                                           "settings":  {
+                                                            "SpecialWindows":  0
+                                                        }
+                                       },
+                 "local@net-speed-taskbar-apple":  {
+                                                       "settings":  {
+                                                                        "theme":  "Chart",
+                                                                        "horizontalPosition":  10,
+                                                                        "rightOffset":  6,
+                                                                        "verticalNudge":  15,
+                                                                        "updateIntervalMs":  1000,
+                                                                        "fontSize":  14,
+                                                                        "opacity":  255
+                                                                    }
+                                                   },
+                 "mac-island-dock":  {
+                                         "settings":  {
+                                                          "taskbarMode":  "dock",
+                                                          "windowsHideTray":  0,
+                                                          "showIsland":  1,
+                                                          "calendarIcs[0]":  "",
+                                                          "hiding.autoHide":  0,
+                                                          "hiding.hideWhen":  "mouseAway",
+                                                          "hiding.showDelay":  0,
+                                                          "hiding.revealHeight":  0,
+                                                          "hiding.hideDelay":  400,
+                                                          "hiding.showDuration":  260,
+                                                          "hiding.hideDuration":  220,
+                                                          "hiding.fullscreenGuard":  1,
+                                                          "icons.magnification":  170,
+                                                          "icons.magnificationRange":  150,
+                                                          "icons.onlyApps":  0,
+                                                          "icons.bounceOnLaunch":  1,
+                                                          "icons.keepOpenOnLaunch":  1,
+                                                          "icons.keepOpenDuration":  1500,
+                                                          "dock.iconSize":  32,
+                                                          "dock.iconGap":  8,
+                                                          "dock.bottomGap":  2,
+                                                          "dock.cornerRadius":  22,
+                                                          "dock.maxWidth":  0,
+                                                          "dock.background":  1,
+                                                          "dock.backgroundOpacity":  50,
+                                                          "dock.dotIndicator":  1,
+                                                          "dock.separator":  0,
+                                                          "dock.attentionMode":  "icon",
+                                                          "dock.hideTray":  0,
+                                                          "animations.enabled":  1,
+                                                          "animations.level":  "all",
+                                                          "animations.speed":  125,
+                                                          "animations.frameRate":  "screen"
+                                                      }
+                                     },
+                 "macos-minimize-animation":  {
+                                                  "settings":  {
+                                                                   "duration_ms":  450,
+                                                                   "open_animation":  1,
+                                                                   "launch_animation":  1,
+                                                                   "close_animation":  1,
+                                                                   "close_direction":  "up",
+                                                                   "hide_as_close":  0,
+                                                                   "multi_monitor":  0,
+                                                                   "unhide_taskbar":  1,
+                                                                   "unhide_duration_ms":  450,
+                                                                   "engine":  "modern",
+                                                                   "tile_count":  35,
+                                                                   "excluded_programs[0]":  ""
+                                                               }
+                                              },
+                 "translucent-windows":  {
+                                             "settings":  {
+                                                              "RenderingMod.ThemeBackground":  1,
+                                                              "RenderingMod.SysColors":  0,
+                                                              "RenderingMod.AccentColorControls":  1,
+                                                              "BackgroundEffects.type":  "acrylicblur",
+                                                              "BackgroundEffects.AccentBlurBehind":  "3A232323",
+                                                              "FlyoutsEffects":  1,
+                                                              "RuledPrograms[0].target":  "Notepad.exe",
+                                                              "RuledPrograms[0].RenderingMod.ThemeBackground":  0,
+                                                              "RuledPrograms[0].RenderingMod.AccentColorControls":  0,
+                                                              "RuledPrograms[0].BackgroundEffects.type":  "none",
+                                                              "RuledPrograms[0].BackgroundEffects.AccentBlurBehind":  "3A232323",
+                                                              "RuledPrograms[1].target":  "Spotify.exe",
+                                                              "RuledPrograms[1].RenderingMod.ThemeBackground":  1,
+                                                              "RuledPrograms[1].RenderingMod.AccentColorControls":  1,
+                                                              "RuledPrograms[1].BackgroundEffects.type":  "acrylicblur",
+                                                              "RuledPrograms[1].BackgroundEffects.AccentBlurBehind":  "3A232323"
+                                                          }
+                                         },
+                 "windows-11-file-explorer-styler":  {
+                                                         "settings":  {
+                                                                          "theme":  "Translucent Explorer11",
+                                                                          "backgroundTranslucentEffect":  "",
+                                                                          "backgroundTranslucentEffectRegion":  "entireWindow",
+                                                                          "styleConstants[0]":  "",
+                                                                          "controlStyles[0].target":  "Grid#NavigationBarControlGrid",
+                                                                          "controlStyles[0].styles[0]":  "Background:=\u003cWindhawkBlur BlurAmount=\"1\" TintColor=\"#18202020\" TintOpacity=\"0.25\"/\u003e",
+                                                                          "themeResourceVariables[0]":  "",
+                                                                          "explorerFrameContainerHeight":  0,
+                                                                          "xamlDiagnosticsHandling":  "alert",
+                                                                          "controlStyles[0].styles[1]":  "BorderThickness=0,0,0,0",
+                                                                          "controlStyles[0].styles[2]":  "BorderBrush=#30FFFFFF",
+                                                                          "controlStyles[1].target":  "Grid#DetailsViewControlRootGrid",
+                                                                          "controlStyles[1].styles[0]":  "Background:=\u003cWindhawkBlur BlurAmount=\"10\" TintColor=\"#18202020\" TintOpacity=\"0.25\"/\u003e",
+                                                                          "controlStyles[1].styles[1]":  "BorderThickness=0,0,1,1",
+                                                                          "controlStyles[1].styles[2]":  "BorderBrush=#25FFFFFF",
+                                                                          "controlStyles[2].target":  "StackPanel#DetailsViewThumbnail",
+                                                                          "controlStyles[2].styles[0]":  "Background=WindhawkBlur",
+                                                                          "controlStyles[2].styles[1]":  "BorderThickness=0,0,0,1",
+                                                                          "controlStyles[2].styles[2]":  "BorderBrush=#40FFFFFF",
+                                                                          "controlStyles[3].target":  "Grid#CommandBarControlRootGrid",
+                                                                          "controlStyles[3].styles[0]":  "BorderThickness=1",
+                                                                          "controlStyles[3].styles[1]":  "BorderBrush=#40FFFFFF",
+                                                                          "controlStyles[3].styles[2]":  "CornerRadius=2"
+                                                                      }
+                                                     },
+                 "windows-11-notification-center-styler":  {
+                                                               "settings":  {
+                                                                                "theme":  "OS26 Tahoe Glass",
+                                                                                "styleConstants[0]":  "",
+                                                                                "controlStyles[0].target":  "",
+                                                                                "controlStyles[0].styles[0]":  "",
+                                                                                "themeResourceVariables[0]":  ""
+                                                                            }
+                                                           },
+                 "windows-11-start-menu-styler":  {
+                                                      "settings":  {
+                                                                       "theme":  "LiquidGlass",
+                                                                       "disableNewStartMenuLayout":  "",
+                                                                       "styleConstants[0]":  "Background=\u003cWindhawkBlur BlurAmount=\"10\" TintColor=\"{ThemeResource SystemAltLowColor}\" TintOpacity=\"0.2\" /\u003e",
+                                                                       "controlStyles[0].target":  "",
+                                                                       "controlStyles[0].styles[0]":  "",
+                                                                       "themeResourceVariables[0]":  "",
+                                                                       "webContentStyles[0].target":  "",
+                                                                       "webContentStyles[0].styles[0]":  "",
+                                                                       "webContentCustomJs":  "",
+                                                                       "styleConstants[1]":  "ElementBackground=\u003cWindhawkBlur BlurAmount=\"15\" TintColor=\"{ThemeResource SystemAltLowColor}\" TintOpacity=\"0.2\" /\u003e",
+                                                                       "styleConstants[2]":  "ElementBackground2=\u003cWindhawkBlur BlurAmount=\"15\" TintColor=\"{ThemeResource SystemAltLowColor}\" TintOpacity=\"0.2\" /\u003e",
+                                                                       "styleConstants[3]":  "AccentBackground=\u003cWindhawkBlur BlurAmount=\"15\" TintColor=\"{ThemeResource SystemAccentColorLight1}\" TintOpacity=\"0.2\" /\u003e",
+                                                                       "styleConstants[4]":  "BorderBrush=\u003cLinearGradientBrush StartPoint=\"0,0\" EndPoint=\"0,1\"\u003e\u003cGradientStop Color=\"#70FFFFFF\" Offset=\"0.0\" /\u003e\u003cGradientStop Color=\"#40505050\" Offset=\"0.5\" /\u003e\u003cGradientStop Color=\"#70FFFFFF\" Offset=\"1\" /\u003e\u003c/LinearGradientBrush\u003e",
+                                                                       "styleConstants[5]":  "ElementBorderBrush=\u003cLinearGradientBrush StartPoint=\"0,0\" EndPoint=\"0,1\"\u003e\u003cGradientStop Color=\"#65FFFFFF\" Offset=\"0.0\" /\u003e\u003cGradientStop Color=\"#35404040\" Offset=\"0.5\" /\u003e\u003cGradientStop Color=\"#40FFFFFF\" Offset=\"1.0\" /\u003e\u003c/LinearGradientBrush\u003e"
+                                                                   }
+                                                  }
+             }
+}
