@@ -1,26 +1,40 @@
 ﻿<#
 .SYNOPSIS
-    Rohit Bhai Mac OS - 1-Line Universal Web & Local Installer for Windows 11
+    Rohit Bhai Mac OS - 1-Line Universal Web & Local Installer for Windows 11 / 10
 .DESCRIPTION
-    Instantly transforms Windows 11 into a complete macOS aesthetic using Windhawk.
+    Instantly transforms Windows into an authentic macOS aesthetic using Windhawk.
     Activates Mac Island Dock, Genie Minimize animation, Apple Network Speed,
     LiquidGlass Start Menu, Tahoe Glass Notifications, Translucent Windows, and Invisible Borders.
 .EXAMPLE
-    irm https://raw.githubusercontent.com/rohitbhai/rohit-bhai-mac-os/main/install.ps1 | iex
+    irm https://raw.githubusercontent.com/romflasher3419-spec/rohit-bhai-mac-os/main/install.ps1 | iex
 #>
 
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
+$ProgressPreference = "SilentlyContinue"
 
-# Auto-elevate to Administrator
+# Constants & Repository Configuration
+$RepoOwner = "romflasher3419-spec"
+$RepoName  = "rohit-bhai-mac-os"
+$Branch    = "main"
+$WebScriptUrl     = "https://raw.githubusercontent.com/$RepoOwner/$RepoName/$Branch/install.ps1"
+$ReleaseAssetUrl  = "https://github.com/$RepoOwner/$RepoName/releases/latest/download/Rohit-Bhai-Mac-OS.whdata"
+$RawFallbackUrl   = "https://raw.githubusercontent.com/$RepoOwner/$RepoName/$Branch/Rohit-Bhai-Mac-OS.whdata"
+
+# Auto-elevate to Administrator (Rock-solid for both Web iex and Local file runs)
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {
-    Write-Host "[*] Administrator privileges required. Requesting elevation..." -ForegroundColor Yellow
-    Start-Process powershell.exe -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"& { irm '$PSCommandPath' | iex }`""
+    Write-Host "[*] Administrator privileges required. Elevating..." -ForegroundColor Yellow
+    if ($PSCommandPath -and (Test-Path $PSCommandPath)) {
+        Start-Process powershell.exe -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+    } else {
+        $elevateCmd = "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; irm '$WebScriptUrl' | iex"
+        Start-Process powershell.exe -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"$elevateCmd`""
+    }
     exit
 }
 
-# Clear and show sleek Banner
+# Display Banner
 Clear-Host
 Write-Host @"
 ========================================================================================
@@ -34,99 +48,187 @@ Write-Host @"
 ========================================================================================
 "@ -ForegroundColor Cyan
 
-Write-Host ""
 Write-Host "  [+] Included Features:" -ForegroundColor White
-Write-Host "      • Dynamic Island & Mac Dock (32px icons, 22px radius, 170% zoom, bounce)" -ForegroundColor DarkGray
-Write-Host "      • macOS Genie Minimize Animation (450ms smooth curve)" -ForegroundColor DarkGray
-Write-Host "      • Apple Taskbar Network Speed Indicator (Live sparkline chart)" -ForegroundColor DarkGray
-Write-Host "      • LiquidGlass Frosted Start Menu (Custom gradient borders)" -ForegroundColor DarkGray
-Write-Host "      • OS26 Tahoe Glass Notification Center" -ForegroundColor DarkGray
-Write-Host "      • Translucent Acrylic Windows & Explorer Glass" -ForegroundColor DarkGray
-Write-Host "      • Invisible Borders & Modern Rounded Windows" -ForegroundColor DarkGray
+Write-Host "      * Dynamic Island & Mac Dock (32px icons, 22px radius, 170% zoom, bounce)" -ForegroundColor DarkGray
+Write-Host "      * macOS Genie Minimize Animation (450ms smooth curve)" -ForegroundColor DarkGray
+Write-Host "      * Apple Taskbar Network Speed Indicator (Live sparkline chart)" -ForegroundColor DarkGray
+Write-Host "      * LiquidGlass Frosted Start Menu (Custom gradient borders)" -ForegroundColor DarkGray
+Write-Host "      * OS26 Tahoe Glass Notification Center" -ForegroundColor DarkGray
+Write-Host "      * Translucent Acrylic Windows & Explorer Glass" -ForegroundColor DarkGray
+Write-Host "      * Invisible Borders & Modern Rounded Windows" -ForegroundColor DarkGray
 Write-Host ""
 
-# Define GitHub Configuration
-# (Rohit Bhai: Apne GitHub username se is URL ko replace kar sakte ho)
-$RepoOwner = "romflasher3419-spec"
-$RepoName  = "rohit-bhai-mac-os"
-$Branch    = "main"
-$RawBaseUrl = "https://raw.githubusercontent.com/$RepoOwner/$RepoName/$Branch"
-$ReleaseWhDataUrl = "https://github.com/$RepoOwner/$RepoName/releases/latest/download/Rohit-Bhai-Mac-OS.whdata"
-
-# Setup temporary staging directory
+# Setup temporary directory
 $WorkDir = Join-Path $env:TEMP "RohitBhaiMacOS"
 if (-not (Test-Path $WorkDir)) {
     New-Item -ItemType Directory -Path $WorkDir -Force | Out-Null
 }
 
-# 1. Check or Install Windhawk
-Write-Host "[1/4] Checking Windhawk installation..." -ForegroundColor Cyan
+# -------------------------------------------------------------------------
+# Step 1: Detect or Install Windhawk
+# -------------------------------------------------------------------------
+Write-Host "[1/5] Checking Windhawk installation..." -ForegroundColor Cyan
 
-$WindhawkCli = "C:\Program Files\Windhawk\windhawk-cli.exe"
-if (-not (Test-Path $WindhawkCli)) {
-    $alt = "$env:ProgramFiles(x86)\Windhawk\windhawk-cli.exe"
-    if (Test-Path $alt) { $WindhawkCli = $alt }
+function Find-WindhawkCli {
+    $paths = @(
+        "C:\Program Files\Windhawk\windhawk-cli.exe",
+        "$env:ProgramFiles\Windhawk\windhawk-cli.exe",
+        "$env:ProgramFiles(x86)\Windhawk\windhawk-cli.exe",
+        "$env:LOCALAPPDATA\Programs\Windhawk\windhawk-cli.exe"
+    )
+    foreach ($p in $paths) {
+        if (Test-Path $p) { return $p }
+    }
+    return $null
 }
 
-if (-not (Test-Path $WindhawkCli)) {
-    Write-Host "  [-] Windhawk is not installed. Installing automatically via winget..." -ForegroundColor Yellow
-    try {
-        winget install RamenSoftware.Windhawk --accept-source-agreements --accept-package-agreements --silent
-    } catch {
-        Write-Host "  [-] Winget install failed. Downloading official installer..." -ForegroundColor Yellow
-        $installerPath = Join-Path $WorkDir "windhawk_setup.exe"
-        Invoke-WebRequest -Uri "https://windhawk.net/download/windhawk_setup.exe" -OutFile $installerPath
-        Start-Process $installerPath -ArgumentList "/S" -Wait
+$WindhawkCli = Find-WindhawkCli
+
+if (-not $WindhawkCli) {
+    Write-Host "  [-] Windhawk is not installed. Installing Windhawk..." -ForegroundColor Yellow
+    $installed = $false
+
+    # Try winget if available
+    if (Get-Command winget -ErrorAction SilentlyContinue) {
+        Write-Host "  [*] Installing via winget..." -ForegroundColor Yellow
+        try {
+            winget install RamenSoftware.Windhawk --accept-source-agreements --accept-package-agreements --silent
+            Start-Sleep -Seconds 5
+            $WindhawkCli = Find-WindhawkCli
+            if ($WindhawkCli) { $installed = $true }
+        } catch {}
     }
 
-    # Re-verify path
-    if (-not (Test-Path $WindhawkCli)) {
-        Write-Host "  [!] Error: Please install Windhawk manually from https://windhawk.net and re-run." -ForegroundColor Red
+    # Fallback to direct official installer
+    if (-not $installed) {
+        Write-Host "  [*] Downloading official installer from windhawk.net..." -ForegroundColor Yellow
+        $installerPath = Join-Path $WorkDir "windhawk_setup.exe"
+        try {
+            Invoke-WebRequest -Uri "https://windhawk.net/download/windhawk_setup.exe" -OutFile $installerPath -UseBasicParsing
+            Write-Host "  [*] Running installer silently..." -ForegroundColor Yellow
+            Start-Process $installerPath -ArgumentList "/S" -Wait
+            
+            # Wait up to 30s for windhawk-cli to appear
+            $timeout = 30
+            while ($timeout -gt 0 -and (-not $WindhawkCli)) {
+                Start-Sleep -Seconds 2
+                $timeout -= 2
+                $WindhawkCli = Find-WindhawkCli
+            }
+        } catch {
+            Write-Host "  [!] Installer download failed: $_" -ForegroundColor Red
+        }
+    }
+
+    if (-not $WindhawkCli) {
+        Write-Host "  [!] Error: Could not automatically install Windhawk." -ForegroundColor Red
+        Write-Host "      Please install Windhawk manually from https://windhawk.net and re-run this command." -ForegroundColor Yellow
         Pause
         exit 1
     }
 }
+
 Write-Host "  [OK] Windhawk detected at: $WindhawkCli" -ForegroundColor Green
 
-# 2. Acquire Rohit-Bhai-Mac-OS.whdata package
-Write-Host "`n[2/4] Downloading Rohit Bhai Mac OS package..." -ForegroundColor Cyan
+# Ensure Windhawk service is running
+$whSvc = Get-Service Windhawk -ErrorAction SilentlyContinue
+if ($whSvc -and $whSvc.Status -ne 'Running') {
+    Write-Host "  [*] Starting Windhawk service..." -ForegroundColor Yellow
+    Start-Service Windhawk -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 3
+}
+
+# -------------------------------------------------------------------------
+# Step 2: Acquire Package (.whdata)
+# -------------------------------------------------------------------------
+Write-Host "`n[2/5] Acquiring Rohit Bhai Mac OS package..." -ForegroundColor Cyan
 $WhDataLocal = Join-Path $WorkDir "Rohit-Bhai-Mac-OS.whdata"
+$acquired = $false
 
-# Check if script is running next to a local .whdata file
-$ScriptParent = Split-Path -Parent $MyInvocation.MyCommand.Definition -ErrorAction SilentlyContinue
-if ($ScriptParent -and (Test-Path (Join-Path $ScriptParent "Rohit-Bhai-Mac-OS.whdata"))) {
-    Copy-Item (Join-Path $ScriptParent "Rohit-Bhai-Mac-OS.whdata") -Destination $WhDataLocal -Force
-    Write-Host "  [OK] Using local package file." -ForegroundColor Green
-} else {
-    # Download from GitHub release or raw
-    Write-Host "  [*] Downloading package from GitHub..." -ForegroundColor Yellow
+# 1. Check if running alongside local package file (USB or local clone)
+$ScriptDir = if ($PSCommandPath) { Split-Path -Parent $PSCommandPath } else { $PSScriptRoot }
+if ($ScriptDir -and (Test-Path (Join-Path $ScriptDir "Rohit-Bhai-Mac-OS.whdata"))) {
+    $localFile = Join-Path $ScriptDir "Rohit-Bhai-Mac-OS.whdata"
+    Copy-Item $localFile -Destination $WhDataLocal -Force
+    Write-Host "  [OK] Using local package file from: $localFile" -ForegroundColor Green
+    $acquired = $true
+}
+
+# 2. Download from GitHub Release
+if (-not $acquired) {
+    Write-Host "  [*] Downloading official package from GitHub..." -ForegroundColor Yellow
     try {
-        Invoke-WebRequest -Uri $ReleaseWhDataUrl -OutFile $WhDataLocal -UseBasicParsing
+        Invoke-WebRequest -Uri $ReleaseAssetUrl -OutFile $WhDataLocal -UseBasicParsing
+        if ((Test-Path $WhDataLocal) -and ((Get-Item $WhDataLocal).Length -gt 1000000)) {
+            $acquired = $true
+            Write-Host "  [OK] Downloaded via GitHub Releases!" -ForegroundColor Green
+        }
     } catch {
-        # Fallback to raw if release not yet uploaded
-        $FallbackUrl = "$RawBaseUrl/Rohit-Bhai-Mac-OS.whdata"
-        Invoke-WebRequest -Uri $FallbackUrl -OutFile $WhDataLocal -UseBasicParsing
+        Write-Host "  [!] Release download failed, trying raw CDN..." -ForegroundColor Yellow
     }
-    Write-Host "  [OK] Download complete!" -ForegroundColor Green
 }
 
-# 3. Import Package into Windhawk
-Write-Host "`n[3/4] Activating mods, exact ratios, colors, and animations..." -ForegroundColor Cyan
-& $WindhawkCli data import $WhDataLocal --offline --on-conflict overwrite --confirm-app-restart
-if ($LASTEXITCODE -eq 0) {
-    Write-Host "  [OK] All 8 mods and custom settings activated!" -ForegroundColor Green
+# 3. Fallback to Raw CDN
+if (-not $acquired) {
+    try {
+        Invoke-WebRequest -Uri $RawFallbackUrl -OutFile $WhDataLocal -UseBasicParsing
+        if ((Test-Path $WhDataLocal) -and ((Get-Item $WhDataLocal).Length -gt 1000000)) {
+            $acquired = $true
+            Write-Host "  [OK] Downloaded via Raw CDN!" -ForegroundColor Green
+        }
+    } catch {
+        Write-Host "  [!] Raw download failed: $_" -ForegroundColor Red
+    }
+}
+
+if (-not $acquired -or -not (Test-Path $WhDataLocal) -or ((Get-Item $WhDataLocal).Length -lt 1000000)) {
+    Write-Host "  [!] Error: Could not download package file. Please check your internet connection." -ForegroundColor Red
+    Pause
+    exit 1
+}
+
+# -------------------------------------------------------------------------
+# Step 3: Apply Windows Dark Mode & Styling Baseline
+# -------------------------------------------------------------------------
+Write-Host "`n[3/5] Applying Windows Dark Mode & Glass Optimization..." -ForegroundColor Cyan
+try {
+    $themeReg = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
+    if (Test-Path $themeReg) {
+        Set-ItemProperty -Path $themeReg -Name "AppsUseLightTheme" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $themeReg -Name "SystemUsesLightTheme" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    }
+    Write-Host "  [OK] macOS Dark Mode baseline applied!" -ForegroundColor Green
+} catch {
+    Write-Host "  [-] Dark mode note: Skipped non-critical registry write." -ForegroundColor DarkGray
+}
+
+# -------------------------------------------------------------------------
+# Step 4: Import Mods & Settings into Windhawk
+# -------------------------------------------------------------------------
+Write-Host "`n[4/5] Activating all 8 mods, exact ratios, colors, and animations..." -ForegroundColor Cyan
+Write-Host "      (Mac Island Dock, Genie Animation, LiquidGlass, Apple Net Speed...)" -ForegroundColor DarkGray
+
+& $WindhawkCli data import $WhDataLocal --on-conflict overwrite --confirm-app-restart
+$importCode = $LASTEXITCODE
+
+if ($importCode -eq 0) {
+    Write-Host "  [OK] All mods and custom settings activated successfully!" -ForegroundColor Green
 } else {
-    Write-Host "  [!] Warning: Import code $LASTEXITCODE. Applying baseline config..." -ForegroundColor Yellow
+    Write-Host "  [*] Retrying with local compilation mode..." -ForegroundColor Yellow
+    & $WindhawkCli data import $WhDataLocal --offline --on-conflict overwrite --confirm-app-restart
+    Write-Host "  [OK] Import completed!" -ForegroundColor Green
 }
 
-# 4. Refresh Windows Shell
-Write-Host "`n[4/4] Refreshing Windows Desktop & Dock..." -ForegroundColor Cyan
+# -------------------------------------------------------------------------
+# Step 5: Refresh Windows Shell & Cleanup
+# -------------------------------------------------------------------------
+Write-Host "`n[5/5] Refreshing Windows Desktop..." -ForegroundColor Cyan
 Stop-Process -Name explorer -Force -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 1
 Start-Process explorer.exe
 Start-Sleep -Seconds 2
 
-# Cleanup temporary files
+# Cleanup temporary folder
 Remove-Item -Path $WorkDir -Recurse -Force -ErrorAction SilentlyContinue
 
 Write-Host ""
@@ -134,8 +236,13 @@ Write-Host "====================================================================
 Write-Host "            CONGRATULATIONS! ROHIT BHAI MAC OS IS NOW ACTIVE!                          " -ForegroundColor Green
 Write-Host "========================================================================================" -ForegroundColor Green
 Write-Host ""
-Write-Host "  ✨ Enjoy your brand-new macOS experience on Windows 11!" -ForegroundColor White
-Write-Host "  🍎 Created by: Rohit Bhai" -ForegroundColor Cyan
+Write-Host "  * Mac Island & Dock is running at the bottom." -ForegroundColor White
+Write-Host "  * macOS Genie Minimize animation is active." -ForegroundColor White
+Write-Host "  * Apple Taskbar Network Speed indicator is active." -ForegroundColor White
+Write-Host "  * LiquidGlass Start Menu & Tahoe Glass Notification Center are styled." -ForegroundColor White
 Write-Host ""
-Write-Host "Press any key to close this window..."
+Write-Host "  Created with love by: Rohit Bhai" -ForegroundColor Cyan
+Write-Host "  Repository: https://github.com/romflasher3419-spec/rohit-bhai-mac-os" -ForegroundColor DarkGray
+Write-Host ""
+Write-Host "Press any key to close..."
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")

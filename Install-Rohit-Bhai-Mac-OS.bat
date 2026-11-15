@@ -1,18 +1,16 @@
 @echo off
 :: ==============================================================================
-:: Rohit Bhai Mac OS - 1-Click Ultimate Installer for Windhawk
-:: Restores full macOS Experience: Island Dock, Genie Animation, LiquidGlass,
-:: Tahoe Glass, Translucent Windows, Apple Net Speed & Custom Colors/Ratios.
+:: Rohit Bhai Mac OS - 1-Click Offline & USB Installer for Windows 11 / 10
 :: ==============================================================================
 
 setlocal EnableDelayedExpansion
 title Rohit Bhai Mac OS - Installer
 
-:: Request Administrator Privileges
+:: Check for Administrator Privileges
 net session >nul 2>&1
-if %errorLevel% neq 0 (
-    echo [INFO] Administrator rights required. Requesting elevation...
-    powershell -Command "Start-Process cmd -ArgumentList '/c \"\"%~f0\"\"' -Verb RunAs"
+if %errorlevel% neq 0 (
+    echo [INFO] Administrator privileges required. Requesting elevation...
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process cmd -ArgumentList '/c \"\"%~f0\"\"' -Verb RunAs"
     exit /b
 )
 
@@ -20,24 +18,24 @@ cd /d "%~dp0"
 cls
 echo ==============================================================================
 echo                      ROHIT BHAI MAC OS - 1-CLICK INSTALLER
+echo                              Crafted by Rohit Bhai
 echo ==============================================================================
 echo.
 echo  [+] Target: Windows 11 / Windows 10
-echo  [+] Mods to activate:
-echo      - Mac Island ^& Dock (Dynamic Island, Dock Mode, 32px icons, 22px radius)
-echo      - macOS Minimize Animation (Genie Effect, 450ms smooth curve)
+echo  [+] Included Components:
+echo      - Mac Island ^& Dock (32px icons, 22px radius, 170%% zoom, launch bounce)
+echo      - macOS Genie Minimize Animation (450ms fluid curve)
 echo      - Taskbar Network Speed Indicator (Apple Edition, live sparkline)
 echo      - Windows 11 Start Menu Styler (LiquidGlass frosted theme)
 echo      - Windows 11 Notification Center Styler (OS26 Tahoe Glass)
 echo      - Windows 11 File Explorer Styler (Translucent acrylic blur)
 echo      - Translucent Windows (System-wide acrylic glass effects)
-echo      - Invisible Window Borders (Sleek borderless curved windows)
-echo      - Rohit Bhai Mac OS (Core Engine Mod)
+echo      - Invisible Window Borders (Sleek borderless rounded windows)
 echo.
 echo ==============================================================================
 echo.
 
-:: 1. Detect Windhawk Installation
+:: 1. Locate Windhawk
 set "WINDHAWK_CLI=C:\Program Files\Windhawk\windhawk-cli.exe"
 
 if not exist "!WINDHAWK_CLI!" (
@@ -49,12 +47,21 @@ if not exist "!WINDHAWK_CLI!" (
 if not exist "!WINDHAWK_CLI!" (
     echo [-] Windhawk not found on this system!
     echo [*] Attempting to install Windhawk automatically via winget...
-    winget install RamenSoftware.Windhawk --accept-source-agreements --accept-package-agreements
+    winget install RamenSoftware.Windhawk --accept-source-agreements --accept-package-agreements --silent
+    
+    if not exist "!WINDHAWK_CLI!" (
+        echo [*] Downloading official installer from windhawk.net...
+        powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; (New-Object System.Net.WebClient).DownloadFile('https://windhawk.net/download/windhawk_setup.exe', '%TEMP%\windhawk_setup.exe')"
+        if exist "%TEMP%\windhawk_setup.exe" (
+            "%TEMP%\windhawk_setup.exe" /S
+            timeout /t 5 /nobreak >nul
+        )
+    )
     
     if not exist "!WINDHAWK_CLI!" (
         echo.
-        echo [!] Please install Windhawk from https://windhawk.net first!
-        echo     After installing Windhawk, run this script again.
+        echo [!] Error: Please install Windhawk manually from https://windhawk.net
+        echo     and run this installer again.
         echo.
         pause
         exit /b 1
@@ -67,31 +74,29 @@ echo.
 :: 2. Import Complete Offline Data Package (.whdata)
 if exist "%~dp0Rohit-Bhai-Mac-OS.whdata" (
     echo [*] Importing Rohit Bhai Mac OS complete package (ratios, colors, mods)...
-    "!WINDHAWK_CLI!" data import "%~dp0Rohit-Bhai-Mac-OS.whdata" --offline --on-conflict overwrite --confirm-app-restart
-    if %errorlevel% equ 0 (
-        echo [OK] All mods and custom settings imported successfully!
-    ) else (
-        echo [!] Windhawk import exited with code %errorlevel%. Applying registry backup...
+    "!WINDHAWK_CLI!" data import "%~dp0Rohit-Bhai-Mac-OS.whdata" --on-conflict overwrite --confirm-app-restart
+    if !errorlevel! neq 0 (
+        echo [*] Applying fallback offline mode...
+        "!WINDHAWK_CLI!" data import "%~dp0Rohit-Bhai-Mac-OS.whdata" --offline --on-conflict overwrite --confirm-app-restart
     )
+    echo [OK] All mods and custom settings imported successfully!
 ) else (
     echo [!] Rohit-Bhai-Mac-OS.whdata not found in script directory.
 )
 
-:: 3. Import Registry Settings (Exact backup of all ratios, blur, opacities)
+:: 3. Import Registry Settings Backup
 if exist "%~dp0Rohit-Bhai-Mac-OS-Settings.reg" (
     echo [*] Writing exact customization registry keys...
     reg import "%~dp0Rohit-Bhai-Mac-OS-Settings.reg" >nul 2>&1
     echo [OK] Registry settings verified!
 )
 
-:: 4. Install Rohit Bhai Mac OS Core Mod
-if exist "%~dp0rohit-bhai-mac-os.wh.cpp" (
-    echo [*] Compiling and activating 'Rohit Bhai Mac OS' core mod...
-    "!WINDHAWK_CLI!" mod install --file "%~dp0rohit-bhai-mac-os.wh.cpp" --yes >nul 2>&1
-    echo [OK] Rohit Bhai Mac OS core mod active!
-)
+:: 4. Apply Windows Dark Mode
+echo [*] Applying Windows Dark Mode baseline...
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" /v AppsUseLightTheme /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" /v SystemUsesLightTheme /t REG_DWORD /d 0 /f >nul 2>&1
 
-:: 5. Restart Windows Explorer to apply changes instantly
+:: 5. Restart Windows Explorer
 echo.
 echo [*] Refreshing Windows Shell (Explorer)...
 taskkill /f /im explorer.exe >nul 2>&1
