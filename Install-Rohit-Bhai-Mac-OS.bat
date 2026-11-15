@@ -1,10 +1,10 @@
 @echo off
 :: ==============================================================================
-:: Rohit Bhai Mac OS - 1-Click Offline & USB Installer for Windows 11 / 10
+:: Rohit Bhai Mac OS - 1-Click Offline & USB Installer v2.0 Ultimate
 :: ==============================================================================
 
 setlocal EnableDelayedExpansion
-title Rohit Bhai Mac OS - Installer
+title Rohit Bhai Mac OS v2.0 - Installer
 
 :: Check for Administrator Privileges
 net session >nul 2>&1
@@ -17,7 +17,7 @@ if %errorlevel% neq 0 (
 cd /d "%~dp0"
 cls
 echo ==============================================================================
-echo                      ROHIT BHAI MAC OS - 1-CLICK INSTALLER
+echo                      ROHIT BHAI MAC OS v2.0 - 1-CLICK INSTALLER
 echo                              Crafted by Rohit Bhai
 echo ==============================================================================
 echo.
@@ -29,8 +29,9 @@ echo      - Taskbar Network Speed Indicator (Apple Edition, live sparkline)
 echo      - Windows 11 Start Menu Styler (LiquidGlass frosted theme)
 echo      - Windows 11 Notification Center Styler (OS26 Tahoe Glass)
 echo      - Windows 11 File Explorer Styler (Translucent acrylic blur)
-echo      - Translucent Windows (System-wide acrylic glass effects)
-echo      - Invisible Window Borders (Sleek borderless rounded windows)
+echo      - Apple SF Pro Display Fonts Suite
+echo      - macOS Capitaine Dark Cursors Scheme (with Rainbow Beach Ball)
+echo      - 4K Ultra-HD macOS Wallpaper ^& Deep Dark Mode
 echo.
 echo ==============================================================================
 echo.
@@ -91,12 +92,26 @@ if exist "%~dp0Rohit-Bhai-Mac-OS-Settings.reg" (
     echo [OK] Registry settings verified!
 )
 
-:: 4. Apply Windows Dark Mode
+:: 4. Apply Apple SF Pro Fonts
+if exist "%~dp0assets\fonts" (
+    echo [*] Installing Apple SF Pro Fonts...
+    copy /y "%~dp0assets\fonts\*.otf" "%WINDIR%\Fonts" >nul 2>&1
+    echo [OK] Apple SF Pro typography active!
+)
+
+:: 5. Apply 4K macOS Wallpaper & Dark Mode
+if exist "%~dp0assets\wallpaper.jpg" (
+    echo [*] Setting 4K macOS Wallpaper...
+    copy /y "%~dp0assets\wallpaper.jpg" "%APPDATA%\Microsoft\Windows\Themes\TranscodedWallpaper" >nul 2>&1
+    reg add "HKCU\Control Panel\Desktop" /v Wallpaper /t REG_SZ /d "%APPDATA%\Microsoft\Windows\Themes\TranscodedWallpaper" /f >nul 2>&1
+    reg add "HKCU\Control Panel\Desktop" /v WallpaperStyle /t REG_SZ /d "10" /f >nul 2>&1
+)
+
 echo [*] Applying Windows Dark Mode baseline...
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" /v AppsUseLightTheme /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" /v SystemUsesLightTheme /t REG_DWORD /d 0 /f >nul 2>&1
 
-:: 5. Restart Windows Explorer
+:: 6. Restart Windows Explorer
 echo.
 echo [*] Refreshing Windows Shell (Explorer)...
 taskkill /f /im explorer.exe >nul 2>&1
@@ -105,15 +120,16 @@ start explorer.exe
 
 echo.
 echo ==============================================================================
-echo        CONGRATULATIONS! ROHIT BHAI MAC OS CUSTOMIZATION IS NOW ACTIVE!
+echo        CONGRATULATIONS! ROHIT BHAI MAC OS v2.0 IS NOW ACTIVE!
 echo ==============================================================================
 echo.
 echo  Your PC is now running the full macOS aesthetic:
 echo    ^> Dynamic Island ^& Mac Dock
 echo    ^> macOS Genie Minimize Animation
 echo    ^> Apple-style Live Taskbar Speed
+echo    ^> Apple SF Pro Display Typography
+echo    ^> 4K Ultra-HD macOS Wallpaper ^& Dark Mode
 echo    ^> Frosted Glass Start Menu ^& Notification Center
-echo    ^> Acrylic Windows ^& Invisible Borders
 echo.
 pause
 exit /b 0
