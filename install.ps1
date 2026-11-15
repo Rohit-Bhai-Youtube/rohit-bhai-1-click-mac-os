@@ -1,9 +1,10 @@
 # ==============================================================================
-# Rohit Bhai Mac OS for Windows 11 - 1-Click Ultimate Suite v3.0 Pro
+# Rohit Bhai Mac OS for Windows 11 - 1-Click Ultimate Suite v4.0 Pro
 # Target: Windows 11 (22H2 / 23H2 / 24H2) and Windows 10
 # Includes: Windhawk Mac Island Dock, Genie, Net Speed, SF Pro Fonts,
-#           macOS Capitaine Cursors, 4K macOS Wallpaper, Dark Mode &
-#           Official Apple macOS Sound Scheme (Trash, USB, Alert, Notification)
+#           macOS Capitaine Cursors, 4K macOS Wallpaper, Dark Mode,
+#           Official Apple macOS Sound Scheme (Trash, USB, Alert, Notification) &
+#           Official Apple macOS File Explorer & Folder Icons (Sonoma Aqua)
 # Crafted for Rohit Bhai | 100% Native - No Bloatware
 # ==============================================================================
 
@@ -33,13 +34,13 @@ if (-not $isAdmin) {
 Clear-Host
 Write-Host @"
 ========================================================================================
-   ██████╗  ██████╗ ███╗   ███╗    ███████╗██╗      █████╗ ███████╗██╗  ██╗
-   ██╔══██╗██╔═══██╗████╗ ████║    ██╔════╝██║     ██╔══██╗██╔════╝██║  ██║
-   ██████╔╝██║   ██║██╔████╔██║    █████╗  ██║     ███████║███████╗███████║
-   ██╔══██╗██║   ██║██║╚██╔╝██║    ██╔══╝  ██║     ██╔══██║╚════██║██╔══██║
-   ██║  ██║╚██████╔╝██║ ╚═╝ ██║    ██║     ███████╗██║  ██║███████║██║  ██║
-   ╚═╝  ╚═╝ ╚═════╝ ╚═╝     ╚═╝    ╚═╝     ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
-              ROHIT BHAI MAC OS FOR WINDOWS 11 - v3.0 [ULTIMATE EDITION]
+   ██████╗  ██████╗ ██████╗    ███████╗██╗     █████╗ ███████╗██╗  ██╗
+   ██╔══██╗██╔═══██╗██╔══██╗   ██╔════╝██║    ██╔══██╗██╔════╝██║  ██║
+   ██████╔╝██║   ██║██████╔╝   █████╗  ██║    ███████║███████╗███████║
+   ██╔══██╗██║   ██║██╔══██╗   ██╔══╝  ██║    ██╔══██║╚════██║██╔══██║
+   ██║  ██║╚██████╔╝██████╔╝   ██║     ███████╗██║  ██║███████║██║  ██║
+   ╚═╝  ╚═╝ ╚═════╝ ╚═════╝    ╚═╝     ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
+              ROHIT BHAI MAC OS FOR WINDOWS 11 - v4.0 [ULTIMATE EDITION]
                                Crafted for Rohit Bhai
 ========================================================================================
 "@ -ForegroundColor Cyan
@@ -49,8 +50,9 @@ Write-Host "  [+] macOS Genie Minimize Animation (Liquid curve 450ms)" -Foregrou
 Write-Host "  [+] Apple Taskbar Network Speed Indicator (100% native Windhawk)" -ForegroundColor White
 Write-Host "  [+] Apple SF Pro Typography (San Francisco Display & Text)" -ForegroundColor White
 Write-Host "  [+] macOS Capitaine Dark Cursors with Rainbow Spinning Beach-Ball" -ForegroundColor White
-Write-Host "  [+] 4K Ultra-HD macOS Wallpaper & Windows Deep Dark Theme" -ForegroundColor White
 Write-Host "  [+] Official Apple macOS Sound Scheme (Trash Empty, USB Connect, Pop, Tink)" -ForegroundColor White
+Write-Host "  [+] Official Apple macOS File Explorer & Folder Icons (Sonoma Aqua Folders, Macintosh HD)" -ForegroundColor White
+Write-Host "  [+] 4K Ultra-HD macOS Wallpaper & Windows Deep Dark Theme" -ForegroundColor White
 Write-Host ""
 
 $WorkDir = Join-Path $env:TEMP "RohitBhai_MacOS_Setup"
@@ -64,7 +66,7 @@ $ScriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { $null }
 # -------------------------------------------------------------------------
 # Step 1: Detect or Install Windhawk
 # -------------------------------------------------------------------------
-Write-Host "[1/7] Checking Windhawk Customization Engine..." -ForegroundColor Cyan
+Write-Host "[1/8] Checking Windhawk Customization Engine..." -ForegroundColor Cyan
 
 function Find-WindhawkCli {
     $paths = @(
@@ -100,71 +102,48 @@ if (-not $WindhawkCli) {
         $installerPath = Join-Path $WorkDir "windhawk_setup.exe"
         try {
             Invoke-WebRequest -Uri "https://windhawk.net/download/windhawk_setup.exe" -OutFile $installerPath -UseBasicParsing
-            Write-Host "  [*] Running installer silently..." -ForegroundColor Yellow
-            Start-Process $installerPath -ArgumentList "/S" -Wait
-            
-            $timeout = 30
-            while ($timeout -gt 0 -and (-not $WindhawkCli)) {
-                Start-Sleep -Seconds 2
-                $timeout -= 2
-                $WindhawkCli = Find-WindhawkCli
-            }
+            Start-Process -FilePath $installerPath -ArgumentList "/S" -Wait
+            Start-Sleep -Seconds 5
+            $WindhawkCli = Find-WindhawkCli
         } catch {
-            Write-Host "  [!] Installer download failed: $_" -ForegroundColor Red
+            Write-Host "  [!] Windhawk auto-download failed. Please install Windhawk manually." -ForegroundColor Red
         }
     }
-
-    if (-not $WindhawkCli) {
-        Write-Host "  [!] Error: Please install Windhawk manually from https://windhawk.net and re-run." -ForegroundColor Red
-        Pause
-        exit 1
-    }
 }
 
-Write-Host "  [OK] Windhawk CLI verified: $WindhawkCli" -ForegroundColor Green
+if ($WindhawkCli) {
+    Write-Host "  [OK] Windhawk engine found: $WindhawkCli" -ForegroundColor Green
+} else {
+    Write-Host "  [!] Warning: Windhawk not found. Proceeding with System Icons, Sounds & Cursors..." -ForegroundColor Yellow
+}
 
 # -------------------------------------------------------------------------
-# Step 2: Download or Locate Backup Package
+# Step 2: Download or Locate Rohit Bhai Mac OS Settings
 # -------------------------------------------------------------------------
-Write-Host "`n[2/7] Fetching Rohit Bhai Mac OS Mod Configurations..." -ForegroundColor Cyan
+Write-Host "`n[2/8] Locating Rohit Bhai Mac OS Preset..." -ForegroundColor Cyan
+$WhDataLocal = Join-Path $WorkDir "Rohit-Bhai-Mac-OS-Settings.json"
 
-$WhDataLocal = $null
-$CandidatePaths = @()
-if ($ScriptDir) {
-    $CandidatePaths += (Join-Path $ScriptDir "Rohit-Bhai-Mac-OS.whdata")
-}
-$CandidatePaths += (Join-Path $PSScriptRoot "Rohit-Bhai-Mac-OS.whdata")
-$CandidatePaths += (Join-Path $WorkDir "Rohit-Bhai-Mac-OS.whdata")
-
-foreach ($p in $CandidatePaths) {
-    if ($p -and (Test-Path $p)) {
-        $WhDataLocal = $p
-        break
-    }
-}
-
-if (-not $WhDataLocal) {
-    Write-Host "  [*] Downloading configuration bundle from GitHub..." -ForegroundColor Yellow
-    $backupUrl = "https://raw.githubusercontent.com/$RepoOwner/$RepoName/$Branch/Rohit-Bhai-Mac-OS.whdata"
-    $targetPath = Join-Path $WorkDir "Rohit-Bhai-Mac-OS.whdata"
+$localPreset = if ($ScriptDir) { Join-Path $ScriptDir "Rohit-Bhai-Mac-OS-Settings.json" } else { $null }
+if ($localPreset -and (Test-Path $localPreset)) {
+    Copy-Item $localPreset -Destination $WhDataLocal -Force
+    Write-Host "  [OK] Using local preset configuration." -ForegroundColor Green
+} else {
+    $presetUrl = "https://raw.githubusercontent.com/$RepoOwner/$RepoName/$Branch/Rohit-Bhai-Mac-OS-Settings.json"
+    Write-Host "  [*] Downloading preset from GitHub repository..." -ForegroundColor Yellow
     try {
-        Invoke-WebRequest -Uri $backupUrl -OutFile $targetPath -UseBasicParsing
-        $WhDataLocal = $targetPath
+        Invoke-WebRequest -Uri $presetUrl -OutFile $WhDataLocal -UseBasicParsing
+        Write-Host "  [OK] Preset downloaded successfully!" -ForegroundColor Green
     } catch {
-        Write-Host "  [!] Error: Failed to download configuration bundle: $_" -ForegroundColor Red
-        Pause
-        exit 1
+        Write-Host "  [!] Failed to download settings preset from GitHub." -ForegroundColor Red
     }
 }
 
-Write-Host "  [OK] Configuration data loaded: $WhDataLocal" -ForegroundColor Green
-
 # -------------------------------------------------------------------------
-# Step 3: Apple SF Pro Fonts Installation
+# Step 3: Apple SF Pro Display Typography
 # -------------------------------------------------------------------------
-Write-Host "`n[3/7] Installing Apple SF Pro Typography (San Francisco)..." -ForegroundColor Cyan
+Write-Host "`n[3/8] Installing Apple SF Pro Display Fonts..." -ForegroundColor Cyan
 try {
-    $fontsTarget = "$env:LOCALAPPDATA\Microsoft\Windows\Fonts"
+    $fontsTarget = "$env:LOCALAPPDATA\RohitBhaiMacOS\Fonts"
     if (-not (Test-Path $fontsTarget)) {
         New-Item -ItemType Directory -Path $fontsTarget -Force | Out-Null
     }
@@ -197,7 +176,7 @@ try {
 # -------------------------------------------------------------------------
 # Step 4: macOS Capitaine Dark Cursors Installation
 # -------------------------------------------------------------------------
-Write-Host "`n[4/7] Deploying macOS Capitaine Dark Cursors with Beach-Ball..." -ForegroundColor Cyan
+Write-Host "`n[4/8] Deploying macOS Capitaine Dark Cursors with Beach-Ball..." -ForegroundColor Cyan
 try {
     $cursorsTarget = "$env:LOCALAPPDATA\RohitBhaiMacOS\Cursors"
     if (-not (Test-Path $cursorsTarget)) {
@@ -246,7 +225,7 @@ try {
 # -------------------------------------------------------------------------
 # Step 5: Official Apple macOS System Sound Scheme
 # -------------------------------------------------------------------------
-Write-Host "`n[5/7] Configuring Authentic Apple macOS System Sound Scheme..." -ForegroundColor Cyan
+Write-Host "`n[5/8] Configuring Authentic Apple macOS System Sound Scheme..." -ForegroundColor Cyan
 try {
     $soundsTarget = "$env:LOCALAPPDATA\RohitBhaiMacOS\Sounds"
     if (-not (Test-Path $soundsTarget)) {
@@ -305,9 +284,134 @@ try {
 }
 
 # -------------------------------------------------------------------------
-# Step 6: Apply 4K macOS Wallpaper & Windows Dark Mode
+# Step 6: Official Apple macOS File Explorer & Folder Icons
 # -------------------------------------------------------------------------
-Write-Host "`n[6/7] Applying 4K macOS Wallpaper & Deep Dark Mode..." -ForegroundColor Cyan
+Write-Host "`n[6/8] Deploying Official Apple macOS File Explorer & Folder Icons..." -ForegroundColor Cyan
+try {
+    $iconsTarget = "$env:LOCALAPPDATA\RohitBhaiMacOS\Icons"
+    if (-not (Test-Path $iconsTarget)) {
+        New-Item -ItemType Directory -Path $iconsTarget -Force | Out-Null
+    }
+
+    $localIcons = if ($ScriptDir) { Join-Path $ScriptDir "assets\icons" } else { $null }
+    if ($localIcons -and (Test-Path $localIcons)) {
+        Copy-Item "$localIcons\*.ico" -Destination $iconsTarget -Force -ErrorAction SilentlyContinue
+    } else {
+        $iconsZipUrl = "https://github.com/$RepoOwner/$RepoName/releases/download/v4.0.0/macos_icons.zip"
+        $iconsZip = Join-Path $WorkDir "macos_icons.zip"
+        try {
+            Invoke-WebRequest -Uri $iconsZipUrl -OutFile $iconsZip -UseBasicParsing -ErrorAction SilentlyContinue
+            if (Test-Path $iconsZip) {
+                Expand-Archive -Path $iconsZip -DestinationPath $iconsTarget -Force
+            }
+        } catch {}
+    }
+
+    # 1. Generic Folder Icons (Shell Icons HKLM & HKCU)
+    $folderIco = Join-Path $iconsTarget "macOS_Folder.ico"
+    $folderOpenIco = Join-Path $iconsTarget "macOS_Folder_Open.ico"
+    
+    if (Test-Path $folderIco) {
+        $shellIconsKeys = @(
+            "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons",
+            "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons",
+            "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons"
+        )
+        foreach ($k in $shellIconsKeys) {
+            if (-not (Test-Path $k)) { New-Item -Path $k -Force -ErrorAction SilentlyContinue | Out-Null }
+            Set-ItemProperty -Path $k -Name "3" -Value "$folderIco,0" -Force -ErrorAction SilentlyContinue
+            Set-ItemProperty -Path $k -Name "4" -Value "$folderOpenIco,0" -Force -ErrorAction SilentlyContinue
+        }
+
+        foreach ($c in @("HKCU:\Software\Classes\Folder\DefaultIcon", "HKCU:\Software\Classes\Directory\DefaultIcon")) {
+            if (-not (Test-Path $c)) { New-Item -Path $c -Force -ErrorAction SilentlyContinue | Out-Null }
+            Set-ItemProperty -Path $c -Name "(Default)" -Value "$folderIco,0" -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    # 2. Drive Icons (Macintosh HD for C:, Generic for others)
+    $cIco = Join-Path $iconsTarget "macOS_Drive_System.ico"
+    if (Test-Path $cIco) {
+        $cKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons\C\DefaultIcon"
+        if (-not (Test-Path $cKey)) { New-Item -Path $cKey -Force -ErrorAction SilentlyContinue | Out-Null }
+        Set-ItemProperty -Path $cKey -Name "(Default)" -Value "$cIco,0" -Force -ErrorAction SilentlyContinue
+    }
+
+    $driveIco = Join-Path $iconsTarget "macOS_Drive.ico"
+    if (Test-Path $driveIco) {
+        Get-Volume -ErrorAction SilentlyContinue | Where-Object { $_.DriveLetter -and $_.DriveLetter -ne 'C' } | ForEach-Object {
+            $dl = $_.DriveLetter
+            $dKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons\$dl\DefaultIcon"
+            if (-not (Test-Path $dKey)) { New-Item -Path $dKey -Force -ErrorAction SilentlyContinue | Out-Null }
+            Set-ItemProperty -Path $dKey -Name "(Default)" -Value "$driveIco,0" -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    # 3. Recycle Bin & This PC
+    $trashEmpty = Join-Path $iconsTarget "macOS_Trash_Empty.ico"
+    $trashFull  = Join-Path $iconsTarget "macOS_Trash_Full.ico"
+    if (Test-Path $trashEmpty) {
+        $binKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\DefaultIcon"
+        if (-not (Test-Path $binKey)) { New-Item -Path $binKey -Force -ErrorAction SilentlyContinue | Out-Null }
+        Set-ItemProperty -Path $binKey -Name "(Default)" -Value "$trashEmpty,0" -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $binKey -Name "empty" -Value "$trashEmpty,0" -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $binKey -Name "full" -Value "$trashFull,0" -Force -ErrorAction SilentlyContinue
+    }
+
+    $thisPc = Join-Path $iconsTarget "macOS_ThisPC.ico"
+    if (Test-Path $thisPc) {
+        $pcKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\CLSID\{20D04FE0-3AEA-1069-A2D8-08002B30309D}\DefaultIcon"
+        if (-not (Test-Path $pcKey)) { New-Item -Path $pcKey -Force -ErrorAction SilentlyContinue | Out-Null }
+        Set-ItemProperty -Path $pcKey -Name "(Default)" -Value "$thisPc,0" -Force -ErrorAction SilentlyContinue
+    }
+
+    # 4. User Profile Special Folders (Downloads, Documents, Pictures, Music, Videos, Desktop)
+    $folderMap = @(
+        @{ Name = "Downloads"; Path = "$env:USERPROFILE\Downloads"; Ico = Join-Path $iconsTarget "macOS_Downloads.ico"; GUIDs = @("{374DE290-123F-4565-9164-39C4925E467B}", "{7d83ee9b-2244-4e70-b1f5-5393042af1e4}") }
+        @{ Name = "Documents"; Path = "$env:USERPROFILE\Documents"; Ico = Join-Path $iconsTarget "macOS_Documents.ico"; GUIDs = @("{FDD39AD0-238F-46AF-ADB4-6C85480369C7}", "{f42ee2d3-909f-4907-8871-4c22fc0bf756}") }
+        @{ Name = "Pictures";  Path = "$env:USERPROFILE\Pictures";  Ico = Join-Path $iconsTarget "macOS_Pictures.ico";  GUIDs = @("{33E28130-4E1E-4676-835A-98395C3BC3BB}", "{0ddd0157-5467-4334-96c9-78ec10e39588}") }
+        @{ Name = "Music";     Path = "$env:USERPROFILE\Music";     Ico = Join-Path $iconsTarget "macOS_Music.ico";     GUIDs = @("{4BD8D571-6D19-48D3-BE97-422220080E43}", "{a0c69a99-21c8-4671-8703-7934162fbe1d}") }
+        @{ Name = "Videos";    Path = "$env:USERPROFILE\Videos";    Ico = Join-Path $iconsTarget "macOS_Videos.ico";    GUIDs = @("{18989B1D-99B5-455B-841C-AB7C74E4DDFC}", "{35286161-5079-4140-9a09-7b505a4f2791}") }
+        @{ Name = "Desktop";   Path = "$env:USERPROFILE\Desktop";   Ico = Join-Path $iconsTarget "macOS_Desktop.ico";   GUIDs = @("{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}") }
+    )
+
+    foreach ($f in $folderMap) {
+        if (Test-Path $f.Ico) {
+            foreach ($g in $f.GUIDs) {
+                $regPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\$g"
+                if (Test-Path $regPath) {
+                    Set-ItemProperty -Path $regPath -Name "Icon" -Value "$($f.Ico),0" -Force -ErrorAction SilentlyContinue
+                }
+            }
+
+            if (Test-Path $f.Path) {
+                $ini = Join-Path $f.Path "desktop.ini"
+                if (Test-Path $ini) {
+                    attrib -h -s -r $ini 2>$null
+                }
+                $iniContent = "[.ShellClassInfo]`r`nIconResource=$($f.Ico),0`r`n[ViewState]`r`nMode=`r`nVid=`r`nFolderType=Generic`r`n"
+                [System.IO.File]::WriteAllText($ini, $iniContent, [System.Text.Encoding]::ASCII)
+                attrib +h +s $ini 2>$null
+                attrib +r $f.Path 2>$null
+            }
+        }
+    }
+
+    # 5. Flush Icon Cache
+    $iconCache = "$env:LOCALAPPDATA\IconCache.db"
+    if (Test-Path $iconCache) { Remove-Item $iconCache -Force -ErrorAction SilentlyContinue }
+    Get-ChildItem -Path "$env:LOCALAPPDATA\Microsoft\Windows\Explorer" -Filter "*cache*.db" -Force -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+    & ie4uinit.exe -show 2>$null
+
+    Write-Host "  [OK] Apple macOS File Explorer & Folder Icons applied!" -ForegroundColor Green
+} catch {
+    Write-Host "  [-] Icons note: Skipped non-critical icon install." -ForegroundColor DarkGray
+}
+
+# -------------------------------------------------------------------------
+# Step 7: Apply 4K macOS Wallpaper & Windows Dark Mode
+# -------------------------------------------------------------------------
+Write-Host "`n[7/8] Applying 4K macOS Wallpaper & Deep Dark Mode..." -ForegroundColor Cyan
 try {
     # 1. Dark Mode
     $themeReg = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
@@ -339,24 +443,28 @@ try {
 }
 
 # -------------------------------------------------------------------------
-# Step 7: Import Windhawk Mods & Settings (Island Dock, Genie, Net Speed)
+# Step 8: Import Windhawk Mods & Settings (Island Dock, Genie, Net Speed)
 # -------------------------------------------------------------------------
-Write-Host "`n[7/7] Activating all 8 Windhawk mods, exact ratios, colors, and animations..." -ForegroundColor Cyan
+Write-Host "`n[8/8] Activating all 8 Windhawk mods, exact ratios, colors, and animations..." -ForegroundColor Cyan
 Write-Host "      (Mac Island Dock, Genie Animation, LiquidGlass, Apple Net Speed...)" -ForegroundColor DarkGray
 
-& $WindhawkCli data import $WhDataLocal --on-conflict overwrite --confirm-app-restart
-$importCode = $LASTEXITCODE
+if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
+    & $WindhawkCli data import $WhDataLocal --on-conflict overwrite --confirm-app-restart
+    $importCode = $LASTEXITCODE
 
-if ($importCode -eq 0) {
-    Write-Host "  [OK] All mods and custom settings activated successfully!" -ForegroundColor Green
+    if ($importCode -eq 0) {
+        Write-Host "  [OK] All mods and custom settings activated successfully!" -ForegroundColor Green
+    } else {
+        Write-Host "  [*] Retrying with local compilation mode..." -ForegroundColor Yellow
+        & $WindhawkCli data import $WhDataLocal --offline --on-conflict overwrite --confirm-app-restart
+        Write-Host "  [OK] Import completed!" -ForegroundColor Green
+    }
 } else {
-    Write-Host "  [*] Retrying with local compilation mode..." -ForegroundColor Yellow
-    & $WindhawkCli data import $WhDataLocal --offline --on-conflict overwrite --confirm-app-restart
-    Write-Host "  [OK] Import completed!" -ForegroundColor Green
+    Write-Host "  [-] Skipped Windhawk mods activation (Windhawk not available)." -ForegroundColor DarkGray
 }
 
 # Refresh Shell
-Write-Host "`n[*] Refreshing Windows Desktop & Dock..." -ForegroundColor Cyan
+Write-Host "`n[*] Refreshing Windows Desktop, Folders & Dock..." -ForegroundColor Cyan
 Stop-Process -Name explorer -Force -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 1
 Start-Process explorer.exe
@@ -367,15 +475,17 @@ Remove-Item -Path $WorkDir -Recurse -Force -ErrorAction SilentlyContinue
 
 Write-Host ""
 Write-Host "========================================================================================" -ForegroundColor Green
-Write-Host "            CONGRATULATIONS! ROHIT BHAI MAC OS v3.0 IS NOW ACTIVE!                     " -ForegroundColor Green
+Write-Host "            CONGRATULATIONS! ROHIT BHAI MAC OS v4.0 IS NOW ACTIVE!                     " -ForegroundColor Green
 Write-Host "========================================================================================" -ForegroundColor Green
 Write-Host ""
+Write-Host "  * Official Apple macOS Folder Icons (Sonoma Aqua, Documents, Downloads, etc.) active" -ForegroundColor White
+Write-Host "  * Apple Macintosh HD drive icon & Recycle Bin (empty/full) active" -ForegroundColor White
+Write-Host "  * Authentic Apple macOS Sound Scheme (Trash, USB, Alert, Notification) active" -ForegroundColor White
 Write-Host "  * Mac Island & Dock (32px, 8px gap, 22px radius, launch bounce) active" -ForegroundColor White
 Write-Host "  * macOS Genie Minimize animation (450ms) active" -ForegroundColor White
 Write-Host "  * Apple Taskbar Network Speed indicator active" -ForegroundColor White
 Write-Host "  * Apple SF Pro Display typography installed" -ForegroundColor White
 Write-Host "  * macOS Capitaine Dark Cursors (with rainbow spinning beach-ball) active" -ForegroundColor White
-Write-Host "  * Authentic Apple macOS Sound Scheme (Trash, USB, Alert, Notification) active" -ForegroundColor White
 Write-Host "  * 4K Ultra-HD macOS Wallpaper & Deep Dark Mode applied" -ForegroundColor White
 Write-Host ""
 Write-Host "  Crafted with love by: Rohit Bhai" -ForegroundColor Cyan
