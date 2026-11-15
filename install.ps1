@@ -459,6 +459,18 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
         & $WindhawkCli data import $WhDataLocal --offline --on-conflict overwrite --confirm-app-restart
         Write-Host "  [OK] Import completed!" -ForegroundColor Green
     }
+
+    # Ensure Maximize Window Guard (Windows Never Covered by Bar / Dock)
+    & $WindhawkCli mod settings set mac-island-dock hiding.autoHide=1 hiding.hideWhen=maximized 2>$null
+    $islandStoragePath = "HKLM:\Software\Windhawk\Engine\ModsWritable\mac-island-dock\LocalStorage"
+    if (-not (Test-Path $islandStoragePath)) {
+        New-Item -Path $islandStoragePath -Force | Out-Null
+    }
+    Set-ItemProperty -Path $islandStoragePath -Name "islandAutoHide" -Value 1 -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandHideWhen" -Value 1 -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandHideClock" -Value 1 -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandBar" -Value 2 -Force -ErrorAction SilentlyContinue
+    Write-Host "  [OK] Maximized window guard active: windows stay clear of dock and top bar!" -ForegroundColor Green
 } else {
     Write-Host "  [-] Skipped Windhawk mods activation (Windhawk not available)." -ForegroundColor DarkGray
 }

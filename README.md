@@ -52,6 +52,9 @@ Or clone the repo and double-click `Install-Rohit-Bhai-Mac-OS.bat`.
 8. **🖼️ 4K Ultra-HD macOS Wallpaper & Deep Dark Theme**:
    - Official macOS wallpaper set dynamically with complete system dark mode.
 
+9. **🛡️ Smart Maximized Window Guard**:
+   - Maximized full-screen windows automatically keep 100% visibility — the floating dock smoothly clears out of the way on maximized apps, and the Island bar keeps room, so windows never get overlapped or covered by taskbars.
+
 ---
 
 ## 🧹 Clean Uninstallation
