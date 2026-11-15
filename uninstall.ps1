@@ -1,9 +1,9 @@
-<#
-.SYNOPSIS
-    Rohit Bhai Mac OS - Uninstaller
-.DESCRIPTION
-    Safely disables and uninstalls all mods applied by the Rohit Bhai Mac OS suite.
-#>
+# ==============================================================================
+# Rohit Bhai Mac OS - Uninstaller
+# Target: Windows 11 / Windows 10
+# Reverts Windhawk mods, cursor schemes, sound schemes, and fonts safely
+# Crafted for Rohit Bhai
+# ==============================================================================
 
 # Auto-elevate to Administrator
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
@@ -18,6 +18,18 @@ Write-Host "                ROHIT BHAI MAC OS - UNINSTALLER                     
 Write-Host "====================================================================" -ForegroundColor Yellow
 Write-Host ""
 
+# 1. Reset Sound Scheme to Windows Default
+Write-Host "[*] Resetting sound scheme to Windows Default..." -ForegroundColor Cyan
+Set-ItemProperty -Path "HKCU:\AppEvents\Schemes" -Name "(Default)" -Value ".Default" -Force -ErrorAction SilentlyContinue
+if (Test-Path "HKCU:\AppEvents\Schemes\Names\RohitBhaiMacOS") {
+    Remove-Item "HKCU:\AppEvents\Schemes\Names\RohitBhaiMacOS" -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+# 2. Reset Cursors to Windows Default
+Write-Host "[*] Resetting cursors to Windows Default..." -ForegroundColor Cyan
+Set-ItemProperty -Path "HKCU:\Control Panel\Cursors" -Name "" -Value "Windows Default" -Force -ErrorAction SilentlyContinue
+
+# 3. Disable and remove Windhawk mods
 $WindhawkCli = "C:\Program Files\Windhawk\windhawk-cli.exe"
 if (-not (Test-Path $WindhawkCli)) {
     $alt = "$env:ProgramFiles(x86)\Windhawk\windhawk-cli.exe"
@@ -50,6 +62,6 @@ Start-Sleep -Seconds 1
 Start-Process explorer.exe
 
 Write-Host ""
-Write-Host "[OK] Rohit Bhai Mac OS uninstalled. Windows default restored!" -ForegroundColor Green
+Write-Host "[OK] Rohit Bhai Mac OS uninstalled cleanly. Windows defaults restored!" -ForegroundColor Green
 Write-Host "Press any key to exit..."
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
