@@ -460,28 +460,28 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
         Write-Host "  [OK] Import completed!" -ForegroundColor Green
     }
 
-    # Ensure Maximize Window Guard (Windows Never Covered by Bar / Dock)
-    & $WindhawkCli mod settings set mac-island-dock hiding.autoHide=1 hiding.hideWhen=maximized 2>$null
+    # Ensure Maximize Window Guard (Top Bar & Bottom Dock Always Visible with Zero Overlap)
+    & $WindhawkCli mod settings set mac-island-dock hiding.autoHide=0 2>$null
     $islandStoragePath = "HKLM:\Software\Windhawk\Engine\ModsWritable\mac-island-dock\LocalStorage"
     if (-not (Test-Path $islandStoragePath)) {
         New-Item -Path $islandStoragePath -Force | Out-Null
     }
-    Set-ItemProperty -Path $islandStoragePath -Name "islandAutoHide" -Value 1 -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $islandStoragePath -Name "islandHideWhen" -Value 1 -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $islandStoragePath -Name "islandHideClock" -Value 1 -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandAutoHide" -Value 0 -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandHideWhen" -Value 0 -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandHideClock" -Value 0 -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $islandStoragePath -Name "islandBar" -Value 2 -Force -ErrorAction SilentlyContinue
-    Write-Host "  [OK] Maximized window guard active: windows stay clear of dock and top bar!" -ForegroundColor Green
+    Write-Host "  [OK] Maximized window guard active: Top Bar & Bottom Dock stay ALWAYS visible with zero overlap!" -ForegroundColor Green
 } else {
     Write-Host "  [-] Skipped Windhawk mods activation (Windhawk not available)." -ForegroundColor DarkGray
 }
 
-# Ensure Windows Native Auto-Hide Calibration (StuckRects3 Byte 8 = 03)
+# Ensure Windows Taskbar Calibration: Always Visible (StuckRects3 Byte 8 = 02)
 try {
     $stuckKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\StuckRects3"
     if (Test-Path $stuckKey) {
         $stuckVal = (Get-ItemProperty -Path $stuckKey -Name "Settings" -ErrorAction SilentlyContinue).Settings
         if ($stuckVal -and $stuckVal.Length -ge 9) {
-            $stuckVal[8] = 3
+            $stuckVal[8] = 2
             Set-ItemProperty -Path $stuckKey -Name "Settings" -Value $stuckVal -Force
         }
     }
