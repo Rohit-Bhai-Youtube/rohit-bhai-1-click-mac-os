@@ -1,13 +1,6 @@
-﻿<#
-.SYNOPSIS
-    Rohit Bhai Mac OS - 1-Line Universal Web & Local Installer for Windows 11 / 10
-.DESCRIPTION
-    Instantly transforms Windows into an authentic macOS aesthetic using Windhawk.
-    Activates Mac Island Dock, Genie Minimize animation, Apple Network Speed,
-    LiquidGlass Start Menu, Tahoe Glass Notifications, Translucent Windows, and Invisible Borders.
-.EXAMPLE
-    irm https://raw.githubusercontent.com/romflasher3419-spec/rohit-bhai-mac-os/main/install.ps1 | iex
-#>
+# ==============================================================================
+# Rohit Bhai Mac OS - 1-Line Universal Web & Local Installer
+# ==============================================================================
 
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $ErrorActionPreference = "Continue"
