@@ -475,6 +475,18 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
     Write-Host "  [-] Skipped Windhawk mods activation (Windhawk not available)." -ForegroundColor DarkGray
 }
 
+# Ensure Windows Native Auto-Hide Calibration (StuckRects3 Byte 8 = 03)
+try {
+    $stuckKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\StuckRects3"
+    if (Test-Path $stuckKey) {
+        $stuckVal = (Get-ItemProperty -Path $stuckKey -Name "Settings" -ErrorAction SilentlyContinue).Settings
+        if ($stuckVal -and $stuckVal.Length -ge 9) {
+            $stuckVal[8] = 3
+            Set-ItemProperty -Path $stuckKey -Name "Settings" -Value $stuckVal -Force
+        }
+    }
+} catch {}
+
 # Refresh Shell
 Write-Host "`n[*] Refreshing Windows Desktop, Folders & Dock..." -ForegroundColor Cyan
 Stop-Process -Name explorer -Force -ErrorAction SilentlyContinue
