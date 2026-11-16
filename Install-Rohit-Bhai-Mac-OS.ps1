@@ -67,18 +67,75 @@ $ScriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { $null }
 # -------------------------------------------------------------------------
 # Step 1: Detect or Install Windhawk
 # -------------------------------------------------------------------------
-Write-Host "[1/8] Checking Windhawk Customization Engine..." -ForegroundColor Cyan
+Write-Host "[1/9] Checking Windhawk Customization Engine..." -ForegroundColor Cyan
 
 function Find-WindhawkCli {
-    $paths = @(
+    # 1. Standard well-known directory paths
+    $candidatePaths = @(
         "C:\Program Files\Windhawk\windhawk-cli.exe",
         "$env:ProgramFiles\Windhawk\windhawk-cli.exe",
-        "$env:ProgramFiles(x86)\Windhawk\windhawk-cli.exe",
+        "$env:ProgramW6432\Windhawk\windhawk-cli.exe",
+        "${env:ProgramFiles(x86)}\Windhawk\windhawk-cli.exe",
         "$env:LOCALAPPDATA\Programs\Windhawk\windhawk-cli.exe"
     )
-    foreach ($p in $paths) {
-        if (Test-Path $p) { return $p }
+    foreach ($p in $candidatePaths) {
+        if ($p -and (Test-Path $p)) { return $p }
     }
+
+    # 2. Check running processes
+    try {
+        $proc = Get-Process -Name "windhawk" -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($proc -and $proc.Path) {
+            $cli = Join-Path (Split-Path $proc.Path -Parent) "windhawk-cli.exe"
+            if (Test-Path $cli) { return $cli }
+        }
+    } catch {}
+
+    # 3. Check Windows Service definition
+    try {
+        $svc = Get-CimInstance Win32_Service -Filter "Name = 'Windhawk'" -ErrorAction SilentlyContinue
+        if ($svc -and $svc.PathName) {
+            $cleanPath = $svc.PathName -replace '^"|"[^"]*$', '' -replace '\.exe.*$', '.exe'
+            if (Test-Path $cleanPath) {
+                $cli = Join-Path (Split-Path $cleanPath -Parent) "windhawk-cli.exe"
+                if (Test-Path $cli) { return $cli }
+            }
+        }
+    } catch {}
+
+    # 4. Check Windows Registry Uninstall keys (32-bit & 64-bit)
+    $regPaths = @(
+        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
+        "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*",
+        "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*"
+    )
+    foreach ($reg in $regPaths) {
+        try {
+            $items = Get-ItemProperty -Path $reg -ErrorAction SilentlyContinue
+            foreach ($item in $items) {
+                if ($item.DisplayName -like "*Windhawk*") {
+                    if ($item.InstallLocation) {
+                        $cli = Join-Path $item.InstallLocation "windhawk-cli.exe"
+                        if (Test-Path $cli) { return $cli }
+                    }
+                    if ($item.DisplayIcon) {
+                        $cleanIcon = $item.DisplayIcon -replace '^"|"[^"]*$', '' -replace ',.*$', ''
+                        $cli = Join-Path (Split-Path $cleanIcon -Parent) "windhawk-cli.exe"
+                        if (Test-Path $cli) { return $cli }
+                    }
+                }
+            }
+        } catch {}
+    }
+
+    # 5. Check PATH environment
+    try {
+        $cmd = Get-Command "windhawk-cli.exe" -ErrorAction SilentlyContinue
+        if ($cmd -and $cmd.Source -and (Test-Path $cmd.Source)) {
+            return $cmd.Source
+        }
+    } catch {}
+
     return $null
 }
 
@@ -88,31 +145,82 @@ if (-not $WindhawkCli) {
     Write-Host "  [-] Windhawk is not installed. Installing Windhawk..." -ForegroundColor Yellow
     $installed = $false
 
+    # Attempt 1: winget (with --force to reinstall if package registry is already present)
     if (Get-Command winget -ErrorAction SilentlyContinue) {
         Write-Host "  [*] Installing via winget..." -ForegroundColor Yellow
         try {
-            winget install RamenSoftware.Windhawk --accept-source-agreements --accept-package-agreements --silent
-            Start-Sleep -Seconds 5
-            $WindhawkCli = Find-WindhawkCli
-            if ($WindhawkCli) { $installed = $true }
+            winget install RamenSoftware.Windhawk --accept-source-agreements --accept-package-agreements --silent --force
+            for ($i = 0; $i -lt 6; $i++) {
+                Start-Sleep -Seconds 2
+                $WindhawkCli = Find-WindhawkCli
+                if ($WindhawkCli) {
+                    $installed = $true
+                    break
+                }
+            }
         } catch {}
     }
 
+    # Attempt 2: Direct download official installer from GitHub Releases
     if (-not $installed) {
-        Write-Host "  [*] Downloading official installer from windhawk.net..." -ForegroundColor Yellow
+        Write-Host "  [*] Downloading official Windhawk installer from GitHub Releases..." -ForegroundColor Yellow
         $installerPath = Join-Path $WorkDir "windhawk_setup.exe"
-        try {
-            Invoke-WebRequest -Uri "https://windhawk.net/download/windhawk_setup.exe" -OutFile $installerPath -UseBasicParsing
-            Start-Process -FilePath $installerPath -ArgumentList "/S" -Wait
-            Start-Sleep -Seconds 5
-            $WindhawkCli = Find-WindhawkCli
-        } catch {
+        $whDownloadUrls = @(
+            "https://github.com/ramensoftware/windhawk/releases/latest/download/windhawk_setup.exe",
+            "https://github.com/ramensoftware/windhawk/releases/download/v1.5.1/windhawk_setup.exe"
+        )
+        $downloadSuccess = $false
+
+        foreach ($url in $whDownloadUrls) {
+            try {
+                if (Test-Path $installerPath) { Remove-Item $installerPath -Force -ErrorAction SilentlyContinue }
+
+                # Use curl.exe if available for fast direct download
+                if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
+                    & curl.exe -sSL "$url" -o "$installerPath"
+                }
+
+                # Fallback to WebClient if curl didn't download or is too small
+                if (-not (Test-Path $installerPath) -or ((Get-Item $installerPath).Length -lt 5000000)) {
+                    $wc = New-Object System.Net.WebClient
+                    $wc.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+                    $wc.DownloadFile($url, $installerPath)
+                }
+
+                # Verify valid PE executable size (> 5MB)
+                if ((Test-Path $installerPath) -and ((Get-Item $installerPath).Length -gt 5000000)) {
+                    $downloadSuccess = $true
+                    break
+                }
+            } catch {}
+        }
+
+        if ($downloadSuccess) {
+            Write-Host "  [*] Executing Windhawk silent installer (/S /STANDARD)..." -ForegroundColor Yellow
+            Start-Process -FilePath $installerPath -ArgumentList "/S", "/STANDARD" -Wait
+            for ($i = 0; $i -lt 10; $i++) {
+                Start-Sleep -Seconds 2
+                $WindhawkCli = Find-WindhawkCli
+                if ($WindhawkCli) {
+                    $installed = $true
+                    break
+                }
+            }
+        } else {
             Write-Host "  [!] Windhawk auto-download failed. Please install Windhawk manually." -ForegroundColor Red
         }
     }
 }
 
 if ($WindhawkCli) {
+    # Ensure Windhawk background service is running
+    try {
+        $whSvc = Get-Service -Name Windhawk -ErrorAction SilentlyContinue
+        if ($whSvc -and $whSvc.Status -ne 'Running') {
+            Start-Service Windhawk -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 2
+        }
+    } catch {}
     Write-Host "  [OK] Windhawk engine found: $WindhawkCli" -ForegroundColor Green
 } else {
     Write-Host "  [!] Warning: Windhawk not found. Proceeding with System Icons, Sounds & Cursors..." -ForegroundColor Yellow
@@ -121,7 +229,7 @@ if ($WindhawkCli) {
 # -------------------------------------------------------------------------
 # Step 2: Download or Locate Rohit Bhai Mac OS Settings
 # -------------------------------------------------------------------------
-Write-Host "`n[2/8] Locating Rohit Bhai Mac OS Preset..." -ForegroundColor Cyan
+Write-Host "`n[2/9] Locating Rohit Bhai Mac OS Preset..." -ForegroundColor Cyan
 $WhDataLocal = Join-Path $WorkDir "Rohit-Bhai-Mac-OS-Settings.json"
 
 $localPreset = if ($ScriptDir) { Join-Path $ScriptDir "Rohit-Bhai-Mac-OS-Settings.json" } else { $null }
@@ -142,7 +250,7 @@ if ($localPreset -and (Test-Path $localPreset)) {
 # -------------------------------------------------------------------------
 # Step 3: Apple SF Pro Display Typography
 # -------------------------------------------------------------------------
-Write-Host "`n[3/8] Installing Apple SF Pro Display Fonts..." -ForegroundColor Cyan
+Write-Host "`n[3/9] Installing Apple SF Pro Display Fonts..." -ForegroundColor Cyan
 try {
     $fontsTarget = "$env:LOCALAPPDATA\RohitBhaiMacOS\Fonts"
     if (-not (Test-Path $fontsTarget)) {
@@ -177,7 +285,7 @@ try {
 # -------------------------------------------------------------------------
 # Step 4: macOS Capitaine Dark Cursors Installation
 # -------------------------------------------------------------------------
-Write-Host "`n[4/8] Deploying macOS Capitaine Dark Cursors with Beach-Ball..." -ForegroundColor Cyan
+Write-Host "`n[4/9] Deploying macOS Capitaine Dark Cursors with Beach-Ball..." -ForegroundColor Cyan
 try {
     $cursorsTarget = "$env:LOCALAPPDATA\RohitBhaiMacOS\Cursors"
     if (-not (Test-Path $cursorsTarget)) {
@@ -238,7 +346,7 @@ public class Win32Cursor {
 # -------------------------------------------------------------------------
 # Step 5: Official Apple macOS System Sound Scheme
 # -------------------------------------------------------------------------
-Write-Host "`n[5/8] Configuring Authentic Apple macOS System Sound Scheme..." -ForegroundColor Cyan
+Write-Host "`n[5/9] Configuring Authentic Apple macOS System Sound Scheme..." -ForegroundColor Cyan
 try {
     $soundsTarget = "$env:LOCALAPPDATA\RohitBhaiMacOS\Sounds"
     if (-not (Test-Path $soundsTarget)) {
@@ -867,7 +975,20 @@ public class Win32Wall {
 Write-Host "`n[9/9] Activating all 8 Windhawk mods, exact ratios, colors, and animations..." -ForegroundColor Cyan
 Write-Host "      (Mac Island Dock, Genie Animation, LiquidGlass, Apple Net Speed...)" -ForegroundColor DarkGray
 
+if (-not $WindhawkCli) {
+    $WindhawkCli = Find-WindhawkCli
+}
+
 if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
+    # Ensure Windhawk background service is running
+    try {
+        $whSvc = Get-Service -Name Windhawk -ErrorAction SilentlyContinue
+        if ($whSvc -and $whSvc.Status -ne 'Running') {
+            Start-Service Windhawk -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 2
+        }
+    } catch {}
+
     # Ensure any traffic light mod is completely removed (reverting to clean original Windows buttons)
     & $WindhawkCli mod remove local@caption-buttons-customizer --yes 2>$null
     & $WindhawkCli mod remove caption-buttons-customizer --yes 2>$null
@@ -943,10 +1064,16 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
     $vbsPath = Join-Path $startupFolder "RohitBhai_Mac_Island.vbs"
     $vbsContent = "Set WshShell = CreateObject(""WScript.Shell"")`r`nWshShell.Run ""powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden -File """"$daemonPs1"""""", 0, False"
     [System.IO.File]::WriteAllText($vbsPath, $vbsContent, [System.Text.Encoding]::ASCII)
-    Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'Windhawk' -Value '"C:\Program Files\Windhawk\windhawk.exe" -tray-only' -Force -ErrorAction SilentlyContinue
+    $windhawkExe = Join-Path (Split-Path $WindhawkCli -Parent) "windhawk.exe"
+    if (-not (Test-Path $windhawkExe)) {
+        $windhawkExe = "C:\Program Files\Windhawk\windhawk.exe"
+    }
+    Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'Windhawk' -Value "`"$windhawkExe`" -tray-only" -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'RohitBhai_Mac_Island' -Value "wscript.exe `"$vbsPath`"" -Force -ErrorAction SilentlyContinue
 
-    & "C:\Program Files\Windhawk\windhawk.exe" -restart -tray-only 2>$null
+    if (Test-Path $windhawkExe) {
+        & $windhawkExe -restart -tray-only 2>$null
+    }
     Write-Host "  [OK] Maximized window guard active: Top Bar fixed at top-right & Bottom Dock stay ALWAYS visible with zero overlap!" -ForegroundColor Green
 } else {
     Write-Host "  [-] Skipped Windhawk mods activation (Windhawk not available)." -ForegroundColor DarkGray
