@@ -14,7 +14,7 @@
                         "engine":  {
                                        "loggingVerbosity":  0,
                                        "include":  [
-                                                       "dwm.exe"
+
                                                    ],
                                        "exclude":  [
 
@@ -191,27 +191,6 @@
                                       "updateIntervalMs":  1000,
                                       "fontSize":  14,
                                       "opacity":  255
-                                  }
-                 },
-                 {
-                     "modId":  "caption-buttons-customizer",
-                     "version":  "1.1",
-                     "name":  "Caption Buttons Customizer",
-                     "settings":  {
-                                      "buttons.moveButtons":  0,
-                                      "buttons.leftMargin":  0,
-                                      "buttons.buttonTighten":  12,
-                                      "buttons.order":  "minMaxClose",
-                                      "buttons.showDialogClose":  1,
-                                      "buttonStyle.style":  "macos",
-                                      "buttonStyle.minimizeColor":  "#FEBC2E",
-                                      "buttonStyle.maximizeColor":  "#28C840",
-                                      "buttonStyle.closeColor":  "#FF5F57",
-                                      "buttonStyle.restartDwmOnUnload":  0,
-                                      "exclusions.excludedApps":  "notepad.exe, taskmgr.exe, WindowsTerminal.exe",
-                                      "exclusions.excludedClasses":  "CabinetWClass",
-                                      "explorerTabs.enabled":  1,
-                                      "debugLog":  0
                                   }
                  }
              ]

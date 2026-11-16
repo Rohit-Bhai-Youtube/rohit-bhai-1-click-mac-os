@@ -1,5 +1,5 @@
 ﻿# ==============================================================================
-# Rohit Bhai Mac OS for Windows 11 - 1-Click Ultimate Suite v4.5 Pro
+# Rohit Bhai Mac OS for Windows 11 - 1-Click Ultimate Suite v4.4 Pro
 # Target: Windows 11 (22H2 / 23H2 / 24H2) and Windows 10
 # Includes: Windhawk Mac Island Dock, Genie, Net Speed, SF Pro Fonts,
 #           macOS Capitaine Cursors, 4K macOS Wallpaper, Dark Mode,
@@ -40,7 +40,7 @@ Write-Host @"
    ██╔══██╗██║   ██║██╔══██╗   ██╔══╝  ██║    ██╔══██║╚════██║██╔══██║
    ██║  ██║╚██████╔╝██████╔╝   ██║     ███████╗██║  ██║███████║██║  ██║
    ╚═╝  ╚═╝ ╚═════╝ ╚═════╝    ╚═╝     ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
-              ROHIT BHAI MAC OS FOR WINDOWS 11 - v4.5 [TRAFFIC LIGHTS EDITION]
+              ROHIT BHAI MAC OS FOR WINDOWS 11 - v4.4 [ULTIMATE SQUIRCLE EDITION]
                                Crafted for Rohit Bhai
 ========================================================================================
 "@ -ForegroundColor Cyan
@@ -53,7 +53,6 @@ Write-Host "  [+] macOS Capitaine Dark Cursors with Rainbow Spinning Beach-Ball"
 Write-Host "  [+] Official Apple macOS Sound Scheme (Trash Empty, USB Connect, Pop, Tink)" -ForegroundColor White
 Write-Host "  [+] Official Apple macOS File Explorer & Folder Icons (Sonoma Aqua Folders, Macintosh HD)" -ForegroundColor White
 Write-Host "  [+] Official Apple macOS Squircle App Icons (Safari, Finder, App Store, WhatsApp, Discord, Steam, Notes, etc.)" -ForegroundColor White
-Write-Host "  [+] Apple Traffic Light Window Buttons (Red, Yellow, Green circles on the RIGHT side)" -ForegroundColor White
 Write-Host "  [+] 4K Ultra-HD macOS Wallpaper & Windows Deep Dark Theme" -ForegroundColor White
 Write-Host ""
 
@@ -843,20 +842,23 @@ public class Win32Wall {
 # -------------------------------------------------------------------------
 # Step 9: Import Windhawk Mods & Settings (Island Dock, Genie, Net Speed)
 # -------------------------------------------------------------------------
-Write-Host "`n[9/9] Activating all 9 Windhawk mods, exact ratios, colors, and animations..." -ForegroundColor Cyan
-Write-Host "      (Mac Island Dock, Genie Animation, LiquidGlass, Apple Net Speed, Right-Side Apple Traffic Lights...)" -ForegroundColor DarkGray
+Write-Host "`n[9/9] Activating all 8 Windhawk mods, exact ratios, colors, and animations..." -ForegroundColor Cyan
+Write-Host "      (Mac Island Dock, Genie Animation, LiquidGlass, Apple Net Speed...)" -ForegroundColor DarkGray
 
 if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
-        # 1. Enable critical process injection for DWM titlebar traffic lights
-    & $WindhawkCli app settings set --confirm-app-restart engine.injectIntoCriticalProcesses true 2>$null
-    & $WindhawkCli app settings set --confirm-app-restart engine.include "dwm.exe" 2>$null
+    # Ensure any traffic light mod is completely removed (reverting to clean original Windows buttons)
+    & $WindhawkCli mod remove local@caption-buttons-customizer --yes 2>$null
+    & $WindhawkCli mod remove caption-buttons-customizer --yes 2>$null
+    Remove-Item -Path "HKLM:\SOFTWARE\Windhawk\Engine\Mods\caption-buttons-customizer" -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -Path "HKLM:\SOFTWARE\Windhawk\Engine\Mods\local@caption-buttons-customizer" -Recurse -Force -ErrorAction SilentlyContinue
+    Stop-Process -Name dwm -Force -ErrorAction SilentlyContinue
 
-    # 2. Import all mods with --yes confirmation
+    # Import clean 8-mod preset
     & $WindhawkCli data import $WhDataLocal --yes --on-conflict overwrite --confirm-app-restart
     $importCode = $LASTEXITCODE
 
     if ($importCode -eq 0) {
-        Write-Host "  [OK] All mods and custom settings activated successfully!" -ForegroundColor Green
+        Write-Host "  [OK] All 8 mods and custom settings activated successfully!" -ForegroundColor Green
     } else {
         Write-Host "  [*] Retrying with local compilation mode..." -ForegroundColor Yellow
         & $WindhawkCli data import $WhDataLocal --yes --offline --on-conflict overwrite --confirm-app-restart
@@ -865,43 +867,6 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
 
     # Ensure Maximize Window Guard (Top Bar Fixed Top-Right & Bottom Dock Always Visible with Zero Overlap)
     & $WindhawkCli mod settings set mac-island-dock hiding.autoHide=0 2>$null
-    
-    # 3. Ensure Caption Buttons Customizer is installed & configured (RIGHT-SIDE Traffic Lights)
-    Write-Host "  [*] Configuring Apple Traffic Light Buttons (Right-Side)..." -ForegroundColor Cyan
-    $localModSrc = Join-Path $WorkDir "caption-buttons-customizer.wh.cpp"
-    $repoModSrc = if ($ScriptDir) { Join-Path $ScriptDir "assets\mods\caption-buttons-customizer.wh.cpp" } else { $null }
-    if ($repoModSrc -and (Test-Path $repoModSrc)) {
-        Copy-Item $repoModSrc -Destination $localModSrc -Force
-    } else {
-        $modUrl = "https://raw.githubusercontent.com/$RepoOwner/$RepoName/$Branch/assets/mods/caption-buttons-customizer.wh.cpp"
-        Invoke-WebRequest -Uri $modUrl -OutFile $localModSrc -UseBasicParsing -ErrorAction SilentlyContinue
-    }
-    if (Test-Path $localModSrc) {
-        & $WindhawkCli mod install --file $localModSrc caption-buttons-customizer 2>$null
-    } else {
-        & $WindhawkCli mod install caption-buttons-customizer 2>$null
-    }
-
-    # Strict enforcement: Traffic Light Buttons on the RIGHT side
-    $cbcReg = "HKLM:\SOFTWARE\Windhawk\Engine\Mods\caption-buttons-customizer\Settings"
-    if (-not (Test-Path $cbcReg)) { New-Item -Path $cbcReg -Force | Out-Null }
-    Set-ItemProperty -Path $cbcReg -Name "buttons.moveButtons" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $cbcReg -Name "buttons.leftMargin" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $cbcReg -Name "buttons.buttonTighten" -Value 12 -Type DWord -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $cbcReg -Name "buttons.order" -Value "minMaxClose" -Type String -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $cbcReg -Name "buttons.showDialogClose" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $cbcReg -Name "buttonStyle.style" -Value "macos" -Type String -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $cbcReg -Name "buttonStyle.minimizeColor" -Value "#FEBC2E" -Type String -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $cbcReg -Name "buttonStyle.maximizeColor" -Value "#28C840" -Type String -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $cbcReg -Name "buttonStyle.closeColor" -Value "#FF5F57" -Type String -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $cbcReg -Name "buttonStyle.restartDwmOnUnload" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $cbcReg -Name "exclusions.excludedApps" -Value "notepad.exe, taskmgr.exe, WindowsTerminal.exe" -Type String -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $cbcReg -Name "exclusions.excludedClasses" -Value "CabinetWClass" -Type String -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $cbcReg -Name "explorerTabs.enabled" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $cbcReg -Name "debugLog" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-
-    # Restart DWM to refresh window caption button glyphs
-    Stop-Process -Name dwm -Force -ErrorAction SilentlyContinue
     $islandStoragePath = "HKLM:\Software\Windhawk\Engine\ModsWritable\mac-island-dock\LocalStorage"
     if (-not (Test-Path $islandStoragePath)) {
         New-Item -Path $islandStoragePath -Force | Out-Null
@@ -963,7 +928,7 @@ Remove-Item -Path $WorkDir -Recurse -Force -ErrorAction SilentlyContinue
 
 Write-Host ""
 Write-Host "========================================================================================" -ForegroundColor Green
-Write-Host "            CONGRATULATIONS! ROHIT BHAI MAC OS v4.5 IS NOW ACTIVE!                     " -ForegroundColor Green
+Write-Host "            CONGRATULATIONS! ROHIT BHAI MAC OS v4.4 IS NOW ACTIVE!                     " -ForegroundColor Green
 Write-Host "========================================================================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "  * Official Apple macOS Folder Icons (Sonoma Aqua, Documents, Downloads, etc.) active" -ForegroundColor White
@@ -975,7 +940,6 @@ Write-Host "  * Apple Taskbar Network Speed indicator active" -ForegroundColor W
 Write-Host "  * Apple SF Pro Display typography installed" -ForegroundColor White
 Write-Host "  * macOS Capitaine Dark Cursors (with rainbow spinning beach-ball) active" -ForegroundColor White
 Write-Host "  * 4K Ultra-HD macOS Wallpaper & Deep Dark Mode applied" -ForegroundColor White
-Write-Host "  * Apple Traffic Light Window Buttons (Right Side: Red, Yellow, Green circles) active" -ForegroundColor White
 Write-Host ""
 Write-Host "  Crafted with love by: Rohit Bhai" -ForegroundColor Cyan
 Write-Host "  Repository: https://github.com/Rohit-Bhai-Youtube/rohit-bhai-mac-os" -ForegroundColor DarkGray
