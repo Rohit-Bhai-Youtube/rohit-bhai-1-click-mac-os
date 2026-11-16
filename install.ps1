@@ -843,23 +843,65 @@ public class Win32Wall {
 # -------------------------------------------------------------------------
 # Step 9: Import Windhawk Mods & Settings (Island Dock, Genie, Net Speed)
 # -------------------------------------------------------------------------
-Write-Host "`n[9/9] Activating all 8 Windhawk mods, exact ratios, colors, and animations..." -ForegroundColor Cyan
-Write-Host "      (Mac Island Dock, Genie Animation, LiquidGlass, Apple Net Speed...)" -ForegroundColor DarkGray
+Write-Host "`n[9/9] Activating all 9 Windhawk mods, exact ratios, colors, and animations..." -ForegroundColor Cyan
+Write-Host "      (Mac Island Dock, Genie Animation, LiquidGlass, Apple Net Speed, Right-Side Apple Traffic Lights...)" -ForegroundColor DarkGray
 
 if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
-    & $WindhawkCli data import $WhDataLocal --on-conflict overwrite --confirm-app-restart
+        # 1. Enable critical process injection for DWM titlebar traffic lights
+    & $WindhawkCli app settings set --confirm-app-restart engine.injectIntoCriticalProcesses true 2>$null
+    & $WindhawkCli app settings set --confirm-app-restart engine.include "dwm.exe" 2>$null
+
+    # 2. Import all mods with --yes confirmation
+    & $WindhawkCli data import $WhDataLocal --yes --on-conflict overwrite --confirm-app-restart
     $importCode = $LASTEXITCODE
 
     if ($importCode -eq 0) {
         Write-Host "  [OK] All mods and custom settings activated successfully!" -ForegroundColor Green
     } else {
         Write-Host "  [*] Retrying with local compilation mode..." -ForegroundColor Yellow
-        & $WindhawkCli data import $WhDataLocal --offline --on-conflict overwrite --confirm-app-restart
+        & $WindhawkCli data import $WhDataLocal --yes --offline --on-conflict overwrite --confirm-app-restart
         Write-Host "  [OK] Import completed!" -ForegroundColor Green
     }
 
     # Ensure Maximize Window Guard (Top Bar Fixed Top-Right & Bottom Dock Always Visible with Zero Overlap)
     & $WindhawkCli mod settings set mac-island-dock hiding.autoHide=0 2>$null
+    
+    # 3. Ensure Caption Buttons Customizer is installed & configured (RIGHT-SIDE Traffic Lights)
+    Write-Host "  [*] Configuring Apple Traffic Light Buttons (Right-Side)..." -ForegroundColor Cyan
+    $localModSrc = Join-Path $WorkDir "caption-buttons-customizer.wh.cpp"
+    $repoModSrc = if ($ScriptDir) { Join-Path $ScriptDir "assets\mods\caption-buttons-customizer.wh.cpp" } else { $null }
+    if ($repoModSrc -and (Test-Path $repoModSrc)) {
+        Copy-Item $repoModSrc -Destination $localModSrc -Force
+    } else {
+        $modUrl = "https://raw.githubusercontent.com/$RepoOwner/$RepoName/$Branch/assets/mods/caption-buttons-customizer.wh.cpp"
+        Invoke-WebRequest -Uri $modUrl -OutFile $localModSrc -UseBasicParsing -ErrorAction SilentlyContinue
+    }
+    if (Test-Path $localModSrc) {
+        & $WindhawkCli mod install --file $localModSrc caption-buttons-customizer 2>$null
+    } else {
+        & $WindhawkCli mod install caption-buttons-customizer 2>$null
+    }
+
+    # Strict enforcement: Traffic Light Buttons on the RIGHT side
+    $cbcReg = "HKLM:\SOFTWARE\Windhawk\Engine\Mods\caption-buttons-customizer\Settings"
+    if (-not (Test-Path $cbcReg)) { New-Item -Path $cbcReg -Force | Out-Null }
+    Set-ItemProperty -Path $cbcReg -Name "buttons.moveButtons" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $cbcReg -Name "buttons.leftMargin" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $cbcReg -Name "buttons.buttonTighten" -Value 12 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $cbcReg -Name "buttons.order" -Value "minMaxClose" -Type String -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $cbcReg -Name "buttons.showDialogClose" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $cbcReg -Name "buttonStyle.style" -Value "macos" -Type String -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $cbcReg -Name "buttonStyle.minimizeColor" -Value "#FEBC2E" -Type String -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $cbcReg -Name "buttonStyle.maximizeColor" -Value "#28C840" -Type String -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $cbcReg -Name "buttonStyle.closeColor" -Value "#FF5F57" -Type String -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $cbcReg -Name "buttonStyle.restartDwmOnUnload" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $cbcReg -Name "exclusions.excludedApps" -Value "notepad.exe, taskmgr.exe, WindowsTerminal.exe" -Type String -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $cbcReg -Name "exclusions.excludedClasses" -Value "CabinetWClass" -Type String -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $cbcReg -Name "explorerTabs.enabled" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $cbcReg -Name "debugLog" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+
+    # Restart DWM to refresh window caption button glyphs
+    Stop-Process -Name dwm -Force -ErrorAction SilentlyContinue
     $islandStoragePath = "HKLM:\Software\Windhawk\Engine\ModsWritable\mac-island-dock\LocalStorage"
     if (-not (Test-Path $islandStoragePath)) {
         New-Item -Path $islandStoragePath -Force | Out-Null
