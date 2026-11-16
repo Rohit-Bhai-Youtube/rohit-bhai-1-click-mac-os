@@ -392,7 +392,7 @@ try {
         Set-ItemProperty -Path $pcKey -Name "(Default)" -Value "$thisPc,0" -Force -ErrorAction SilentlyContinue
     }
 
-    # 4. User Profile Special Folders (Downloads, Documents, Pictures, Music, Videos, Desktop)
+    # 4. User Profile Special Folders and All User Directories
     $folderMap = @(
         @{ Name = "Downloads"; Paths = @("$env:USERPROFILE\Downloads"); Ico = Join-Path $iconsTarget "macOS_Downloads.ico"; GUIDs = @("{374DE290-123F-4565-9164-39C4925E467B}", "{7d83ee9b-2244-4e70-b1f5-5393042af1e4}") }
         @{ Name = "Documents"; Paths = @("$env:USERPROFILE\OneDrive\Documents", "$env:USERPROFILE\Documents", [Environment]::GetFolderPath('MyDocuments')); Ico = Join-Path $iconsTarget "macOS_Documents.ico"; GUIDs = @("{FDD39AD0-238F-46AF-ADB4-6C85480369C7}", "{f42ee2d3-909f-4907-8871-4c22fc0bf756}") }
@@ -425,6 +425,37 @@ try {
                 }
             }
         }
+    }
+
+    # Apply macOS Blue folder icon to all user folders in $env:USERPROFILE & OneDrive
+    $genericIco = Join-Path $iconsTarget "macOS_Folder.ico"
+    if (Test-Path $genericIco) {
+        $scanRoots = @($env:USERPROFILE, "$env:USERPROFILE\OneDrive")
+        foreach ($root in $scanRoots) {
+            if ($root -and (Test-Path $root)) {
+                Get-ChildItem -Path $root -Directory -Force -ErrorAction SilentlyContinue | ForEach-Object {
+                    $n = $_.Name
+                    if ($n -notin @("AppData", "Application Data", "Cookies", "Local Settings", "NetHood", "PrintHood", "Recent", "SendTo", "Start Menu", "Templates", "Documents", "Downloads", "Pictures", "Music", "Videos", "Desktop")) {
+                        $p = $_.FullName
+                        $ini = Join-Path $p "desktop.ini"
+                        if (Test-Path $ini) { attrib -h -s -r $ini 2>$null }
+                        $iniContent = "[.ShellClassInfo]`r`nIconResource=$genericIco,0`r`n[ViewState]`r`nMode=`r`nVid=`r`nFolderType=Generic`r`n"
+                        try {
+                            [System.IO.File]::WriteAllText($ini, $iniContent, [System.Text.Encoding]::ASCII)
+                            attrib +h +s $ini 2>$null
+                            attrib +r $p 2>$null
+                        } catch {}
+                    }
+                }
+            }
+        }
+    }
+
+    # Copy 1-Click Global Admin Icon Patch to Desktop
+    $desktopDir = if (Test-Path "$env:USERPROFILE\OneDrive\Desktop") { "$env:USERPROFILE\OneDrive\Desktop" } else { [Environment]::GetFolderPath('Desktop') }
+    $adminBatSrc = if ($ScriptDir) { Join-Path $ScriptDir "Apply_Global_Mac_Icons_Admin.bat" } else { $null }
+    if ($adminBatSrc -and (Test-Path $adminBatSrc) -and $desktopDir) {
+        Copy-Item $adminBatSrc -Destination (Join-Path $desktopDir "Apply_Global_Mac_Icons_Admin.bat") -Force -ErrorAction SilentlyContinue
     }
 
     # 5. Flush Icon Cache
