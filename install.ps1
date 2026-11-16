@@ -1,5 +1,5 @@
 ﻿# ==============================================================================
-# Rohit Bhai Mac OS for Windows 11 - 1-Click Ultimate Suite v4.4 Pro
+# Rohit Bhai Mac OS for Windows 11 - 1-Click Ultimate Suite v4.5 Pro
 # Target: Windows 11 (22H2 / 23H2 / 24H2) and Windows 10
 # Includes: Windhawk Mac Island Dock, Genie, Net Speed, SF Pro Fonts,
 #           macOS Capitaine Cursors, 4K macOS Wallpaper, Dark Mode,
@@ -40,7 +40,7 @@ Write-Host @"
    ██╔══██╗██║   ██║██╔══██╗   ██╔══╝  ██║    ██╔══██║╚════██║██╔══██║
    ██║  ██║╚██████╔╝██████╔╝   ██║     ███████╗██║  ██║███████║██║  ██║
    ╚═╝  ╚═╝ ╚═════╝ ╚═════╝    ╚═╝     ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
-              ROHIT BHAI MAC OS FOR WINDOWS 11 - v4.4 [ULTIMATE SQUIRCLE EDITION]
+              ROHIT BHAI MAC OS FOR WINDOWS 11 - v4.5 [TRAFFIC LIGHTS EDITION]
                                Crafted for Rohit Bhai
 ========================================================================================
 "@ -ForegroundColor Cyan
@@ -53,6 +53,7 @@ Write-Host "  [+] macOS Capitaine Dark Cursors with Rainbow Spinning Beach-Ball"
 Write-Host "  [+] Official Apple macOS Sound Scheme (Trash Empty, USB Connect, Pop, Tink)" -ForegroundColor White
 Write-Host "  [+] Official Apple macOS File Explorer & Folder Icons (Sonoma Aqua Folders, Macintosh HD)" -ForegroundColor White
 Write-Host "  [+] Official Apple macOS Squircle App Icons (Safari, Finder, App Store, WhatsApp, Discord, Steam, Notes, etc.)" -ForegroundColor White
+Write-Host "  [+] Apple Traffic Light Window Buttons (Red, Yellow, Green circles on the RIGHT side)" -ForegroundColor White
 Write-Host "  [+] 4K Ultra-HD macOS Wallpaper & Windows Deep Dark Theme" -ForegroundColor White
 Write-Host ""
 
@@ -920,7 +921,7 @@ Remove-Item -Path $WorkDir -Recurse -Force -ErrorAction SilentlyContinue
 
 Write-Host ""
 Write-Host "========================================================================================" -ForegroundColor Green
-Write-Host "            CONGRATULATIONS! ROHIT BHAI MAC OS v4.4 IS NOW ACTIVE!                     " -ForegroundColor Green
+Write-Host "            CONGRATULATIONS! ROHIT BHAI MAC OS v4.5 IS NOW ACTIVE!                     " -ForegroundColor Green
 Write-Host "========================================================================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "  * Official Apple macOS Folder Icons (Sonoma Aqua, Documents, Downloads, etc.) active" -ForegroundColor White
@@ -932,9 +933,10 @@ Write-Host "  * Apple Taskbar Network Speed indicator active" -ForegroundColor W
 Write-Host "  * Apple SF Pro Display typography installed" -ForegroundColor White
 Write-Host "  * macOS Capitaine Dark Cursors (with rainbow spinning beach-ball) active" -ForegroundColor White
 Write-Host "  * 4K Ultra-HD macOS Wallpaper & Deep Dark Mode applied" -ForegroundColor White
+Write-Host "  * Apple Traffic Light Window Buttons (Right Side: Red, Yellow, Green circles) active" -ForegroundColor White
 Write-Host ""
 Write-Host "  Crafted with love by: Rohit Bhai" -ForegroundColor Cyan
-Write-Host "  Repository: https://github.com/romflasher3419-spec/rohit-bhai-mac-os" -ForegroundColor DarkGray
+Write-Host "  Repository: https://github.com/Rohit-Bhai-Youtube/rohit-bhai-mac-os" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "Press any key to close..."
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
