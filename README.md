@@ -1,4 +1,4 @@
-﻿# ðŸ Rohit Bhai Mac OS for Windows 11 (v4.4 Ultimate Squircle Edition)
+# ðŸ Rohit Bhai Mac OS for Windows 11 (v4.6 Dynamic Island Edition)
 
 > **Crafted with love by Rohit Bhai**  
 > Transform Windows 11 into a 100% authentic macOS desktop experience. Zero bloatware, zero background battery/RAM drain â€” powered by native Windhawk injection, Apple SF Pro typography, Capitaine Dark cursors, the **Official Apple macOS System Sound Scheme**, **Authentic macOS Folder & System Icons**, and **Official macOS Squircle App Icons for Dock & Start Menu**!
@@ -17,7 +17,7 @@ irm https://raw.githubusercontent.com/Rohit-Bhai-Youtube/rohit-bhai-mac-os/main/
 
 ---
 
-## âœ¨ What's Included in v4.4 Ultimate:
+## âœ¨ What's Included in v4.6 Dynamic Island Edition:
 
 1. **ðŸŽ¨ Official Apple macOS Squircle App Icons (Dock, Taskbar & Start Menu)**:
    - **Microsoft Edge âž” Apple Safari**: Official white squircle with royal blue compass needle.
