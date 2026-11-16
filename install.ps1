@@ -1,4 +1,4 @@
-# ==============================================================================
+﻿# ==============================================================================
 # Rohit Bhai Mac OS for Windows 11 - 1-Click Ultimate Suite v4.4 Pro
 # Target: Windows 11 (22H2 / 23H2 / 24H2) and Windows 10
 # Includes: Windhawk Mac Island Dock, Genie, Net Speed, SF Pro Fonts,
@@ -455,12 +455,21 @@ try {
             $uniquePaths = $f.Paths | Select-Object -Unique
             foreach ($p in $uniquePaths) {
                 if ($p -and (Test-Path $p)) {
+                    try {
+                        $item = Get-Item -LiteralPath $p -Force -ErrorAction Stop
+                        if ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) { continue }
+                    } catch { continue }
+
                     $ini = Join-Path $p "desktop.ini"
-                    if (Test-Path $ini) { attrib -h -s -r $ini 2>$null }
-                    $iniContent = "[.ShellClassInfo]`r`nIconResource=$($f.Ico),0`r`n[ViewState]`r`nMode=`r`nVid=`r`nFolderType=Generic`r`n"
-                    [System.IO.File]::WriteAllText($ini, $iniContent, [System.Text.Encoding]::ASCII)
-                    attrib +h +s $ini 2>$null
-                    attrib +r $p 2>$null
+                    try {
+                        if (Test-Path -LiteralPath $ini) {
+                            (Get-Item -LiteralPath $ini -Force).Attributes = 'Normal'
+                        }
+                        $iniContent = "[.ShellClassInfo]`r`nIconResource=$($f.Ico),0`r`n[ViewState]`r`nMode=`r`nVid=`r`nFolderType=Generic`r`n"
+                        [System.IO.File]::WriteAllText($ini, $iniContent, [System.Text.Encoding]::ASCII)
+                        (Get-Item -LiteralPath $ini -Force).Attributes = 'Hidden, System'
+                        (Get-Item -LiteralPath $p -Force).Attributes = ((Get-Item -LiteralPath $p -Force).Attributes -bor [System.IO.FileAttributes]::ReadOnly)
+                    } catch {}
                 }
             }
         }
@@ -473,15 +482,18 @@ try {
             if ($root -and (Test-Path $root)) {
                 Get-ChildItem -Path $root -Directory -Force -ErrorAction SilentlyContinue | ForEach-Object {
                     $n = $_.Name
-                    if ($n -notin @("AppData", "Application Data", "Cookies", "Local Settings", "NetHood", "PrintHood", "Recent", "SendTo", "Start Menu", "Templates", "Documents", "Downloads", "Pictures", "Music", "Videos", "Desktop")) {
+                    $isReparse = $_.Attributes -band [System.IO.FileAttributes]::ReparsePoint
+                    if (-not $isReparse -and $n -notin @("AppData", "Application Data", "Cookies", "Local Settings", "NetHood", "PrintHood", "Recent", "SendTo", "Start Menu", "Templates", "Documents", "Downloads", "Pictures", "Music", "Videos", "Desktop", "My Documents", "My Pictures", "My Music", "My Videos")) {
                         $p = $_.FullName
                         $ini = Join-Path $p "desktop.ini"
-                        if (Test-Path $ini) { attrib -h -s -r $ini 2>$null }
-                        $iniContent = "[.ShellClassInfo]`r`nIconResource=$folderIco,0`r`n[ViewState]`r`nMode=`r`nVid=`r`nFolderType=Generic`r`n"
                         try {
+                            if (Test-Path -LiteralPath $ini) {
+                                (Get-Item -LiteralPath $ini -Force).Attributes = 'Normal'
+                            }
+                            $iniContent = "[.ShellClassInfo]`r`nIconResource=$folderIco,0`r`n[ViewState]`r`nMode=`r`nVid=`r`nFolderType=Generic`r`n"
                             [System.IO.File]::WriteAllText($ini, $iniContent, [System.Text.Encoding]::ASCII)
-                            attrib +h +s $ini 2>$null
-                            attrib +r $p 2>$null
+                            (Get-Item -LiteralPath $ini -Force).Attributes = 'Hidden, System'
+                            (Get-Item -LiteralPath $p -Force).Attributes = ((Get-Item -LiteralPath $p -Force).Attributes -bor [System.IO.FileAttributes]::ReadOnly)
                         } catch {}
                     }
                 }
