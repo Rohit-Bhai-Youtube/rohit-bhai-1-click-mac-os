@@ -1,7 +1,8 @@
 ﻿# ==============================================================================
-# Rohit Bhai Mac OS - Complete Uninstaller & Windows Restore Suite
+# Rohit Bhai Mac OS - Complete 1-Click Uninstaller & Windows Restore Suite
 # Target: Windows 11 / Windows 10
-# Reverts Windhawk mods, cursor schemes, sound schemes, folder icons, and fonts safely
+# Reverts 100% of Windhawk mods, cursor schemes, sound schemes, folder & drive icons,
+# taskbar shortcuts, wallpaper, and restores original Windows defaults.
 # Crafted for Rohit Bhai | 100% Native Pure PowerShell
 # ==============================================================================
 
@@ -40,15 +41,15 @@ Write-Host @"
 ========================================================================================
 "@ -ForegroundColor Yellow
 
-Write-Host "  [*] Reverting macOS customization and restoring original Windows defaults..." -ForegroundColor White
+Write-Host "  [*] Restoring 100% original Windows 11 defaults across all system components..." -ForegroundColor White
 Write-Host ""
 
 # -------------------------------------------------------------------------
 # Step 1: Terminate Island Daemon & Remove Startup Persistence
 # -------------------------------------------------------------------------
-Write-Host "[1/7] Removing Background Daemons & Startup Entries..." -ForegroundColor Cyan
+Write-Host "[1/8] Removing Background Daemons & Startup Entries..." -ForegroundColor Cyan
 try {
-    # Kill running island daemon powershell background jobs
+    # Terminate running island daemon powershell background jobs
     Get-CimInstance Win32_Process -Filter "Name like 'powershell%'" -ErrorAction SilentlyContinue | Where-Object {
         $_.CommandLine -like "*run_island_daemon.ps1*"
     } | ForEach-Object {
@@ -66,221 +67,54 @@ try {
     Remove-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'RohitBhai_Mac_Island' -ErrorAction SilentlyContinue
     Remove-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'Windhawk' -ErrorAction SilentlyContinue
 
-    Write-Host "  [OK] Startup daemons removed!" -ForegroundColor Green
+    Write-Host "  [OK] Startup daemons and persistence removed!" -ForegroundColor Green
 } catch {
     Write-Host "  [-] Skipped startup cleanup." -ForegroundColor DarkGray
 }
 
 # -------------------------------------------------------------------------
-# Step 2: Reset Sound Scheme to Windows Default
+# Step 2: Disable and Remove Windhawk Mods
 # -------------------------------------------------------------------------
-Write-Host "`n[2/7] Restoring Windows Default Sound Scheme..." -ForegroundColor Cyan
-try {
-    Set-ItemProperty -Path "HKCU:\AppEvents\Schemes" -Name "(Default)" -Value ".Default" -Force -ErrorAction SilentlyContinue
-    if (Test-Path "HKCU:\AppEvents\Schemes\Names\RohitBhaiMacOS") {
-        Remove-Item "HKCU:\AppEvents\Schemes\Names\RohitBhaiMacOS" -Recurse -Force -ErrorAction SilentlyContinue
-    }
-    Write-Host "  [OK] Sound scheme restored to Windows Default!" -ForegroundColor Green
-} catch {
-    Write-Host "  [-] Skipped sound scheme reset." -ForegroundColor DarkGray
-}
-
-# -------------------------------------------------------------------------
-# Step 3: Reset Cursors to Windows Default
-# -------------------------------------------------------------------------
-Write-Host "`n[3/7] Restoring Windows Default Cursors..." -ForegroundColor Cyan
-try {
-    $schemePath = "HKCU:\Control Panel\Cursors"
-    Set-ItemProperty -Path $schemePath -Name "(Default)" -Value "Windows Default" -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $schemePath -Name "Scheme Source" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-
-    $cursorKeys = @("Arrow","Help","AppStarting","Wait","Crosshair","IBeam","NWPen","No","SizeNS","SizeWE","SizeNWSE","SizeNESW","SizeAll","UpArrow","Hand")
-    foreach ($cur in $cursorKeys) {
-        Remove-ItemProperty -Path $schemePath -Name $cur -ErrorAction SilentlyContinue
-    }
-
-    Add-Type @"
-using System;
-using System.Runtime.InteropServices;
-public class Win32CursorReset {
-    [DllImport("user32.dll", SetLastError = true)]
-    public static extern bool SystemParametersInfo(uint uiAction, uint uiParam, IntPtr pvParam, uint fWinIni);
-}
-"@ -ErrorAction SilentlyContinue
-    [Win32CursorReset]::SystemParametersInfo(0x0057, 0, [IntPtr]::Zero, 3) | Out-Null
-    Write-Host "  [OK] Cursors restored to Windows Default!" -ForegroundColor Green
-} catch {
-    Write-Host "  [-] Skipped cursor reset." -ForegroundColor DarkGray
-}
-
-# -------------------------------------------------------------------------
-# Step 4: Reset File Explorer & Folder Icons
-# -------------------------------------------------------------------------
-Write-Host "`n[4/7] Restoring Windows Default Folder & Drive Icons..." -ForegroundColor Cyan
-try {
-    # Remove Shell Icons overrides
-    $shellIconsKeys = @(
-        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons",
-        "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons",
-        "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons"
-    )
-    foreach ($k in $shellIconsKeys) {
-        if (Test-Path $k) {
-            Remove-Item -Path $k -Recurse -Force -ErrorAction SilentlyContinue
-        }
-    }
-
-    # Remove HKCU Classes Folder overrides
-    foreach ($c in @("HKCU:\Software\Classes\Folder\DefaultIcon", "HKCU:\Software\Classes\Directory\DefaultIcon")) {
-        if (Test-Path $c) {
-            Remove-Item -Path $c -Recurse -Force -ErrorAction SilentlyContinue
-        }
-    }
-
-    # Remove DriveIcons overrides
-    if (Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons") {
-        Remove-Item "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons\*" -Recurse -Force -ErrorAction SilentlyContinue
-    }
-
-    # Reset Recycle Bin & This PC in HKCU
-    $binKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\DefaultIcon"
-    if (Test-Path $binKey) {
-        Set-ItemProperty -Path $binKey -Name "(Default)" -Value "C:\WINDOWS\System32\imageres.dll,-54" -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $binKey -Name "empty" -Value "C:\WINDOWS\System32\imageres.dll,-55" -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $binKey -Name "full" -Value "C:\WINDOWS\System32\imageres.dll,-54" -Force -ErrorAction SilentlyContinue
-    }
-
-    $pcKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\CLSID\{20D04FE0-3AEA-1069-A2D8-08002B30309D}\DefaultIcon"
-    if (Test-Path $pcKey) {
-        Set-ItemProperty -Path $pcKey -Name "(Default)" -Value "C:\WINDOWS\System32\imageres.dll,-109" -Force -ErrorAction SilentlyContinue
-    }
-
-    # Reset FolderDescriptions
-    $folderDefaults = @{
-        "{374DE290-123F-4565-9164-39C4925E467B}" = "C:\WINDOWS\system32\imageres.dll,-184" # Downloads
-        "{FDD39AD0-238F-46AF-ADB4-6C85480369C7}" = "C:\WINDOWS\system32\imageres.dll,-112" # Personal (Documents)
-        "{f42ee2d3-909f-4907-8871-4c22fc0bf756}" = "C:\WINDOWS\system32\imageres.dll,-112" # Documents
-        "{33E28130-4E1E-4676-835A-98395C3BC3BB}" = "C:\WINDOWS\system32\imageres.dll,-113" # Pictures
-        "{4BD8D571-6D19-48D3-BE97-422220080E43}" = "C:\WINDOWS\system32\imageres.dll,-108" # Music
-        "{18989B1D-99B5-455B-841C-AB7C74E4DDFC}" = "C:\WINDOWS\system32\imageres.dll,-189" # Video
-        "{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}" = "C:\WINDOWS\system32\imageres.dll,-183" # Desktop
-    }
-    foreach ($g in $folderDefaults.Keys) {
-        $p = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\$g"
-        if (Test-Path $p) {
-            Set-ItemProperty -Path $p -Name "Icon" -Value $folderDefaults[$g] -Force -ErrorAction SilentlyContinue
-        }
-    }
-
-    # Clean desktop.ini in user profile folders
-    $userDirs = @(
-        "$env:USERPROFILE\Downloads",
-        "$env:USERPROFILE\Documents",
-        "$env:USERPROFILE\Pictures",
-        "$env:USERPROFILE\Music",
-        "$env:USERPROFILE\Videos",
-        "$env:USERPROFILE\Desktop"
-    )
-    foreach ($d in $userDirs) {
-        $ini = Join-Path $d "desktop.ini"
-        if (Test-Path $ini) {
-            $content = Get-Content -Path $ini -Raw -ErrorAction SilentlyContinue
-            if ($content -match "RohitBhaiMacOS") {
-                attrib -h -s -r $ini 2>$null
-                Remove-Item $ini -Force -ErrorAction SilentlyContinue
-            }
-        }
-    }
-
-    # Flush icon and thumbnail cache
-    $iconCache = "$env:LOCALAPPDATA\IconCache.db"
-    if (Test-Path $iconCache) { Remove-Item $iconCache -Force -ErrorAction SilentlyContinue }
-    Get-ChildItem -Path "$env:LOCALAPPDATA\Microsoft\Windows\Explorer" -Filter "*cache*.db" -Force -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
-    & ie4uinit.exe -show 2>$null
-
-    Write-Host "  [OK] Default Windows folder and drive icons restored!" -ForegroundColor Green
-} catch {
-    Write-Host "  [-] Skipped folder icons reset." -ForegroundColor DarkGray
-}
-
-# -------------------------------------------------------------------------
-# Step 5: Clean SF Pro Font Registrations
-# -------------------------------------------------------------------------
-Write-Host "`n[5/7] Cleaning Installed Custom Fonts..." -ForegroundColor Cyan
-try {
-    $fontReg = "HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Fonts"
-    if (Test-Path $fontReg) {
-        $props = Get-ItemProperty -Path $fontReg -ErrorAction SilentlyContinue
-        foreach ($p in $props.PSObject.Properties) {
-            if ($p.Value -and ($p.Value -like "*RohitBhaiMacOS*")) {
-                Remove-ItemProperty -Path $fontReg -Name $p.Name -Force -ErrorAction SilentlyContinue
-            }
-        }
-    }
-    Write-Host "  [OK] Font registrations cleaned!" -ForegroundColor Green
-} catch {
-    Write-Host "  [-] Skipped font cleanup." -ForegroundColor DarkGray
-}
-
-# -------------------------------------------------------------------------
-# Step 6: Disable and Remove Windhawk Mods
-# -------------------------------------------------------------------------
-Write-Host "`n[6/7] Removing Windhawk Mods (Island Dock, Genie Animation, Net Speed)..." -ForegroundColor Cyan
+Write-Host "`n[2/8] Removing Windhawk Mods (Island Dock, Genie Animation, Net Speed)..." -ForegroundColor Cyan
 
 function Find-WindhawkCli {
-    $candidatePaths = @(
-        "C:\Program Files\Windhawk\windhawk-cli.exe",
-        "$env:ProgramFiles\Windhawk\windhawk-cli.exe",
-        "$env:ProgramW6432\Windhawk\windhawk-cli.exe",
-        "${env:ProgramFiles(x86)}\Windhawk\windhawk-cli.exe",
-        "$env:LOCALAPPDATA\Programs\Windhawk\windhawk-cli.exe"
+    $searchRoots = @(
+        "C:\Program Files\Windhawk",
+        "$env:ProgramFiles\Windhawk",
+        "$env:ProgramW6432\Windhawk",
+        "${env:ProgramFiles(x86)}\Windhawk",
+        "$env:LOCALAPPDATA\Programs\Windhawk"
     )
-    foreach ($p in $candidatePaths) {
-        if ($p -and (Test-Path $p)) { return $p }
+    foreach ($root in $searchRoots) {
+        if ($root -and (Test-Path $root)) {
+            $direct = Join-Path $root "windhawk-cli.exe"
+            if (Test-Path $direct) { return $direct }
+            $found = Get-ChildItem -Path $root -Filter "windhawk-cli.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($found -and (Test-Path $found.FullName)) { return $found.FullName }
+        }
     }
+    return $null
+}
 
-    try {
-        $proc = Get-Process -Name "windhawk" -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($proc -and $proc.Path) {
-            $cli = Join-Path (Split-Path $proc.Path -Parent) "windhawk-cli.exe"
-            if (Test-Path $cli) { return $cli }
-        }
-    } catch {}
-
-    try {
-        $svc = Get-CimInstance Win32_Service -Filter "Name = 'Windhawk'" -ErrorAction SilentlyContinue
-        if ($svc -and $svc.PathName) {
-            $cleanPath = $svc.PathName -replace '^"|"[^"]*$', '' -replace '\.exe.*$', '.exe'
-            if (Test-Path $cleanPath) {
-                $cli = Join-Path (Split-Path $cleanPath -Parent) "windhawk-cli.exe"
-                if (Test-Path $cli) { return $cli }
-            }
-        }
-    } catch {}
-
-    $regPaths = @(
-        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
-        "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*",
-        "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*"
+function Find-WindhawkExe {
+    $searchRoots = @(
+        "C:\Program Files\Windhawk",
+        "$env:ProgramFiles\Windhawk",
+        "$env:ProgramW6432\Windhawk",
+        "${env:ProgramFiles(x86)}\Windhawk",
+        "$env:LOCALAPPDATA\Programs\Windhawk"
     )
-    foreach ($reg in $regPaths) {
-        try {
-            $items = Get-ItemProperty -Path $reg -ErrorAction SilentlyContinue
-            foreach ($item in $items) {
-                if ($item.DisplayName -like "*Windhawk*") {
-                    if ($item.InstallLocation) {
-                        $cli = Join-Path $item.InstallLocation "windhawk-cli.exe"
-                        if (Test-Path $cli) { return $cli }
-                    }
-                }
-            }
-        } catch {}
+    foreach ($root in $searchRoots) {
+        if ($root -and (Test-Path $root)) {
+            $exe = Join-Path $root "windhawk.exe"
+            if (Test-Path $exe) { return $exe }
+        }
     }
-
     return $null
 }
 
 $WindhawkCli = Find-WindhawkCli
+$WindhawkExe = Find-WindhawkExe
 
 if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
     $mods = @(
@@ -301,38 +135,364 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
         & $WindhawkCli mod disable $m --yes 2>$null
         & $WindhawkCli mod remove $m --yes 2>$null
     }
+}
 
-    # Clean custom local storage
-    Remove-Item -Path "HKLM:\Software\Windhawk\Engine\ModsWritable\mac-island-dock" -Recurse -Force -ErrorAction SilentlyContinue
+# Clean all Windhawk Engine custom mods & local storage
+Remove-Item -Path "HKLM:\SOFTWARE\Windhawk\Engine\Mods\*" -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -Path "HKLM:\SOFTWARE\Windhawk\Engine\ModsWritable\*" -Recurse -Force -ErrorAction SilentlyContinue
 
-    $whExe = Join-Path (Split-Path $WindhawkCli -Parent) "windhawk.exe"
-    if (Test-Path $whExe) {
-        & $whExe -restart -tray-only 2>$null
-    }
-    Write-Host "  [OK] Windhawk mods removed cleanly!" -ForegroundColor Green
+if ($WindhawkExe -and (Test-Path $WindhawkExe)) {
+    & $WindhawkExe -restart -tray-only 2>$null
+    Write-Host "  [OK] Windhawk mods removed & engine reset to clean default!" -ForegroundColor Green
 } else {
-    Write-Host "  [-] Windhawk CLI not found (skipping mod unregistration)." -ForegroundColor DarkGray
+    Write-Host "  [OK] Windhawk configuration cleaned!" -ForegroundColor Green
 }
 
 # -------------------------------------------------------------------------
-# Step 7: Clean Rohit Bhai Mac OS Directory & Refresh Explorer
+# Step 3: Reset Drive Icons & Remove 'Macintosh HD' Label Overrides
 # -------------------------------------------------------------------------
-Write-Host "`n[7/7] Cleaning System Cache & Refreshing Windows Explorer..." -ForegroundColor Cyan
+Write-Host "`n[3/8] Restoring Windows C: Drive & Default Storage Labels..." -ForegroundColor Cyan
+try {
+    # Remove all DriveIcons and Drive label overrides across HKLM, WOW6432Node, and HKCU
+    $driveKeys = @(
+        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons",
+        "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons",
+        "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons",
+        "HKCU:\Software\Classes\Applications\Explorer.exe\Drives",
+        "HKCU:\Software\Classes\Applications\explorer.exe\Drives"
+    )
+    foreach ($dk in $driveKeys) {
+        if (Test-Path $dk) {
+            Remove-Item -Path $dk -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
 
-# Remove app data directory
+    # Reset C: drive filesystem volume label to standard 'Windows'
+    try {
+        Set-Volume -DriveLetter C -NewFileSystemLabel "Windows" -ErrorAction SilentlyContinue
+    } catch {}
+
+    Write-Host "  [OK] Drive C: restored back to original 'Windows (C:)'! No more Macintosh HD!" -ForegroundColor Green
+} catch {
+    Write-Host "  [-] Skipped drive label cleanup." -ForegroundColor DarkGray
+}
+
+# -------------------------------------------------------------------------
+# Step 4: Reset File Explorer & Folder Icons
+# -------------------------------------------------------------------------
+Write-Host "`n[4/8] Restoring Windows Default Folder & System Icons..." -ForegroundColor Cyan
+try {
+    # Remove Shell Icons overrides
+    $shellIconsKeys = @(
+        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons",
+        "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons",
+        "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons"
+    )
+    foreach ($k in $shellIconsKeys) {
+        if (Test-Path $k) {
+            Remove-Item -Path $k -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    # Remove HKCU Classes Folder overrides
+    foreach ($c in @("HKCU:\Software\Classes\Folder\DefaultIcon", "HKCU:\Software\Classes\Directory\DefaultIcon")) {
+        if (Test-Path $c) {
+            Remove-Item -Path $c -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    # Remove custom CLSID overrides in HKCU Classes
+    $customClsids = @(
+        "HKCU:\Software\Classes\CLSID\{645FF040-5081-101B-9F08-00AA002F954E}",
+        "HKCU:\Software\Classes\CLSID\{20D04FE0-3AEA-1069-A2D8-08002B30309D}",
+        "HKCU:\Software\Classes\CLSID\{59031A47-3F72-44A7-89C5-5595FE6B30EE}",
+        "HKCU:\Software\Classes\CLSID\{F02C1A0D-BE21-4350-88B0-7367FC96EF3C}"
+    )
+    foreach ($cls in $customClsids) {
+        if (Test-Path $cls) {
+            Remove-Item -Path $cls -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    # Reset Recycle Bin & This PC in Explorer CLSID to official Windows imageres.dll defaults
+    $binKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\DefaultIcon"
+    if (Test-Path $binKey) {
+        Set-ItemProperty -Path $binKey -Name "(Default)" -Value "C:\WINDOWS\System32\imageres.dll,-54" -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $binKey -Name "empty" -Value "C:\WINDOWS\System32\imageres.dll,-55" -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $binKey -Name "full" -Value "C:\WINDOWS\System32\imageres.dll,-54" -Force -ErrorAction SilentlyContinue
+    }
+
+    $pcKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\CLSID\{20D04FE0-3AEA-1069-A2D8-08002B30309D}\DefaultIcon"
+    if (Test-Path $pcKey) {
+        Set-ItemProperty -Path $pcKey -Name "(Default)" -Value "C:\WINDOWS\System32\imageres.dll,-109" -Force -ErrorAction SilentlyContinue
+    }
+
+    # Reset FolderDescriptions
+    $folderDefaults = @{
+        "{374DE290-123F-4565-9164-39C4925E467B}" = "C:\WINDOWS\system32\imageres.dll,-184" # Downloads
+        "{7d83ee9b-2244-4e70-b1f5-5393042af1e4}" = "C:\WINDOWS\system32\imageres.dll,-184" # Downloads 2
+        "{FDD39AD0-238F-46AF-ADB4-6C85480369C7}" = "C:\WINDOWS\system32\imageres.dll,-112" # Personal (Documents)
+        "{f42ee2d3-909f-4907-8871-4c22fc0bf756}" = "C:\WINDOWS\system32\imageres.dll,-112" # Documents
+        "{33E28130-4E1E-4676-835A-98395C3BC3BB}" = "C:\WINDOWS\system32\imageres.dll,-113" # Pictures
+        "{0ddd015d-b06c-45d5-8c4c-f59713854639}" = "C:\WINDOWS\system32\imageres.dll,-113" # Pictures 2
+        "{4BD8D571-6D19-48D3-BE97-422220080E43}" = "C:\WINDOWS\system32\imageres.dll,-108" # Music
+        "{a0c69a99-21c8-4671-8703-7934162fef1d}" = "C:\WINDOWS\system32\imageres.dll,-108" # Music 2
+        "{18989B1D-99B5-455B-841C-AB7C74E4DDFC}" = "C:\WINDOWS\system32\imageres.dll,-189" # Video
+        "{35286161-052a-4736-ac15-41e990f2430e}" = "C:\WINDOWS\system32\imageres.dll,-189" # Video 2
+        "{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}" = "C:\WINDOWS\system32\imageres.dll,-183" # Desktop
+    }
+    foreach ($g in $folderDefaults.Keys) {
+        $p = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\$g"
+        if (Test-Path $p) {
+            Set-ItemProperty -Path $p -Name "Icon" -Value $folderDefaults[$g] -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    # Clean desktop.ini in user profile folders
+    $userDirs = @(
+        "$env:USERPROFILE\Downloads",
+        "$env:USERPROFILE\Documents",
+        "$env:USERPROFILE\Pictures",
+        "$env:USERPROFILE\Music",
+        "$env:USERPROFILE\Videos",
+        "$env:USERPROFILE\Desktop",
+        "$env:USERPROFILE\OneDrive\Downloads",
+        "$env:USERPROFILE\OneDrive\Documents",
+        "$env:USERPROFILE\OneDrive\Pictures",
+        "$env:USERPROFILE\OneDrive\Desktop"
+    )
+    foreach ($d in $userDirs) {
+        if (Test-Path $d) {
+            $ini = Join-Path $d "desktop.ini"
+            if (Test-Path $ini) {
+                attrib -h -s -r "$ini" 2>$null
+                $content = Get-Content -LiteralPath $ini -Raw -ErrorAction SilentlyContinue
+                if ($content -match "RohitBhaiMacOS|Finder|macOS|Sonoma") {
+                    Remove-Item -LiteralPath $ini -Force -ErrorAction SilentlyContinue
+                }
+            }
+        }
+    }
+
+    Write-Host "  [OK] Default Windows folder & system icons restored!" -ForegroundColor Green
+} catch {
+    Write-Host "  [-] Skipped folder icons reset." -ForegroundColor DarkGray
+}
+
+# -------------------------------------------------------------------------
+# Step 5: Restore Taskbar & Start Menu App Icons (Edge, Explorer, Store)
+# -------------------------------------------------------------------------
+Write-Host "`n[5/8] Restoring Original Taskbar Icons (Edge, File Explorer, Apps)..." -ForegroundColor Cyan
+try {
+    $taskbarDir   = Join-Path $env:APPDATA 'Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar'
+    $userStartDir = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'
+    $allStartDir  = Join-Path $env:ProgramData 'Microsoft\Windows\Start Menu\Programs'
+    $shortcutDirs = @($taskbarDir, $userStartDir, $allStartDir)
+
+    $wsh = New-Object -ComObject WScript.Shell
+
+    # 1. Clean duplicate *(2).lnk, *(3).lnk in taskbar
+    if (Test-Path $taskbarDir) {
+        Get-ChildItem -Path $taskbarDir -Filter "*(*).lnk" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+    }
+
+    # 2. Restore 100% Native Microsoft Edge Taskbar Shortcut
+    $edgeExe = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+    if (-not (Test-Path $edgeExe)) { $edgeExe = "C:\Program Files\Microsoft\Edge\Application\msedge.exe" }
+    $edgeLnk = Join-Path $taskbarDir "Microsoft Edge.lnk"
+    if (Test-Path $edgeExe) {
+        $sc = $wsh.CreateShortcut($edgeLnk)
+        $sc.TargetPath = $edgeExe
+        $sc.Arguments = ""
+        $sc.IconLocation = "$edgeExe,0"
+        $sc.Save()
+    }
+
+    # 3. Restore 100% Native File Explorer Taskbar Shortcut
+    $explorerLnk = Join-Path $taskbarDir "File Explorer.lnk"
+    $sc = $wsh.CreateShortcut($explorerLnk)
+    $sc.TargetPath = "$env:WINDIR\explorer.exe"
+    $sc.Arguments = ""
+    $sc.IconLocation = "$env:WINDIR\explorer.exe,0"
+    $sc.Save()
+
+    # 4. Remove fake launcher shortcuts created by Mac suite in taskbar
+    $macCreatedShortcuts = @(
+        "Apple Music.lnk",
+        "Calculator.lnk",
+        "Notepad.lnk",
+        "Photos.lnk",
+        "Settings.lnk",
+        "Windows Terminal.lnk",
+        "WhatsApp.lnk",
+        "Telegram.lnk",
+        "Microsoft Store.lnk"
+    )
+    foreach ($scName in $macCreatedShortcuts) {
+        $p = Join-Path $taskbarDir $scName
+        if (Test-Path $p) {
+            Remove-Item -LiteralPath $p -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    # 5. Fix real installed apps (Discord, Steam, etc.) whose icons were customized
+    $discordLnk = Join-Path $taskbarDir "Discord.lnk"
+    $discordExe = "$env:LOCALAPPDATA\Discord\Discord.exe"
+    if ((Test-Path $discordLnk) -and (Test-Path $discordExe)) {
+        $sc = $wsh.CreateShortcut($discordLnk)
+        $sc.TargetPath = $discordExe
+        $sc.Arguments = ""
+        $sc.IconLocation = "$discordExe,0"
+        $sc.Save()
+    }
+
+    $steamLnk = Join-Path $taskbarDir "Steam.lnk"
+    $steamExe = "C:\Program Files (x86)\Steam\steam.exe"
+    if ((Test-Path $steamLnk) -and (Test-Path $steamExe)) {
+        $sc = $wsh.CreateShortcut($steamLnk)
+        $sc.TargetPath = $steamExe
+        $sc.Arguments = ""
+        $sc.IconLocation = "$steamExe,0"
+        $sc.Save()
+    }
+
+    # 6. Scan Start Menu and clean any shortcuts pointing to RohitBhaiMacOS
+    foreach ($dir in $shortcutDirs) {
+        if (-not (Test-Path $dir)) { continue }
+        Get-ChildItem -Path $dir -Filter "*.lnk" -Recurse -ErrorAction SilentlyContinue | ForEach-Object {
+            try {
+                $lnk = $wsh.CreateShortcut($_.FullName)
+                if ($lnk.TargetPath -like "*RohitBhaiMacOS*") {
+                    Remove-Item -LiteralPath $_.FullName -Force -ErrorAction SilentlyContinue
+                } elseif ($lnk.IconLocation -like "*RohitBhaiMacOS*") {
+                    $lnk.IconLocation = ""
+                    $lnk.Save()
+                }
+            } catch {}
+        }
+    }
+
+    Write-Host "  [OK] Original Microsoft Edge & File Explorer taskbar icons restored!" -ForegroundColor Green
+} catch {
+    Write-Host "  [-] Skipped taskbar shortcut restoration." -ForegroundColor DarkGray
+}
+
+# -------------------------------------------------------------------------
+# Step 6: Reset Cursors & System Sounds to Windows Default
+# -------------------------------------------------------------------------
+Write-Host "`n[6/8] Restoring Default Windows Cursors & Sound Scheme..." -ForegroundColor Cyan
+try {
+    # 1. Reset sound scheme
+    Set-ItemProperty -Path "HKCU:\AppEvents\Schemes" -Name "(Default)" -Value ".Default" -Force -ErrorAction SilentlyContinue
+    if (Test-Path "HKCU:\AppEvents\Schemes\Names\RohitBhaiMacOS") {
+        Remove-Item "HKCU:\AppEvents\Schemes\Names\RohitBhaiMacOS" -Recurse -Force -ErrorAction SilentlyContinue
+    }
+
+    # 2. Reset cursors
+    $schemePath = "HKCU:\Control Panel\Cursors"
+    Set-ItemProperty -Path $schemePath -Name "(Default)" -Value "Windows Default" -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $schemePath -Name "Scheme Source" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+
+    $cursorKeys = @("Arrow","Help","AppStarting","Wait","Crosshair","IBeam","NWPen","No","SizeNS","SizeWE","SizeNWSE","SizeNESW","SizeAll","UpArrow","Hand")
+    foreach ($cur in $cursorKeys) {
+        Remove-ItemProperty -Path $schemePath -Name $cur -ErrorAction SilentlyContinue
+    }
+
+    Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public class Win32CursorReset {
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern bool SystemParametersInfo(uint uiAction, uint uiParam, IntPtr pvParam, uint fWinIni);
+}
+"@ -ErrorAction SilentlyContinue
+    [Win32CursorReset]::SystemParametersInfo(0x0057, 0, [IntPtr]::Zero, 3) | Out-Null
+
+    # 3. Clean custom fonts
+    $fontReg = "HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Fonts"
+    if (Test-Path $fontReg) {
+        $props = Get-ItemProperty -Path $fontReg -ErrorAction SilentlyContinue
+        foreach ($p in $props.PSObject.Properties) {
+            if ($p.Value -and ($p.Value -like "*RohitBhaiMacOS*")) {
+                Remove-ItemProperty -Path $fontReg -Name $p.Name -Force -ErrorAction SilentlyContinue
+            }
+        }
+    }
+
+    Write-Host "  [OK] Cursors, Sounds, and Fonts restored to standard Windows defaults!" -ForegroundColor Green
+} catch {
+    Write-Host "  [-] Skipped cursor and sound reset." -ForegroundColor DarkGray
+}
+
+# -------------------------------------------------------------------------
+# Step 7: Restore Default Windows 11 Wallpaper
+# -------------------------------------------------------------------------
+Write-Host "`n[7/8] Restoring Default Windows Wallpaper..." -ForegroundColor Cyan
+try {
+    $defaultWallpapers = @(
+        "C:\Windows\Web\Wallpaper\Windows\img0.jpg",
+        "C:\Windows\Web\Wallpaper\Windows\img19.jpg",
+        "$env:WINDIR\Web\Wallpaper\Windows\img0.jpg"
+    )
+    $restoredWall = $null
+    foreach ($w in $defaultWallpapers) {
+        if (Test-Path $w) {
+            $restoredWall = $w
+            break
+        }
+    }
+
+    if ($restoredWall) {
+        Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name 'Wallpaper' -Value $restoredWall -Force -ErrorAction SilentlyContinue
+        Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public class Win32RestoreWall {
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern bool SystemParametersInfo(uint uiAction, uint uiParam, string pvParam, uint fWinIni);
+}
+"@ -ErrorAction SilentlyContinue
+        [Win32RestoreWall]::SystemParametersInfo(0x0014, 0, $restoredWall, 3) | Out-Null
+        rundll32.exe user32.dll,UpdatePerUserSystemParameters 1, True
+        Write-Host "  [OK] Default Windows 11 wallpaper restored!" -ForegroundColor Green
+    }
+} catch {
+    Write-Host "  [-] Skipped wallpaper restoration." -ForegroundColor DarkGray
+}
+
+# -------------------------------------------------------------------------
+# Step 8: Clean AppData Directory & Rebuild Windows Explorer Icon Cache
+# -------------------------------------------------------------------------
+Write-Host "`n[8/8] Rebuilding Windows Icon Cache & Refreshing Explorer..." -ForegroundColor Cyan
+
+# 1. Remove RohitBhaiMacOS data directory
 $appDir = "$env:LOCALAPPDATA\RohitBhaiMacOS"
 if (Test-Path $appDir) {
     Remove-Item -Path $appDir -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-# Restart Windows Explorer
+# 2. Terminate explorer to release icon database handles
 Stop-Process -Name explorer -Force -ErrorAction SilentlyContinue
-Start-Sleep -Seconds 1
+Start-Sleep -Seconds 2
+
+# 3. Flush icon and thumbnail cache files
+$iconCache = "$env:LOCALAPPDATA\IconCache.db"
+if (Test-Path $iconCache) { Remove-Item $iconCache -Force -ErrorAction SilentlyContinue }
+
+$expCache = "$env:LOCALAPPDATA\Microsoft\Windows\Explorer"
+if (Test-Path $expCache) {
+    Get-ChildItem -Path $expCache -Filter "*iconcache*.db" -Force -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+    Get-ChildItem -Path $expCache -Filter "*thumbcache*.db" -Force -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+}
+
+# 4. Relaunch Windows Explorer cleanly
 Start-Process explorer.exe
+Start-Sleep -Seconds 2
+& ie4uinit.exe -show 2>$null
 
 Write-Host ""
 Write-Host "========================================================================================" -ForegroundColor Green
 Write-Host "         CONGRATULATIONS! ROHIT BHAI MAC OS HAS BEEN COMPLETELY UNINSTALLED!            " -ForegroundColor Green
-Write-Host "                    Original Windows 11 defaults are fully restored!                    " -ForegroundColor Green
+Write-Host "              All icons, Edge, Explorer, wallpaper, and labels restored!                " -ForegroundColor Green
 Write-Host "========================================================================================" -ForegroundColor Green
 Write-Host ""

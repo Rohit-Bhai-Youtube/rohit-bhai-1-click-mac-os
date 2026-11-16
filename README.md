@@ -79,10 +79,12 @@ irm https://raw.githubusercontent.com/Rohit-Bhai-Youtube/rohit-bhai-mac-os/main/
 ```
 
 ### What the Uninstaller does:
-- ✅ **Restores Original Windows Icons**: Reverts Sonoma Aqua folder icons, Macintosh HD drive icons, and Apple Trash Bin back to native Windows icons.
-- ✅ **Restores Default Windows Sounds**: Resets Apple macOS sounds back to Windows Default (`.Default`).
-- ✅ **Restores Default Windows Cursors**: Removes Capitaine cursors and restores the default Windows white pointer.
-- ✅ **Cleans Windhawk Mods**: Disables and cleanly removes Mac Island, Centered Dock, Genie animations, and Net Speed indicators.
+- ✅ **Restores Taskbar Shortcuts & Icons**: Restores native Microsoft Edge and File Explorer icons, fixes app links, and removes custom launcher shortcuts.
+- ✅ **Restores Default Windows Wallpaper**: Automatically restores the official Windows 11 Bloom wallpaper (`img0.jpg`).
+- ✅ **Restores Windows C: Drive Label**: Completely removes "Macintosh HD" overrides and restores standard "Windows (C:)".
+- ✅ **Restores Original Windows Folder & System Icons**: Reverts Sonoma Aqua folders, storage drives, and Recycle Bin back to native Windows icons.
+- ✅ **Restores Default Windows Sounds & Cursors**: Resets Apple macOS sounds back to Windows Default (`.Default`) and restores standard white cursors.
+- ✅ **Cleans Windhawk Mods & Engine**: Disables and cleanly removes Mac Island, Centered Dock, Genie animations, and Net Speed indicators.
 - ✅ **Removes Startup Daemons**: Safely deletes all startup VBS scripts and background helper tasks.
 - ✅ **Flushes & Rebuilds Icon Cache**: Restores a fresh, clean Windows Explorer desktop instantly.
 
