@@ -334,62 +334,85 @@ try {
         } catch {}
     }
 
-    # 1. Generic Folder Icons (Shell Icons HKLM & HKCU)
-    $folderIco = Join-Path $iconsTarget "macOS_Folder.ico"
-    $folderOpenIco = Join-Path $iconsTarget "macOS_Folder_Open.ico"
+    # 1. Shell Icons (HKLM 64-bit, 32-bit & HKCU)
+    $folderIco      = Join-Path $iconsTarget "macOS_Folder.ico"
+    $folderOpenIco  = Join-Path $iconsTarget "macOS_Folder_Open.ico"
+    $driveIco       = Join-Path $iconsTarget "macOS_Drive.ico"
+    $driveSystemIco = Join-Path $iconsTarget "macOS_Drive_System.ico"
+    $thisPcIco      = Join-Path $iconsTarget "macOS_ThisPC.ico"
+    $trashEmptyIco  = Join-Path $iconsTarget "macOS_Trash_Empty.ico"
+    $trashFullIco   = Join-Path $iconsTarget "macOS_Trash_Full.ico"
+    $desktopIco     = Join-Path $iconsTarget "macOS_Desktop.ico"
     
-    if (Test-Path $folderIco) {
-        $shellIconsKeys = @(
-            "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons",
-            "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons",
-            "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons"
-        )
-        foreach ($k in $shellIconsKeys) {
-            if (-not (Test-Path $k)) { New-Item -Path $k -Force -ErrorAction SilentlyContinue | Out-Null }
-            Set-ItemProperty -Path $k -Name "3" -Value "$folderIco,0" -Force -ErrorAction SilentlyContinue
-            Set-ItemProperty -Path $k -Name "4" -Value "$folderOpenIco,0" -Force -ErrorAction SilentlyContinue
-        }
+    $shellIconsKeys = @(
+        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons",
+        "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons",
+        "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons"
+    )
+    foreach ($k in $shellIconsKeys) {
+        if (-not (Test-Path $k)) { New-Item -Path $k -Force -ErrorAction SilentlyContinue | Out-Null }
+        if (Test-Path $folderIco)      { Set-ItemProperty -Path $k -Name "3"   -Value $folderIco      -Force -ErrorAction SilentlyContinue }
+        if (Test-Path $folderOpenIco)  { Set-ItemProperty -Path $k -Name "4"   -Value $folderOpenIco  -Force -ErrorAction SilentlyContinue }
+        if (Test-Path $driveIco)       { Set-ItemProperty -Path $k -Name "8"   -Value $driveIco       -Force -ErrorAction SilentlyContinue }
+        if (Test-Path $driveSystemIco) { Set-ItemProperty -Path $k -Name "9"   -Value $driveSystemIco -Force -ErrorAction SilentlyContinue }
+        if (Test-Path $thisPcIco)      { Set-ItemProperty -Path $k -Name "15"  -Value $thisPcIco      -Force -ErrorAction SilentlyContinue }
+        if (Test-Path $trashEmptyIco)  { Set-ItemProperty -Path $k -Name "31"  -Value $trashEmptyIco  -Force -ErrorAction SilentlyContinue }
+        if (Test-Path $trashFullIco)   { Set-ItemProperty -Path $k -Name "32"  -Value $trashFullIco   -Force -ErrorAction SilentlyContinue }
+        if (Test-Path $desktopIco)     { Set-ItemProperty -Path $k -Name "34"  -Value $desktopIco     -Force -ErrorAction SilentlyContinue }
+        if (Test-Path $thisPcIco)      { Set-ItemProperty -Path $k -Name "109" -Value $thisPcIco      -Force -ErrorAction SilentlyContinue }
+    }
 
-        foreach ($c in @("HKCU:\Software\Classes\Folder\DefaultIcon", "HKCU:\Software\Classes\Directory\DefaultIcon")) {
-            if (-not (Test-Path $c)) { New-Item -Path $c -Force -ErrorAction SilentlyContinue | Out-Null }
-            Set-ItemProperty -Path $c -Name "(Default)" -Value "$folderIco,0" -Force -ErrorAction SilentlyContinue
-        }
+    foreach ($c in @("HKCU:\Software\Classes\Folder\DefaultIcon", "HKCU:\Software\Classes\Directory\DefaultIcon")) {
+        if (-not (Test-Path $c)) { New-Item -Path $c -Force -ErrorAction SilentlyContinue | Out-Null }
+        if (Test-Path $folderIco) { Set-ItemProperty -Path $c -Name "(default)" -Value $folderIco -Force -ErrorAction SilentlyContinue }
     }
 
     # 2. Drive Icons (Macintosh HD for C:, Generic for others)
-    $cIco = Join-Path $iconsTarget "macOS_Drive_System.ico"
-    if (Test-Path $cIco) {
-        $cKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons\C\DefaultIcon"
-        if (-not (Test-Path $cKey)) { New-Item -Path $cKey -Force -ErrorAction SilentlyContinue | Out-Null }
-        Set-ItemProperty -Path $cKey -Name "(Default)" -Value "$cIco,0" -Force -ErrorAction SilentlyContinue
-    }
+    $driveRoots = @(
+        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons",
+        "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons"
+    )
+    foreach ($dr in $driveRoots) {
+        $cKey = "$dr\C"
+        if (-not (Test-Path "$cKey\DefaultIcon"))  { New-Item -Path "$cKey\DefaultIcon"  -Force -ErrorAction SilentlyContinue | Out-Null }
+        if (-not (Test-Path "$cKey\DefaultLabel")) { New-Item -Path "$cKey\DefaultLabel" -Force -ErrorAction SilentlyContinue | Out-Null }
+        if (Test-Path $driveSystemIco) { Set-ItemProperty -Path "$cKey\DefaultIcon"  -Name "(default)" -Value $driveSystemIco -Force -ErrorAction SilentlyContinue }
+        Set-ItemProperty -Path "$cKey\DefaultLabel" -Name "(default)" -Value "Macintosh HD" -Force -ErrorAction SilentlyContinue
 
-    $driveIco = Join-Path $iconsTarget "macOS_Drive.ico"
-    if (Test-Path $driveIco) {
-        Get-Volume -ErrorAction SilentlyContinue | Where-Object { $_.DriveLetter -and $_.DriveLetter -ne 'C' } | ForEach-Object {
-            $dl = $_.DriveLetter
-            $dKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons\$dl\DefaultIcon"
-            if (-not (Test-Path $dKey)) { New-Item -Path $dKey -Force -ErrorAction SilentlyContinue | Out-Null }
-            Set-ItemProperty -Path $dKey -Name "(Default)" -Value "$driveIco,0" -Force -ErrorAction SilentlyContinue
+        if (Test-Path $driveIco) {
+            Get-Volume -ErrorAction SilentlyContinue | Where-Object { $_.DriveLetter -and $_.DriveLetter -ne 'C' } | ForEach-Object {
+                $dl = $_.DriveLetter
+                $dKey = "$dr\$dl"
+                if (-not (Test-Path "$dKey\DefaultIcon")) { New-Item -Path "$dKey\DefaultIcon" -Force -ErrorAction SilentlyContinue | Out-Null }
+                Set-ItemProperty -Path "$dKey\DefaultIcon" -Name "(default)" -Value $driveIco -Force -ErrorAction SilentlyContinue
+            }
         }
     }
 
-    # 3. Recycle Bin & This PC
-    $trashEmpty = Join-Path $iconsTarget "macOS_Trash_Empty.ico"
-    $trashFull  = Join-Path $iconsTarget "macOS_Trash_Full.ico"
-    if (Test-Path $trashEmpty) {
-        $binKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\DefaultIcon"
-        if (-not (Test-Path $binKey)) { New-Item -Path $binKey -Force -ErrorAction SilentlyContinue | Out-Null }
-        Set-ItemProperty -Path $binKey -Name "(Default)" -Value "$trashEmpty,0" -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $binKey -Name "empty" -Value "$trashEmpty,0" -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $binKey -Name "full" -Value "$trashFull,0" -Force -ErrorAction SilentlyContinue
-    }
-
-    $thisPc = Join-Path $iconsTarget "macOS_ThisPC.ico"
-    if (Test-Path $thisPc) {
-        $pcKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\CLSID\{20D04FE0-3AEA-1069-A2D8-08002B30309D}\DefaultIcon"
-        if (-not (Test-Path $pcKey)) { New-Item -Path $pcKey -Force -ErrorAction SilentlyContinue | Out-Null }
-        Set-ItemProperty -Path $pcKey -Name "(Default)" -Value "$thisPc,0" -Force -ErrorAction SilentlyContinue
+    # 3. Recycle Bin, This PC & Network CLSIDs
+    $clsidConfigs = @(
+        @{ GUID = "{645FF040-5081-101B-9F08-00AA002F954E}"; Ico = $trashEmptyIco; Empty = $trashEmptyIco; Full = $trashFullIco } # Recycle Bin
+        @{ GUID = "{20D04FE0-3AEA-1069-A2D8-08002B30309D}"; Ico = $thisPcIco }                                                    # This PC
+        @{ GUID = "{59031A47-3F72-44A7-89C5-5595FE6B30EE}"; Ico = $folderIco }                                                    # User Profile
+        @{ GUID = "{F02C1A0D-BE21-4350-88B0-7367FC96EF3C}"; Ico = $folderIco }                                                    # Network
+    )
+    foreach ($cfg in $clsidConfigs) {
+        $paths = @(
+            "HKCU:\Software\Classes\CLSID\$($cfg.GUID)\DefaultIcon",
+            "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\CLSID\$($cfg.GUID)\DefaultIcon"
+        )
+        foreach ($p in $paths) {
+            if (-not (Test-Path $p)) { New-Item -Path $p -Force -ErrorAction SilentlyContinue | Out-Null }
+            if ($cfg.Ico -and (Test-Path $cfg.Ico)) {
+                Set-ItemProperty -Path $p -Name "(default)" -Value $cfg.Ico -Force -ErrorAction SilentlyContinue
+            }
+            if ($cfg.Empty -and (Test-Path $cfg.Empty)) {
+                Set-ItemProperty -Path $p -Name "empty" -Value $cfg.Empty -Force -ErrorAction SilentlyContinue
+            }
+            if ($cfg.Full -and (Test-Path $cfg.Full)) {
+                Set-ItemProperty -Path $p -Name "full" -Value $cfg.Full -Force -ErrorAction SilentlyContinue
+            }
+        }
     }
 
     # 4. User Profile Special Folders and All User Directories
@@ -399,7 +422,7 @@ try {
         @{ Name = "Pictures";  Paths = @("$env:USERPROFILE\OneDrive\Pictures", "$env:USERPROFILE\Pictures", [Environment]::GetFolderPath('MyPictures'));  Ico = Join-Path $iconsTarget "macOS_Pictures.ico";  GUIDs = @("{33E28130-4E1E-4676-835A-98395C3BC3BB}", "{0ddd0157-5467-4334-96c9-78ec10e39588}") }
         @{ Name = "Music";     Paths = @("$env:USERPROFILE\Music", [Environment]::GetFolderPath('MyMusic'));     Ico = Join-Path $iconsTarget "macOS_Music.ico";     GUIDs = @("{4BD8D571-6D19-48D3-BE97-422220080E43}", "{a0c69a99-21c8-4671-8703-7934162fbe1d}") }
         @{ Name = "Videos";    Paths = @("$env:USERPROFILE\Videos", [Environment]::GetFolderPath('MyVideos'));    Ico = Join-Path $iconsTarget "macOS_Videos.ico";    GUIDs = @("{18989B1D-99B5-455B-841C-AB7C74E4DDFC}", "{35286161-5079-4140-9a09-7b505a4f2791}") }
-        @{ Name = "Desktop";   Paths = @("$env:USERPROFILE\OneDrive\Desktop", "$env:USERPROFILE\Desktop", [Environment]::GetFolderPath('Desktop'));   Ico = Join-Path $iconsTarget "macOS_Desktop.ico";   GUIDs = @("{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}") }
+        @{ Name = "Desktop";   Paths = @("$env:USERPROFILE\OneDrive\Desktop", "$env:USERPROFILE\Desktop", [Environment]::GetFolderPath('Desktop'));   Ico = $desktopIco;   GUIDs = @("{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}") }
     )
 
     foreach ($f in $folderMap) {
@@ -415,9 +438,7 @@ try {
             foreach ($p in $uniquePaths) {
                 if ($p -and (Test-Path $p)) {
                     $ini = Join-Path $p "desktop.ini"
-                    if (Test-Path $ini) {
-                        attrib -h -s -r $ini 2>$null
-                    }
+                    if (Test-Path $ini) { attrib -h -s -r $ini 2>$null }
                     $iniContent = "[.ShellClassInfo]`r`nIconResource=$($f.Ico),0`r`n[ViewState]`r`nMode=`r`nVid=`r`nFolderType=Generic`r`n"
                     [System.IO.File]::WriteAllText($ini, $iniContent, [System.Text.Encoding]::ASCII)
                     attrib +h +s $ini 2>$null
@@ -428,8 +449,7 @@ try {
     }
 
     # Apply macOS Blue folder icon to all user folders in $env:USERPROFILE & OneDrive
-    $genericIco = Join-Path $iconsTarget "macOS_Folder.ico"
-    if (Test-Path $genericIco) {
+    if (Test-Path $folderIco) {
         $scanRoots = @($env:USERPROFILE, "$env:USERPROFILE\OneDrive")
         foreach ($root in $scanRoots) {
             if ($root -and (Test-Path $root)) {
@@ -439,7 +459,7 @@ try {
                         $p = $_.FullName
                         $ini = Join-Path $p "desktop.ini"
                         if (Test-Path $ini) { attrib -h -s -r $ini 2>$null }
-                        $iniContent = "[.ShellClassInfo]`r`nIconResource=$genericIco,0`r`n[ViewState]`r`nMode=`r`nVid=`r`nFolderType=Generic`r`n"
+                        $iniContent = "[.ShellClassInfo]`r`nIconResource=$folderIco,0`r`n[ViewState]`r`nMode=`r`nVid=`r`nFolderType=Generic`r`n"
                         try {
                             [System.IO.File]::WriteAllText($ini, $iniContent, [System.Text.Encoding]::ASCII)
                             attrib +h +s $ini 2>$null
@@ -451,14 +471,7 @@ try {
         }
     }
 
-    # Copy 1-Click Global Admin Icon Patch to Desktop
-    $desktopDir = if (Test-Path "$env:USERPROFILE\OneDrive\Desktop") { "$env:USERPROFILE\OneDrive\Desktop" } else { [Environment]::GetFolderPath('Desktop') }
-    $adminBatSrc = if ($ScriptDir) { Join-Path $ScriptDir "Apply_Global_Mac_Icons_Admin.bat" } else { $null }
-    if ($adminBatSrc -and (Test-Path $adminBatSrc) -and $desktopDir) {
-        Copy-Item $adminBatSrc -Destination (Join-Path $desktopDir "Apply_Global_Mac_Icons_Admin.bat") -Force -ErrorAction SilentlyContinue
-    }
-
-    # 5. Flush Icon Cache
+    # 5. Flush Icon Cache & Suppress Bottom White Artifacts
     $iconCache = "$env:LOCALAPPDATA\IconCache.db"
     if (Test-Path $iconCache) { Remove-Item $iconCache -Force -ErrorAction SilentlyContinue }
     Get-ChildItem -Path "$env:LOCALAPPDATA\Microsoft\Windows\Explorer" -Filter "*cache*.db" -Force -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
