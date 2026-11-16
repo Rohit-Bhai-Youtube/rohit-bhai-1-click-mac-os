@@ -70,6 +70,24 @@ irm https://raw.githubusercontent.com/Rohit-Bhai-Youtube/rohit-bhai-mac-os/main/
 
 ---
 
+## 🗑️ Complete Uninstall & Restore Windows Defaults
+
+If you ever wish to completely remove **Rohit Bhai Mac OS** and restore 100% original Windows 11 default icons, sounds, cursors, taskbar, and animations, simply open **PowerShell** and run this single command:
+
+```powershell
+irm https://raw.githubusercontent.com/Rohit-Bhai-Youtube/rohit-bhai-mac-os/main/uninstall.ps1 | iex
+```
+
+### What the Uninstaller does:
+- ✅ **Restores Original Windows Icons**: Reverts Sonoma Aqua folder icons, Macintosh HD drive icons, and Apple Trash Bin back to native Windows icons.
+- ✅ **Restores Default Windows Sounds**: Resets Apple macOS sounds back to Windows Default (`.Default`).
+- ✅ **Restores Default Windows Cursors**: Removes Capitaine cursors and restores the default Windows white pointer.
+- ✅ **Cleans Windhawk Mods**: Disables and cleanly removes Mac Island, Centered Dock, Genie animations, and Net Speed indicators.
+- ✅ **Removes Startup Daemons**: Safely deletes all startup VBS scripts and background helper tasks.
+- ✅ **Flushes & Rebuilds Icon Cache**: Restores a fresh, clean Windows Explorer desktop instantly.
+
+---
+
 ## 👨‍💻 Author
 
 Crafted with ❤️ by **Rohit Bhai** (`Rohit-Bhai-Youtube`).
