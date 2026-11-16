@@ -35,7 +35,8 @@ Or clone the repo and double-click `Install-Rohit-Bhai-Mac-OS.bat`.
    - *100% Native Windows Registry integration — 0% RAM usage!*
 
 3. **🏝️ Mac Island & Floating Dock**:
-   - Centered dock with 8px floating margin, 22px curved corners, and launch bounce effect.
+   - **Top Menu Bar**: Permanently fixed at top-right (`placeX=1000`, `islandBar=1`, `islandBarAlign=3`), authentic macOS Menu Bar status layout.
+   - **Centered Floating Dock**: Centered dock with 8px floating margin, 22px curved corners, launch bounce effect, and always visible (`autoHide=0`).
 
 4. **🧞 macOS Genie Animation**:
    - 450ms liquid bezier window minimize curve (just like macOS Finder & Mission Control).
@@ -53,7 +54,7 @@ Or clone the repo and double-click `Install-Rohit-Bhai-Mac-OS.bat`.
    - Official macOS wallpaper set dynamically with complete system dark mode.
 
 9. **🛡️ Smart Maximized Window Guard**:
-   - Maximized full-screen windows automatically keep 100% visibility — the floating dock smoothly clears out of the way on maximized apps, and the Island bar keeps room, so windows never get overlapped or covered by taskbars.
+   - Maximized full-screen windows automatically keep 100% visibility — WorkArea cleanly reserved above the floating dock (`WorkArea.Bottom = 1032`) and below the top bar (`WorkArea.Top = 42`), keeping both top bar and bottom dock permanently visible with zero overlap.
 
 ---
 

@@ -58,7 +58,14 @@
                                                           "animations.level":  "all",
                                                           "animations.speed":  125,
                                                           "animations.frameRate":  "screen"
-                                                      }
+                                                      },
+                                         "localStorage":  {
+                                                              "placeX":  1000,
+                                                              "placeY":  0,
+                                                              "islandBar":  1,
+                                                              "islandBarAlign":  3,
+                                                              "islandBarCorners":  0
+                                                          }
                                      },
                  "macos-minimize-animation":  {
                                                   "settings":  {

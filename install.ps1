@@ -1,4 +1,4 @@
-# ==============================================================================
+﻿# ==============================================================================
 # Rohit Bhai Mac OS for Windows 11 - 1-Click Ultimate Suite v4.0 Pro
 # Target: Windows 11 (22H2 / 23H2 / 24H2) and Windows 10
 # Includes: Windhawk Mac Island Dock, Genie, Net Speed, SF Pro Fonts,
@@ -197,11 +197,13 @@ try {
         } catch {}
     }
     
-    $darkDir = Join-Path $cursorsTarget "dist-dark"
+    $darkDir = Join-Path $cursorsTarget "Capitaine Dark W11 HiDPI"
+    if (-not (Test-Path $darkDir)) { $darkDir = Join-Path $cursorsTarget "dist-dark" }
     if (-not (Test-Path $darkDir)) { $darkDir = $cursorsTarget }
     if (Test-Path $darkDir) {
         $schemePath = "HKCU:\Control Panel\Cursors"
-        Set-ItemProperty -Path $schemePath -Name "" -Value "Capitaine macOS Dark" -Force
+        Set-ItemProperty -Path $schemePath -Name "(Default)" -Value "Capitaine Dark W11 HiDPI" -Force
+        Set-ItemProperty -Path $schemePath -Name "Scheme Source" -Value 1 -Type DWord -Force
         Set-ItemProperty -Path $schemePath -Name "Arrow" -Value "$darkDir\pointer.cur" -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $schemePath -Name "Help" -Value "$darkDir\help.cur" -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $schemePath -Name "AppStarting" -Value "$darkDir\working.ani" -Force -ErrorAction SilentlyContinue
@@ -216,7 +218,17 @@ try {
         Set-ItemProperty -Path $schemePath -Name "SizeNESW" -Value "$darkDir\dgn2.cur" -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $schemePath -Name "SizeAll" -Value "$darkDir\move.cur" -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $schemePath -Name "Hand" -Value "$darkDir\link.cur" -Force -ErrorAction SilentlyContinue
-        Write-Host "  [OK] macOS Capitaine Dark Cursors scheme registered!" -ForegroundColor Green
+        
+        Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public class Win32Cursor {
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern bool SystemParametersInfo(uint uiAction, uint uiParam, IntPtr pvParam, uint fWinIni);
+}
+"@ -ErrorAction SilentlyContinue
+        [Win32Cursor]::SystemParametersInfo(0x0057, 0, [IntPtr]::Zero, 3) | Out-Null
+        Write-Host "  [OK] macOS Capitaine Dark Cursors scheme registered & live applied!" -ForegroundColor Green
     }
 } catch {
     Write-Host "  [-] Cursors note: Skipped non-critical cursor install." -ForegroundColor DarkGray
@@ -367,12 +379,12 @@ try {
 
     # 4. User Profile Special Folders (Downloads, Documents, Pictures, Music, Videos, Desktop)
     $folderMap = @(
-        @{ Name = "Downloads"; Path = "$env:USERPROFILE\Downloads"; Ico = Join-Path $iconsTarget "macOS_Downloads.ico"; GUIDs = @("{374DE290-123F-4565-9164-39C4925E467B}", "{7d83ee9b-2244-4e70-b1f5-5393042af1e4}") }
-        @{ Name = "Documents"; Path = "$env:USERPROFILE\Documents"; Ico = Join-Path $iconsTarget "macOS_Documents.ico"; GUIDs = @("{FDD39AD0-238F-46AF-ADB4-6C85480369C7}", "{f42ee2d3-909f-4907-8871-4c22fc0bf756}") }
-        @{ Name = "Pictures";  Path = "$env:USERPROFILE\Pictures";  Ico = Join-Path $iconsTarget "macOS_Pictures.ico";  GUIDs = @("{33E28130-4E1E-4676-835A-98395C3BC3BB}", "{0ddd0157-5467-4334-96c9-78ec10e39588}") }
-        @{ Name = "Music";     Path = "$env:USERPROFILE\Music";     Ico = Join-Path $iconsTarget "macOS_Music.ico";     GUIDs = @("{4BD8D571-6D19-48D3-BE97-422220080E43}", "{a0c69a99-21c8-4671-8703-7934162fbe1d}") }
-        @{ Name = "Videos";    Path = "$env:USERPROFILE\Videos";    Ico = Join-Path $iconsTarget "macOS_Videos.ico";    GUIDs = @("{18989B1D-99B5-455B-841C-AB7C74E4DDFC}", "{35286161-5079-4140-9a09-7b505a4f2791}") }
-        @{ Name = "Desktop";   Path = "$env:USERPROFILE\Desktop";   Ico = Join-Path $iconsTarget "macOS_Desktop.ico";   GUIDs = @("{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}") }
+        @{ Name = "Downloads"; Paths = @("$env:USERPROFILE\Downloads"); Ico = Join-Path $iconsTarget "macOS_Downloads.ico"; GUIDs = @("{374DE290-123F-4565-9164-39C4925E467B}", "{7d83ee9b-2244-4e70-b1f5-5393042af1e4}") }
+        @{ Name = "Documents"; Paths = @("$env:USERPROFILE\Documents", [Environment]::GetFolderPath('MyDocuments')); Ico = Join-Path $iconsTarget "macOS_Documents.ico"; GUIDs = @("{FDD39AD0-238F-46AF-ADB4-6C85480369C7}", "{f42ee2d3-909f-4907-8871-4c22fc0bf756}") }
+        @{ Name = "Pictures";  Paths = @("$env:USERPROFILE\Pictures", [Environment]::GetFolderPath('MyPictures'));  Ico = Join-Path $iconsTarget "macOS_Pictures.ico";  GUIDs = @("{33E28130-4E1E-4676-835A-98395C3BC3BB}", "{0ddd0157-5467-4334-96c9-78ec10e39588}") }
+        @{ Name = "Music";     Paths = @("$env:USERPROFILE\Music", [Environment]::GetFolderPath('MyMusic'));     Ico = Join-Path $iconsTarget "macOS_Music.ico";     GUIDs = @("{4BD8D571-6D19-48D3-BE97-422220080E43}", "{a0c69a99-21c8-4671-8703-7934162fbe1d}") }
+        @{ Name = "Videos";    Paths = @("$env:USERPROFILE\Videos", [Environment]::GetFolderPath('MyVideos'));    Ico = Join-Path $iconsTarget "macOS_Videos.ico";    GUIDs = @("{18989B1D-99B5-455B-841C-AB7C74E4DDFC}", "{35286161-5079-4140-9a09-7b505a4f2791}") }
+        @{ Name = "Desktop";   Paths = @("$env:USERPROFILE\Desktop", [Environment]::GetFolderPath('Desktop'));   Ico = Join-Path $iconsTarget "macOS_Desktop.ico";   GUIDs = @("{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}") }
     )
 
     foreach ($f in $folderMap) {
@@ -384,15 +396,18 @@ try {
                 }
             }
 
-            if (Test-Path $f.Path) {
-                $ini = Join-Path $f.Path "desktop.ini"
-                if (Test-Path $ini) {
-                    attrib -h -s -r $ini 2>$null
+            $uniquePaths = $f.Paths | Select-Object -Unique
+            foreach ($p in $uniquePaths) {
+                if ($p -and (Test-Path $p)) {
+                    $ini = Join-Path $p "desktop.ini"
+                    if (Test-Path $ini) {
+                        attrib -h -s -r $ini 2>$null
+                    }
+                    $iniContent = "[.ShellClassInfo]`r`nIconResource=$($f.Ico),0`r`n[ViewState]`r`nMode=`r`nVid=`r`nFolderType=Generic`r`n"
+                    [System.IO.File]::WriteAllText($ini, $iniContent, [System.Text.Encoding]::ASCII)
+                    attrib +h +s $ini 2>$null
+                    attrib +r $p 2>$null
                 }
-                $iniContent = "[.ShellClassInfo]`r`nIconResource=$($f.Ico),0`r`n[ViewState]`r`nMode=`r`nVid=`r`nFolderType=Generic`r`n"
-                [System.IO.File]::WriteAllText($ini, $iniContent, [System.Text.Encoding]::ASCII)
-                attrib +h +s $ini 2>$null
-                attrib +r $f.Path 2>$null
             }
         }
     }
@@ -436,8 +451,17 @@ try {
     }
     Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "Wallpaper" -Value $wallTarget -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "WallpaperStyle" -Value "10" -Force -ErrorAction SilentlyContinue
+    Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public class Win32Wall {
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern bool SystemParametersInfo(uint uiAction, uint uiParam, string pvParam, uint fWinIni);
+}
+"@ -ErrorAction SilentlyContinue
+    [Win32Wall]::SystemParametersInfo(0x0014, 0, $wallTarget, 3) | Out-Null
     rundll32.exe user32.dll,UpdatePerUserSystemParameters 1, True
-    Write-Host "  [OK] 4K macOS Wallpaper & Dark Mode applied!" -ForegroundColor Green
+    Write-Host "  [OK] 4K macOS Wallpaper & Dark Mode applied live!" -ForegroundColor Green
 } catch {
     Write-Host "  [-] Wallpaper note: Skipped non-critical wallpaper update." -ForegroundColor DarkGray
 }
@@ -460,7 +484,7 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
         Write-Host "  [OK] Import completed!" -ForegroundColor Green
     }
 
-    # Ensure Maximize Window Guard (Top Bar & Bottom Dock Always Visible with Zero Overlap)
+    # Ensure Maximize Window Guard (Top Bar Fixed Top-Right & Bottom Dock Always Visible with Zero Overlap)
     & $WindhawkCli mod settings set mac-island-dock hiding.autoHide=0 2>$null
     $islandStoragePath = "HKLM:\Software\Windhawk\Engine\ModsWritable\mac-island-dock\LocalStorage"
     if (-not (Test-Path $islandStoragePath)) {
@@ -469,8 +493,13 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
     Set-ItemProperty -Path $islandStoragePath -Name "islandAutoHide" -Value 0 -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $islandStoragePath -Name "islandHideWhen" -Value 0 -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $islandStoragePath -Name "islandHideClock" -Value 0 -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $islandStoragePath -Name "islandBar" -Value 2 -Force -ErrorAction SilentlyContinue
-    Write-Host "  [OK] Maximized window guard active: Top Bar & Bottom Dock stay ALWAYS visible with zero overlap!" -ForegroundColor Green
+    Set-ItemProperty -Path $islandStoragePath -Name "placeX" -Value 1000 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "placeY" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandBar" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandBarAlign" -Value 3 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandBarCorners" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    & "C:\Program Files\Windhawk\windhawk.exe" -restart -tray-only 2>$null
+    Write-Host "  [OK] Maximized window guard active: Top Bar fixed at top-right & Bottom Dock stay ALWAYS visible with zero overlap!" -ForegroundColor Green
 } else {
     Write-Host "  [-] Skipped Windhawk mods activation (Windhawk not available)." -ForegroundColor DarkGray
 }
