@@ -618,6 +618,61 @@ public static class MacAppShortcutHelper {
     New-Item -ItemType Directory -Path $taskbarDir -Force | Out-Null
     New-Item -ItemType Directory -Path $userStartDir -Force | Out-Null
 
+    # Compile native Win32 protocol launcher binaries for UWP apps
+    # This solves the Dock click glitch and prevents grey squares permanently
+    $launchersDir = Join-Path $env:LOCALAPPDATA "RohitBhaiMacOS\Apps"
+    if (-not (Test-Path $launchersDir)) { New-Item -ItemType Directory -Path $launchersDir -Force | Out-Null }
+
+    $protocolLaunchers = @(
+        @{ Name = "WhatsApp"; Exe = "WhatsApp.exe"; Icon = "WhatsApp.ico"; Protocol = "whatsapp://"; FallbackAumid = "5319275A.WhatsAppDesktop_cv1g1gvanyjgm!App" },
+        @{ Name = "Telegram"; Exe = "Telegram.exe"; Icon = "Telegram.ico"; Protocol = "tg://"; FallbackAumid = "TelegramMessengerLLP.TelegramDesktop_t4vj0pshhgkwm!Telegram.TelegramDesktop.Store" },
+        @{ Name = "AppStore"; Exe = "AppStore.exe"; Icon = "AppStore.ico"; Protocol = "ms-windows-store:"; FallbackAumid = "Microsoft.WindowsStore_8wekyb3d8bbwe!App" }
+    )
+
+    try {
+        $codeProvider = New-Object Microsoft.CSharp.CSharpCodeProvider
+        foreach ($pl in $protocolLaunchers) {
+            $exeOut = Join-Path $launchersDir $pl.Exe
+            $iconSrc = Join-Path $appsTarget $pl.Icon
+            $protoUri = $pl.Protocol
+            $aumidFb = $pl.FallbackAumid
+
+            $baseProc = [System.IO.Path]::GetFileNameWithoutExtension($pl.Exe)
+            Get-Process -Name $baseProc -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+
+            $launcherCode = @"
+using System;
+using System.Diagnostics;
+class Program {
+    [STAThread]
+    static void Main(string[] args) {
+        try {
+            ProcessStartInfo psi = new ProcessStartInfo("$protoUri");
+            psi.UseShellExecute = true;
+            Process.Start(psi);
+        } catch {
+            try {
+                ProcessStartInfo psi = new ProcessStartInfo("explorer.exe", "shell:AppsFolder\\$aumidFb");
+                psi.UseShellExecute = true;
+                Process.Start(psi);
+            } catch {}
+        }
+    }
+}
+"@
+            $cParams = New-Object System.CodeDom.Compiler.CompilerParameters
+            $cParams.GenerateExecutable = $true
+            $cParams.OutputAssembly = $exeOut
+            $cParams.ReferencedAssemblies.Add("System.dll") | Out-Null
+            if (Test-Path $iconSrc) {
+                $cParams.CompilerOptions = "/target:winexe /win32icon:`"$iconSrc`""
+            } else {
+                $cParams.CompilerOptions = "/target:winexe"
+            }
+            $codeProvider.CompileAssemblyFromSource($cParams, $launcherCode) | Out-Null
+        }
+    } catch {}
+
     $appsConfig = @(
         @{
             Name = "Edge to Safari"; Icon = "Safari.ico"; AppId = "MSEdge"
@@ -630,8 +685,8 @@ public static class MacAppShortcutHelper {
             TaskbarLnk = "File Explorer.lnk"; StartLnks = @("File Explorer.lnk")
         },
         @{
-            Name = "Microsoft Store to App Store"; Icon = "AppStore.ico"; AppId = "Microsoft.WindowsStore_8wekyb3d8bbwe!App"
-            Target = $explorerExe; Args = "shell:AppsFolder\Microsoft.WindowsStore_8wekyb3d8bbwe!App"
+            Name = "Microsoft Store to App Store"; Icon = "AppStore.ico"; AppId = ""
+            Target = (Join-Path $launchersDir "AppStore.exe"); Args = ""
             TaskbarLnk = "Microsoft Store.lnk"; StartLnks = @("Microsoft Store.lnk")
         },
         @{
@@ -640,13 +695,13 @@ public static class MacAppShortcutHelper {
             TaskbarLnk = "Settings.lnk"; StartLnks = @("Settings.lnk", "System Tools\Control Panel.lnk")
         },
         @{
-            Name = "WhatsApp"; Icon = "WhatsApp.ico"; AppId = "5319275A.WhatsAppDesktop_cv1g1gvanyjgm!App"
-            Target = $explorerExe; Args = "shell:AppsFolder\5319275A.WhatsAppDesktop_cv1g1gvanyjgm!App"
+            Name = "WhatsApp"; Icon = "WhatsApp.ico"; AppId = ""
+            Target = (Join-Path $launchersDir "WhatsApp.exe"); Args = ""
             TaskbarLnk = "WhatsApp.lnk"; StartLnks = @("WhatsApp.lnk")
         },
         @{
-            Name = "Telegram"; Icon = "Telegram.ico"; AppId = "TelegramMessengerLLP.TelegramDesktop_t4vj0pshhgkwm!Telegram.TelegramDesktop.Store"
-            Target = $explorerExe; Args = "shell:AppsFolder\TelegramMessengerLLP.TelegramDesktop_t4vj0pshhgkwm!Telegram.TelegramDesktop.Store"
+            Name = "Telegram"; Icon = "Telegram.ico"; AppId = ""
+            Target = (Join-Path $launchersDir "Telegram.exe"); Args = ""
             TaskbarLnk = "Telegram.lnk"; StartLnks = @("Telegram.lnk")
         },
         @{
