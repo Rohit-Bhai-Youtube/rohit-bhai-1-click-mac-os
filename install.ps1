@@ -40,12 +40,12 @@ Write-Host @"
    ██╔══██╗██║   ██║██╔══██╗   ██╔══╝  ██║    ██╔══██║╚════██║██╔══██║
    ██║  ██║╚██████╔╝██████╔╝   ██║     ███████╗██║  ██║███████║██║  ██║
    ╚═╝  ╚═╝ ╚═════╝ ╚═════╝    ╚═╝     ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
-              ROHIT BHAI MAC OS FOR WINDOWS 11 - v4.4 [ULTIMATE SQUIRCLE EDITION]
+              ROHIT BHAI MAC OS FOR WINDOWS 11 - v4.7 [TOP-RIGHT STATUS BAR & DOCK]
                                Crafted for Rohit Bhai
 ========================================================================================
 "@ -ForegroundColor Cyan
 
-Write-Host "  [+] Mac Island & Floating Dock (32px, 8px floating gap, 22px radius, bounce)" -ForegroundColor White
+Write-Host "  [+] Fixed Top-Right macOS Status Bar & Centered Floating Dock (Liquid Glass, Clock, Media, Control Center)" -ForegroundColor White
 Write-Host "  [+] macOS Genie Minimize Animation (Liquid curve 450ms)" -ForegroundColor White
 Write-Host "  [+] Apple Taskbar Network Speed Indicator (100% native Windhawk)" -ForegroundColor White
 Write-Host "  [+] Apple SF Pro Typography (San Francisco Display & Text)" -ForegroundColor White
@@ -893,26 +893,41 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
     if (-not (Test-Path $islandStoragePath)) {
         New-Item -Path $islandStoragePath -Force | Out-Null
     }
-    # Configure Floating Dynamic Island (Centered, Liquid Glass, Media & Notification Expand)
-    Set-ItemProperty -Path $islandStoragePath -Name "islandBar" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $islandStoragePath -Name "placeX" -Value 500 -Type DWord -Force -ErrorAction SilentlyContinue
+    # Configure Fixed Top-Right macOS Status Bar (Right Side, Liquid Glass, No Notch)
+    Set-ItemProperty -Path $islandStoragePath -Name "islandBar" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandNotches" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandPillNotches" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandZoneAsPill" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "placeX" -Value 1000 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $islandStoragePath -Name "placeY" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $islandStoragePath -Name "islandGap" -Value 4 -Type DWord -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $islandStoragePath -Name "islandNotchCurve" -Value 80 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandBarSide" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandBarAlign" -Value 3 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandBarCorners" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandBarFixedSides" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandGap" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandVerticalSides" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $islandStoragePath -Name "islandAutoHide" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandHideWhen" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandHideClock" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandOverFullscreen" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $islandStoragePath -Name "islandTheme" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $islandStoragePath -Name "islandLiquidGlass" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $islandStoragePath -Name "islandVisualizer" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $islandStoragePath -Name "islandVizSensitivity" -Value 100 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandGlassBlur" -Value 70 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandGlassLight" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandClock" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "clockWeekday" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $islandStoragePath -Name "islandMedia" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $islandStoragePath -Name "mediaButtons" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $islandStoragePath -Name "mediaTitle" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandPower" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandApps" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandNetwork" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandVolume" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandWeather" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandBell" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $islandStoragePath -Name "islandStatusNotices" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $islandStoragePath -Name "islandCapsLock" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $islandStoragePath -Name "islandBell" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $islandStoragePath -Name "islandClock" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $islandStoragePath -Name "islandWeather" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $islandStoragePath -Name "islandOverFullscreen" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandUsbNotify" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
 
     # Register permanent silent startup for Mac Island Top Bar
     $appDir = "$env:LOCALAPPDATA\RohitBhaiMacOS"
