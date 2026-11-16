@@ -230,34 +230,11 @@ public class IslandDaemon {
         string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         string iconsDir = Path.Combine(localAppData, "RohitBhaiMacOS", "Icons", "Apps");
 
-        // Start background cleaner and icon injector thread
-        Thread cleaner = new Thread(() => {
-            while (true) {
-                try { CleanArtifactsAndInjectIcons(iconsDir); } catch {}
-                Thread.Sleep(3000);
-            }
-        });
-        cleaner.IsBackground = true;
-        cleaner.Start();
-
-        STARTUPINFO si = new STARTUPINFO();
-        si.cb = Marshal.SizeOf(si);
-        si.lpDesktop = @"WinSta0\Default";
-
-        PROCESS_INFORMATION pi = new PROCESS_INFORMATION();
-        string cmd = "\"C:\\Program Files\\Windhawk\\windhawk-mod.exe\" -tool-mod mac-island-dock";
-
-        bool ok = CreateProcess(null, cmd, IntPtr.Zero, IntPtr.Zero, false, 0, IntPtr.Zero, null, ref si, out pi);
-        if (!ok) {
-            Console.WriteLine("CreateProcess failed: " + Marshal.GetLastWin32Error());
-            return;
+        Console.WriteLine("IslandDaemon: Active background monitor running.");
+        while (true) {
+            try { CleanArtifactsAndInjectIcons(iconsDir); } catch {}
+            Thread.Sleep(3000);
         }
-
-        Console.WriteLine("IslandDaemon: Spawned PID " + pi.dwProcessId + " on WinSta0\\Default");
-        WaitForSingleObject(pi.hProcess, 0xFFFFFFFF); // INFINITE
-        Console.WriteLine("IslandDaemon: Process ended");
-        CloseHandle(pi.hProcess);
-        CloseHandle(pi.hThread);
     }
 }
 '@
