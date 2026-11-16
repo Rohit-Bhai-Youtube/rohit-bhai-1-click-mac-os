@@ -1,5 +1,5 @@
 ﻿# ==============================================================================
-# Rohit Bhai Mac OS for Windows 11 - 1-Click Ultimate Suite v4.0 Pro
+# Rohit Bhai Mac OS for Windows 11 - 1-Click Ultimate Suite v4.4 Pro
 # Target: Windows 11 (22H2 / 23H2 / 24H2) and Windows 10
 # Includes: Windhawk Mac Island Dock, Genie, Net Speed, SF Pro Fonts,
 #           macOS Capitaine Cursors, 4K macOS Wallpaper, Dark Mode,
@@ -40,7 +40,7 @@ Write-Host @"
    ██╔══██╗██║   ██║██╔══██╗   ██╔══╝  ██║    ██╔══██║╚════██║██╔══██║
    ██║  ██║╚██████╔╝██████╔╝   ██║     ███████╗██║  ██║███████║██║  ██║
    ╚═╝  ╚═╝ ╚═════╝ ╚═════╝    ╚═╝     ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
-              ROHIT BHAI MAC OS FOR WINDOWS 11 - v4.0 [ULTIMATE EDITION]
+              ROHIT BHAI MAC OS FOR WINDOWS 11 - v4.4 [ULTIMATE SQUIRCLE EDITION]
                                Crafted for Rohit Bhai
 ========================================================================================
 "@ -ForegroundColor Cyan
@@ -52,6 +52,7 @@ Write-Host "  [+] Apple SF Pro Typography (San Francisco Display & Text)" -Foreg
 Write-Host "  [+] macOS Capitaine Dark Cursors with Rainbow Spinning Beach-Ball" -ForegroundColor White
 Write-Host "  [+] Official Apple macOS Sound Scheme (Trash Empty, USB Connect, Pop, Tink)" -ForegroundColor White
 Write-Host "  [+] Official Apple macOS File Explorer & Folder Icons (Sonoma Aqua Folders, Macintosh HD)" -ForegroundColor White
+Write-Host "  [+] Official Apple macOS Squircle App Icons (Safari, Finder, App Store, WhatsApp, Discord, Steam, Notes, etc.)" -ForegroundColor White
 Write-Host "  [+] 4K Ultra-HD macOS Wallpaper & Windows Deep Dark Theme" -ForegroundColor White
 Write-Host ""
 
@@ -313,7 +314,7 @@ try {
 # -------------------------------------------------------------------------
 # Step 6: Official Apple macOS File Explorer & Folder Icons
 # -------------------------------------------------------------------------
-Write-Host "`n[6/8] Deploying Official Apple macOS File Explorer & Folder Icons..." -ForegroundColor Cyan
+Write-Host "`n[6/9] Deploying Official Apple macOS File Explorer & Folder Icons..." -ForegroundColor Cyan
 try {
     $iconsTarget = "$env:LOCALAPPDATA\RohitBhaiMacOS\Icons"
     if (-not (Test-Path $iconsTarget)) {
@@ -483,9 +484,260 @@ try {
 }
 
 # -------------------------------------------------------------------------
-# Step 7: Apply 4K macOS Wallpaper & Windows Dark Mode
+# Step 7: Deploy Official Apple macOS Squircle App Icons (Dock & Start Menu)
 # -------------------------------------------------------------------------
-Write-Host "`n[7/8] Applying 4K macOS Wallpaper & Deep Dark Mode..." -ForegroundColor Cyan
+Write-Host "`n[7/9] Deploying Official Apple macOS Squircle App Icons (Dock & Start Menu)..." -ForegroundColor Cyan
+try {
+    $appsTarget = "$env:LOCALAPPDATA\RohitBhaiMacOS\Icons\Apps"
+    if (-not (Test-Path $appsTarget)) {
+        New-Item -ItemType Directory -Path $appsTarget -Force | Out-Null
+    }
+
+    $localAppIcons = if ($ScriptDir) { Join-Path $ScriptDir "assets\icons\apps" } else { $null }
+    if ($localAppIcons -and (Test-Path $localAppIcons)) {
+        Copy-Item "$localAppIcons\*.ico" -Destination $appsTarget -Force -ErrorAction SilentlyContinue
+        Copy-Item "$localAppIcons\*.png" -Destination $appsTarget -Force -ErrorAction SilentlyContinue
+    } else {
+        $appIconsZipUrl = "https://github.com/$RepoOwner/$RepoName/releases/download/v4.4.0/macos_app_icons.zip"
+        $appIconsZip = Join-Path $WorkDir "macos_app_icons.zip"
+        try {
+            Invoke-WebRequest -Uri $appIconsZipUrl -OutFile $appIconsZip -UseBasicParsing -ErrorAction SilentlyContinue
+            if (Test-Path $appIconsZip) {
+                Expand-Archive -Path $appIconsZip -DestinationPath $appsTarget -Force
+            }
+        } catch {}
+    }
+
+    Add-Type @'
+using System;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.ComTypes;
+
+public static class MacAppShortcutHelper {
+    [ComImport]
+    [Guid("00021401-0000-0000-C000-000000000046")]
+    internal class ShellLink {}
+
+    [ComImport]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    [Guid("000214F9-0000-0000-C000-000000000046")]
+    internal interface IShellLinkW {
+        void GetPath([Out, MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder pszFile, int cchMaxPath, out IntPtr pfd, uint fFlags);
+        void GetIDList(out IntPtr ppidl);
+        void SetIDList(IntPtr pidl);
+        void GetDescription([Out, MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder pszName, int cchMaxName);
+        void SetDescription([MarshalAs(UnmanagedType.LPWStr)] string pszName);
+        void GetWorkingDirectory([Out, MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder pszDir, int cchMaxPath);
+        void SetWorkingDirectory([MarshalAs(UnmanagedType.LPWStr)] string pszDir);
+        void GetArguments([Out, MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder pszArgs, int cchMaxPath);
+        void SetArguments([MarshalAs(UnmanagedType.LPWStr)] string pszArgs);
+        void GetHotkey(out short pwHotkey);
+        void SetHotkey(short wHotkey);
+        void GetShowCmd(out int piShowCmd);
+        void SetShowCmd(int iShowCmd);
+        void GetIconLocation([Out, MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder pszIconPath, int cchIconPath, out int piIcon);
+        void SetIconLocation([MarshalAs(UnmanagedType.LPWStr)] string pszIconPath, int iIcon);
+        void SetRelativePath([MarshalAs(UnmanagedType.LPWStr)] string pszPathRel, uint dwReserved);
+        void Resolve(IntPtr hwnd, uint fFlags);
+        void SetPath([MarshalAs(UnmanagedType.LPWStr)] string pszFile);
+    }
+
+    [ComImport]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    [Guid("886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99")]
+    internal interface IPropertyStore {
+        uint GetCount();
+        void GetAt(uint iProp, out PROPERTYKEY pkey);
+        void GetValue(ref PROPERTYKEY key, out PROPVARIANT pv);
+        void SetValue(ref PROPERTYKEY key, ref PROPVARIANT pv);
+        void Commit();
+    }
+
+    [StructLayout(LayoutKind.Sequential, Pack = 4)]
+    internal struct PROPERTYKEY {
+        public Guid fmtid;
+        public uint pid;
+        public PROPERTYKEY(Guid guid, uint id) {
+            fmtid = guid;
+            pid = id;
+        }
+    }
+
+    [StructLayout(LayoutKind.Explicit)]
+    internal struct PROPVARIANT {
+        [FieldOffset(0)] public ushort vt;
+        [FieldOffset(8)] public IntPtr pwszVal;
+    }
+
+    private static PROPERTYKEY PKEY_AppUserModel_ID = new PROPERTYKEY(new Guid("9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3"), 5);
+
+    public static void CreateOrUpdateShortcut(string lnkPath, string targetPath, string arguments, string iconPath, string appUserModelId) {
+        if (File.Exists(lnkPath)) {
+            try { File.Delete(lnkPath); } catch {}
+        }
+
+        ShellLink link = new ShellLink();
+        IShellLinkW shellLink = (IShellLinkW)link;
+        IPersistFile persistFile = (IPersistFile)link;
+
+        if (!string.IsNullOrEmpty(targetPath)) shellLink.SetPath(targetPath);
+        if (!string.IsNullOrEmpty(arguments)) shellLink.SetArguments(arguments);
+        if (!string.IsNullOrEmpty(iconPath)) shellLink.SetIconLocation(iconPath, 0);
+
+        if (!string.IsNullOrEmpty(appUserModelId)) {
+            IPropertyStore store = (IPropertyStore)link;
+            PROPVARIANT pv = new PROPVARIANT();
+            pv.vt = 31; // VT_LPWSTR
+            pv.pwszVal = Marshal.StringToCoTaskMemUni(appUserModelId);
+            try {
+                store.SetValue(ref PKEY_AppUserModel_ID, ref pv);
+                store.Commit();
+            } finally {
+                Marshal.FreeCoTaskMem(pv.pwszVal);
+            }
+        }
+
+        persistFile.Save(lnkPath, true);
+    }
+}
+'@ -ErrorAction SilentlyContinue
+
+    $taskbarDir = Join-Path $env:APPDATA 'Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar'
+    $userStartDir = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'
+    $allStartDir = Join-Path $env:ProgramData 'Microsoft\Windows\Start Menu\Programs'
+    $explorerExe = "$env:WINDIR\explorer.exe"
+
+    New-Item -ItemType Directory -Path $taskbarDir -Force | Out-Null
+    New-Item -ItemType Directory -Path $userStartDir -Force | Out-Null
+
+    $appsConfig = @(
+        @{
+            Name = "Edge to Safari"; Icon = "Safari.ico"; AppId = "MSEdge"
+            Target = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"; Args = "--profile-directory=Default"
+            TaskbarLnk = "Microsoft Edge.lnk"; StartLnks = @("Microsoft Edge.lnk")
+        },
+        @{
+            Name = "Explorer to Finder"; Icon = "Finder.ico"; AppId = "Microsoft.Windows.Explorer"
+            Target = $explorerExe; Args = ""
+            TaskbarLnk = "File Explorer.lnk"; StartLnks = @("File Explorer.lnk")
+        },
+        @{
+            Name = "Microsoft Store to App Store"; Icon = "AppStore.ico"; AppId = "Microsoft.WindowsStore_8wekyb3d8bbwe!App"
+            Target = $explorerExe; Args = "shell:AppsFolder\Microsoft.WindowsStore_8wekyb3d8bbwe!App"
+            TaskbarLnk = "Microsoft Store.lnk"; StartLnks = @("Microsoft Store.lnk")
+        },
+        @{
+            Name = "Settings to macOS Settings"; Icon = "Settings.ico"; AppId = "windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel"
+            Target = $explorerExe; Args = "shell:AppsFolder\windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel"
+            TaskbarLnk = "Settings.lnk"; StartLnks = @("Settings.lnk", "System Tools\Control Panel.lnk")
+        },
+        @{
+            Name = "WhatsApp"; Icon = "WhatsApp.ico"; AppId = "5319275A.WhatsAppDesktop_cv1g1gvanyjgm!App"
+            Target = $explorerExe; Args = "shell:AppsFolder\5319275A.WhatsAppDesktop_cv1g1gvanyjgm!App"
+            TaskbarLnk = "WhatsApp.lnk"; StartLnks = @("WhatsApp.lnk")
+        },
+        @{
+            Name = "Telegram"; Icon = "Telegram.ico"; AppId = "TelegramMessengerLLP.TelegramDesktop_t4vj0pshhgkwm!Telegram.TelegramDesktop.Store"
+            Target = $explorerExe; Args = "shell:AppsFolder\TelegramMessengerLLP.TelegramDesktop_t4vj0pshhgkwm!Telegram.TelegramDesktop.Store"
+            TaskbarLnk = "Telegram.lnk"; StartLnks = @("Telegram.lnk")
+        },
+        @{
+            Name = "Discord"; Icon = "Discord.ico"; AppId = "com.squirrel.Discord.Discord"
+            Target = "$env:LOCALAPPDATA\Discord\Discord.exe"; Args = ""
+            TaskbarLnk = "Discord.lnk"; StartLnks = @("Discord.lnk", "Discord Inc\Discord.lnk")
+        },
+        @{
+            Name = "Steam"; Icon = "Steam.ico"; AppId = "Valve.Steam"
+            Target = "C:\Program Files (x86)\Steam\steam.exe"; Args = ""
+            TaskbarLnk = "Steam.lnk"; StartLnks = @("Steam.lnk", "Steam\Steam.lnk")
+        },
+        @{
+            Name = "Terminal"; Icon = "Terminal.ico"; AppId = "Microsoft.WindowsTerminal_8wekyb3d8bbwe!App"
+            Target = $explorerExe; Args = "shell:AppsFolder\Microsoft.WindowsTerminal_8wekyb3d8bbwe!App"
+            TaskbarLnk = "Windows Terminal.lnk"; StartLnks = @("Windows Terminal.lnk", "Windows PowerShell\Windows PowerShell.lnk", "System Tools\Command Prompt.lnk")
+        },
+        @{
+            Name = "Notepad to Notes"; Icon = "Notes.ico"; AppId = "Microsoft.WindowsNotepad_8wekyb3d8bbwe!App"
+            Target = $explorerExe; Args = "shell:AppsFolder\Microsoft.WindowsNotepad_8wekyb3d8bbwe!App"
+            TaskbarLnk = "Notepad.lnk"; StartLnks = @("Notepad.lnk")
+        },
+        @{
+            Name = "Calculator"; Icon = "Calculator.ico"; AppId = "Microsoft.WindowsCalculator_8wekyb3d8bbwe!App"
+            Target = $explorerExe; Args = "shell:AppsFolder\Microsoft.WindowsCalculator_8wekyb3d8bbwe!App"
+            TaskbarLnk = "Calculator.lnk"; StartLnks = @("Calculator.lnk")
+        },
+        @{
+            Name = "Photos"; Icon = "Photos.ico"; AppId = "Microsoft.Windows.Photos_8wekyb3d8bbwe!App"
+            Target = $explorerExe; Args = "shell:AppsFolder\Microsoft.Windows.Photos_8wekyb3d8bbwe!App"
+            TaskbarLnk = "Photos.lnk"; StartLnks = @("Photos.lnk")
+        },
+        @{
+            Name = "Apple Music"; Icon = "Music.ico"; AppId = "Microsoft.ZuneMusic_8wekyb3d8bbwe!Microsoft.ZuneMusic"
+            Target = $explorerExe; Args = "shell:AppsFolder\Microsoft.ZuneMusic_8wekyb3d8bbwe!Microsoft.ZuneMusic"
+            TaskbarLnk = "Apple Music.lnk"; StartLnks = @("Apple Music.lnk", "Media Player.lnk")
+        },
+        @{
+            Name = "Task Manager to Activity Monitor"; Icon = "ActivityMonitor.ico"; AppId = ""
+            Target = "$env:WINDIR\System32\Taskmgr.exe"; Args = ""
+            TaskbarLnk = ""; StartLnks = @("Task Manager.lnk", "System Tools\Task Manager.lnk")
+        },
+        @{
+            Name = "Word to Pages"; Icon = "Word.ico"; AppId = ""
+            Target = ""; Args = ""
+            TaskbarLnk = ""; StartLnks = @("Word.lnk")
+        },
+        @{
+            Name = "Excel to Numbers"; Icon = "Excel.ico"; AppId = ""
+            Target = ""; Args = ""
+            TaskbarLnk = ""; StartLnks = @("Excel.lnk")
+        },
+        @{
+            Name = "PowerPoint to Keynote"; Icon = "PowerPoint.ico"; AppId = ""
+            Target = ""; Args = ""
+            TaskbarLnk = ""; StartLnks = @("PowerPoint.lnk")
+        }
+    )
+
+    foreach ($app in $appsConfig) {
+        $icoPath = Join-Path $appsTarget $app.Icon
+        if (Test-Path $icoPath) {
+            if ($app.TaskbarLnk) {
+                $tbLnkPath = Join-Path $taskbarDir $app.TaskbarLnk
+                [MacAppShortcutHelper]::CreateOrUpdateShortcut($tbLnkPath, $app.Target, $app.Args, $icoPath, $app.AppId)
+            }
+
+            foreach ($sl in $app.StartLnks) {
+                $userSlPath = Join-Path $userStartDir $sl
+                $allSlPath = Join-Path $allStartDir $sl
+
+                $parent = Split-Path $userSlPath -Parent
+                if (-not (Test-Path $parent)) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }
+
+                if (Test-Path $userSlPath) {
+                    [MacAppShortcutHelper]::CreateOrUpdateShortcut($userSlPath, $app.Target, $app.Args, $icoPath, $app.AppId)
+                } elseif ($app.Target -and -not (Test-Path $allSlPath)) {
+                    [MacAppShortcutHelper]::CreateOrUpdateShortcut($userSlPath, $app.Target, $app.Args, $icoPath, $app.AppId)
+                }
+
+                if (Test-Path $allSlPath) {
+                    try {
+                        [MacAppShortcutHelper]::CreateOrUpdateShortcut($allSlPath, $app.Target, $app.Args, $icoPath, $app.AppId)
+                    } catch {}
+                }
+            }
+        }
+    }
+
+    Write-Host "  [OK] Apple macOS Squircle App Icons successfully deployed to Dock & Start Menu!" -ForegroundColor Green
+} catch {
+    Write-Host "  [-] App icons note: $($_.Exception.Message)" -ForegroundColor DarkGray
+}
+
+# -------------------------------------------------------------------------
+# Step 8: Apply 4K macOS Wallpaper & Windows Dark Mode
+# -------------------------------------------------------------------------
+Write-Host "`n[8/9] Applying 4K macOS Wallpaper & Deep Dark Mode..." -ForegroundColor Cyan
 try {
     # 1. Dark Mode
     $themeReg = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
@@ -526,9 +778,9 @@ public class Win32Wall {
 }
 
 # -------------------------------------------------------------------------
-# Step 8: Import Windhawk Mods & Settings (Island Dock, Genie, Net Speed)
+# Step 9: Import Windhawk Mods & Settings (Island Dock, Genie, Net Speed)
 # -------------------------------------------------------------------------
-Write-Host "`n[8/8] Activating all 8 Windhawk mods, exact ratios, colors, and animations..." -ForegroundColor Cyan
+Write-Host "`n[9/9] Activating all 8 Windhawk mods, exact ratios, colors, and animations..." -ForegroundColor Cyan
 Write-Host "      (Mac Island Dock, Genie Animation, LiquidGlass, Apple Net Speed...)" -ForegroundColor DarkGray
 
 if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
@@ -606,7 +858,7 @@ Remove-Item -Path $WorkDir -Recurse -Force -ErrorAction SilentlyContinue
 
 Write-Host ""
 Write-Host "========================================================================================" -ForegroundColor Green
-Write-Host "            CONGRATULATIONS! ROHIT BHAI MAC OS v4.0 IS NOW ACTIVE!                     " -ForegroundColor Green
+Write-Host "            CONGRATULATIONS! ROHIT BHAI MAC OS v4.4 IS NOW ACTIVE!                     " -ForegroundColor Green
 Write-Host "========================================================================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "  * Official Apple macOS Folder Icons (Sonoma Aqua, Documents, Downloads, etc.) active" -ForegroundColor White
