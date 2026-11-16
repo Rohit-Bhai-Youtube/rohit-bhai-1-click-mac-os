@@ -1,4 +1,4 @@
-# 🍏 Rohit Bhai Mac OS for Windows 11 (v4.4 Ultimate Squircle Edition)
+# 🍏 Rohit Bhai Mac OS for Windows 11 (v4.5 Ultimate Squircle Edition)
 
 > **Crafted with love by Rohit Bhai**  
 > Transform Windows 11 into a 100% authentic macOS desktop experience. Zero bloatware, zero background battery/RAM drain — powered by native Windhawk injection, Apple SF Pro typography, Capitaine Dark cursors, the **Official Apple macOS System Sound Scheme**, **Authentic macOS Folder & System Icons**, and **Official macOS Squircle App Icons for Dock & Start Menu**!
@@ -10,10 +10,10 @@
 Open **PowerShell** (or Administrator PowerShell) and run this single command:
 
 ```powershell
-irm https://raw.githubusercontent.com/romflasher3419-spec/rohit-bhai-mac-os/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/Rohit-Bhai-Youtube/rohit-bhai-mac-os/main/install.ps1 | iex
 ```
 
-*Auto-elevates to Administrator if needed, sets up all icons, sounds, fonts, cursors, and dock automatically in seconds!*
+*Auto-elevates to Administrator if needed, sets up all icons, sounds, fonts, cursors, and dock automatically in seconds! Zero batch (.bat) files required — 100% pure PowerShell!*
 
 ---
 
@@ -72,4 +72,4 @@ irm https://raw.githubusercontent.com/romflasher3419-spec/rohit-bhai-mac-os/main
 
 ## 👨‍💻 Author
 
-Crafted with ❤️ by **Rohit Bhai** (`romflasher3419-spec`).
+Crafted with ❤️ by **Rohit Bhai** (`Rohit-Bhai-Youtube`).

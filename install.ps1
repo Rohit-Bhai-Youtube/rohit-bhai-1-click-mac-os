@@ -13,7 +13,7 @@ $ErrorActionPreference = "Continue"
 $ProgressPreference = "SilentlyContinue"
 
 # Repository Configuration
-$RepoOwner = "romflasher3419-spec"
+$RepoOwner = "Rohit-Bhai-Youtube"
 $RepoName  = "rohit-bhai-mac-os"
 $Branch    = "main"
 $WebScriptUrl = "https://raw.githubusercontent.com/$RepoOwner/$RepoName/$Branch/install.ps1"
@@ -325,7 +325,7 @@ try {
     if ($localIcons -and (Test-Path $localIcons)) {
         Copy-Item "$localIcons\*.ico" -Destination $iconsTarget -Force -ErrorAction SilentlyContinue
     } else {
-        $iconsZipUrl = "https://github.com/$RepoOwner/$RepoName/releases/download/v4.0.0/macos_icons.zip"
+        $iconsZipUrl = "https://raw.githubusercontent.com/$RepoOwner/$RepoName/$Branch/assets/macos_icons.zip"
         $iconsZip = Join-Path $WorkDir "macos_icons.zip"
         try {
             Invoke-WebRequest -Uri $iconsZipUrl -OutFile $iconsZip -UseBasicParsing -ErrorAction SilentlyContinue
@@ -377,7 +377,7 @@ try {
         $cKey = "$dr\C"
         if (-not (Test-Path "$cKey\DefaultIcon"))  { New-Item -Path "$cKey\DefaultIcon"  -Force -ErrorAction SilentlyContinue | Out-Null }
         if (-not (Test-Path "$cKey\DefaultLabel")) { New-Item -Path "$cKey\DefaultLabel" -Force -ErrorAction SilentlyContinue | Out-Null }
-        if (Test-Path $driveSystemIco) { Set-ItemProperty -Path "$cKey\DefaultIcon"  -Name "(default)" -Value $driveSystemIco -Force -ErrorAction SilentlyContinue }
+        if (Test-Path $driveSystemIco) { Set-ItemProperty -Path "$cKey\DefaultIcon"  -Name "(default)" -Value "$driveSystemIco,0" -Force -ErrorAction SilentlyContinue }
         Set-ItemProperty -Path "$cKey\DefaultLabel" -Name "(default)" -Value "Macintosh HD" -Force -ErrorAction SilentlyContinue
 
         if (Test-Path $driveIco) {
@@ -385,10 +385,17 @@ try {
                 $dl = $_.DriveLetter
                 $dKey = "$dr\$dl"
                 if (-not (Test-Path "$dKey\DefaultIcon")) { New-Item -Path "$dKey\DefaultIcon" -Force -ErrorAction SilentlyContinue | Out-Null }
-                Set-ItemProperty -Path "$dKey\DefaultIcon" -Name "(default)" -Value $driveIco -Force -ErrorAction SilentlyContinue
+                Set-ItemProperty -Path "$dKey\DefaultIcon" -Name "(default)" -Value "$driveIco,0" -Force -ErrorAction SilentlyContinue
             }
         }
     }
+
+    # Modern Explorer Drive override in HKCU Classes
+    $appDrivesKey = "HKCU:\Software\Classes\Applications\Explorer.exe\Drives\C"
+    if (-not (Test-Path "$appDrivesKey\DefaultIcon"))  { New-Item -Path "$appDrivesKey\DefaultIcon"  -Force -ErrorAction SilentlyContinue | Out-Null }
+    if (-not (Test-Path "$appDrivesKey\DefaultLabel")) { New-Item -Path "$appDrivesKey\DefaultLabel" -Force -ErrorAction SilentlyContinue | Out-Null }
+    if (Test-Path $driveSystemIco) { Set-ItemProperty -Path "$appDrivesKey\DefaultIcon"  -Name "(default)" -Value "$driveSystemIco,0" -Force -ErrorAction SilentlyContinue }
+    Set-ItemProperty -Path "$appDrivesKey\DefaultLabel" -Name "(default)" -Value "Macintosh HD" -Force -ErrorAction SilentlyContinue
 
     # 3. Recycle Bin, This PC & Network CLSIDs
     $clsidConfigs = @(
@@ -498,7 +505,7 @@ try {
         Copy-Item "$localAppIcons\*.ico" -Destination $appsTarget -Force -ErrorAction SilentlyContinue
         Copy-Item "$localAppIcons\*.png" -Destination $appsTarget -Force -ErrorAction SilentlyContinue
     } else {
-        $appIconsZipUrl = "https://github.com/$RepoOwner/$RepoName/releases/download/v4.4.0/macos_app_icons.zip"
+        $appIconsZipUrl = "https://raw.githubusercontent.com/$RepoOwner/$RepoName/$Branch/assets/macos_app_icons.zip"
         $appIconsZip = Join-Path $WorkDir "macos_app_icons.zip"
         try {
             Invoke-WebRequest -Uri $appIconsZipUrl -OutFile $appIconsZip -UseBasicParsing -ErrorAction SilentlyContinue
