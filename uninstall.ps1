@@ -372,7 +372,12 @@ try {
         }
     }
 
-    Write-Host "  [OK] Original Microsoft Edge & File Explorer taskbar icons restored!" -ForegroundColor Green
+    # 7. Restore Windows Search Bar & Taskbar Buttons
+    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Search" -Name "SearchboxTaskbarMode" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ShowTaskViewButton" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarDa" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+
+    Write-Host "  [OK] Original Microsoft Edge & File Explorer taskbar icons & search bar restored!" -ForegroundColor Green
 } catch {
     Write-Host "  [-] Skipped taskbar shortcut restoration." -ForegroundColor DarkGray
 }

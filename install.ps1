@@ -1143,8 +1143,24 @@ if ($windhawkExe -or $WindhawkCli) {
     Write-Host "  [-] Skipped Windhawk mods activation (Windhawk not available)." -ForegroundColor DarkGray
 }
 
-# Ensure Windows Taskbar Calibration: Always Visible (StuckRects3 Byte 8 = 02)
+# -------------------------------------------------------------------------
+# Step 10: Taskbar Calibration (Hide Search Bar, Center Dock & Pure macOS Look)
+# -------------------------------------------------------------------------
 try {
+    # 1. Hide ugly Windows Search Box / pill from taskbar (SearchboxTaskbarMode = 0)
+    $searchKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Search"
+    if (-not (Test-Path $searchKey)) { New-Item -Path $searchKey -Force | Out-Null }
+    Set-ItemProperty -Path $searchKey -Name "SearchboxTaskbarMode" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+
+    # 2. Hide Task View, Widgets & Chat/Copilot buttons for authentic clean macOS Dock look
+    $advKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+    if (-not (Test-Path $advKey)) { New-Item -Path $advKey -Force | Out-Null }
+    Set-ItemProperty -Path $advKey -Name "ShowTaskViewButton" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $advKey -Name "TaskbarDa" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $advKey -Name "TaskbarMn" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $advKey -Name "TaskbarAl" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+
+    # 3. Ensure Always Visible Taskbar (StuckRects3 Byte 8 = 02)
     $stuckKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\StuckRects3"
     if (Test-Path $stuckKey) {
         $stuckVal = (Get-ItemProperty -Path $stuckKey -Name "Settings" -ErrorAction SilentlyContinue).Settings
@@ -1167,13 +1183,14 @@ Remove-Item -Path $WorkDir -Recurse -Force -ErrorAction SilentlyContinue
 
 Write-Host ""
 Write-Host "========================================================================================" -ForegroundColor Green
-Write-Host "            CONGRATULATIONS! ROHIT BHAI MAC OS v4.4 IS NOW ACTIVE!                     " -ForegroundColor Green
+Write-Host "            CONGRATULATIONS! ROHIT BHAI MAC OS v4.7 IS NOW ACTIVE!                     " -ForegroundColor Green
 Write-Host "========================================================================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "  * Official Apple macOS Folder Icons (Sonoma Aqua, Documents, Downloads, etc.) active" -ForegroundColor White
 Write-Host "  * Apple Macintosh HD drive icon & Recycle Bin (empty/full) active" -ForegroundColor White
 Write-Host "  * Authentic Apple macOS Sound Scheme (Trash, USB, Alert, Notification) active" -ForegroundColor White
-Write-Host "  * Mac Island & Dock (32px, 8px gap, 22px radius, launch bounce) active" -ForegroundColor White
+Write-Host "  * Clean macOS Dock (Ugly Windows Search Bar & Task View hidden) active" -ForegroundColor White
+Write-Host "  * Fixed Top-Right macOS Status Bar & Centered Floating Dock active" -ForegroundColor White
 Write-Host "  * macOS Genie Minimize animation (450ms) active" -ForegroundColor White
 Write-Host "  * Apple Taskbar Network Speed indicator active" -ForegroundColor White
 Write-Host "  * Apple SF Pro Display typography installed" -ForegroundColor White
