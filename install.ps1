@@ -916,7 +916,9 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
     Set-ItemProperty -Path $islandStoragePath -Name "islandGlassLight" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $islandStoragePath -Name "islandClock" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $islandStoragePath -Name "clockWeekday" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $islandStoragePath -Name "islandMedia" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    # Media: Standalone music icon hidden, auto-shows Song Title & Playback Controls only when playing
+    Set-ItemProperty -Path $islandStoragePath -Name "islandMedia" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandMediaAlways" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $islandStoragePath -Name "mediaButtons" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $islandStoragePath -Name "mediaTitle" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $islandStoragePath -Name "islandPower" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
