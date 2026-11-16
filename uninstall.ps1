@@ -282,12 +282,13 @@ try {
 # -------------------------------------------------------------------------
 # Step 5: Restore Taskbar & Start Menu App Icons (Edge, Explorer, Store)
 # -------------------------------------------------------------------------
-Write-Host "`n[5/8] Restoring Original Taskbar Icons (Edge, File Explorer, Apps)..." -ForegroundColor Cyan
+Write-Host "`n[5/8] Restoring Original Taskbar & Start Menu Icons (Edge, Explorer, Apps)..." -ForegroundColor Cyan
 try {
     $taskbarDir   = Join-Path $env:APPDATA 'Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar'
-    $userStartDir = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'
-    $allStartDir  = Join-Path $env:ProgramData 'Microsoft\Windows\Start Menu\Programs'
-    $shortcutDirs = @($taskbarDir, $userStartDir, $allStartDir)
+    $userStartDir = [Environment]::GetFolderPath('Programs')
+    $allStartDir  = [Environment]::GetFolderPath('CommonPrograms')
+    $userDesktop  = [Environment]::GetFolderPath('Desktop')
+    $commonDesktop = [Environment]::GetFolderPath('CommonDesktop')
 
     $wsh = New-Object -ComObject WScript.Shell
 
@@ -296,19 +297,63 @@ try {
         Get-ChildItem -Path $taskbarDir -Filter "*(*).lnk" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
     }
 
-    # 2. Restore 100% Native Microsoft Edge Taskbar Shortcut
-    $edgeExe = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
-    if (-not (Test-Path $edgeExe)) { $edgeExe = "C:\Program Files\Microsoft\Edge\Application\msedge.exe" }
-    $edgeLnk = Join-Path $taskbarDir "Microsoft Edge.lnk"
-    if (Test-Path $edgeExe) {
-        $sc = $wsh.CreateShortcut($edgeLnk)
-        $sc.TargetPath = $edgeExe
-        $sc.Arguments = ""
-        $sc.IconLocation = "$edgeExe,0"
-        $sc.Save()
+    # 2. Delete artificial UWP launcher shortcuts created by install.ps1 in user Start Menu
+    # On clean Windows 11, these apps are UWP apps enumerated directly by AppX, not .lnk files in Programs!
+    $uwpShortcutsToRemove = @(
+        "Apple Music.lnk",
+        "Calculator.lnk",
+        "File Explorer.lnk",
+        "Media Player.lnk",
+        "Notepad.lnk",
+        "Photos.lnk",
+        "Settings.lnk",
+        "Task Manager.lnk",
+        "Windows Terminal.lnk",
+        "WhatsApp.lnk",
+        "Telegram.lnk",
+        "Microsoft Store.lnk",
+        "Finder.lnk",
+        "Safari.lnk",
+        "Activity Monitor.lnk"
+    )
+    foreach ($scName in $uwpShortcutsToRemove) {
+        $p = Join-Path $userStartDir $scName
+        if (Test-Path $p) {
+            Remove-Item -LiteralPath $p -Force -ErrorAction SilentlyContinue
+        }
     }
 
-    # 3. Restore 100% Native File Explorer Taskbar Shortcut
+    # 3. Remove fake launcher shortcuts created in Taskbar
+    foreach ($scName in $uwpShortcutsToRemove) {
+        $p = Join-Path $taskbarDir $scName
+        if (Test-Path $p) {
+            Remove-Item -LiteralPath $p -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    # 4. Restore 100% Native Microsoft Edge Shortcuts across Taskbar, User Start, and All Users Start
+    $edgeExe = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+    if (-not (Test-Path $edgeExe)) { $edgeExe = "C:\Program Files\Microsoft\Edge\Application\msedge.exe" }
+    if (Test-Path $edgeExe) {
+        $edgeLocations = @(
+            (Join-Path $taskbarDir "Microsoft Edge.lnk"),
+            (Join-Path $allStartDir "Microsoft Edge.lnk"),
+            (Join-Path $userStartDir "Microsoft Edge.lnk"),
+            (Join-Path $userDesktop "Microsoft Edge.lnk"),
+            (Join-Path $commonDesktop "Microsoft Edge.lnk")
+        )
+        foreach ($edgeLnk in $edgeLocations) {
+            if (Test-Path $edgeLnk) {
+                $sc = $wsh.CreateShortcut($edgeLnk)
+                $sc.TargetPath = $edgeExe
+                $sc.Arguments = ""
+                $sc.IconLocation = "$edgeExe,0"
+                $sc.Save()
+            }
+        }
+    }
+
+    # 5. Restore 100% Native File Explorer Taskbar Shortcut
     $explorerLnk = Join-Path $taskbarDir "File Explorer.lnk"
     $sc = $wsh.CreateShortcut($explorerLnk)
     $sc.TargetPath = "$env:WINDIR\explorer.exe"
@@ -316,70 +361,135 @@ try {
     $sc.IconLocation = "$env:WINDIR\explorer.exe,0"
     $sc.Save()
 
-    # 4. Remove fake launcher shortcuts created by Mac suite in taskbar
-    $macCreatedShortcuts = @(
-        "Apple Music.lnk",
-        "Calculator.lnk",
-        "Notepad.lnk",
-        "Photos.lnk",
-        "Settings.lnk",
-        "Windows Terminal.lnk",
-        "WhatsApp.lnk",
-        "Telegram.lnk",
-        "Microsoft Store.lnk"
-    )
-    foreach ($scName in $macCreatedShortcuts) {
-        $p = Join-Path $taskbarDir $scName
-        if (Test-Path $p) {
-            Remove-Item -LiteralPath $p -Force -ErrorAction SilentlyContinue
+    # 6. Restore System Tools shortcuts to native system binaries
+    $sysToolMap = @{
+        "System Tools\Command Prompt.lnk"           = "$env:WINDIR\System32\cmd.exe,0"
+        "Windows PowerShell\Windows PowerShell.lnk" = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe,0"
+        "System Tools\Control Panel.lnk"            = "$env:WINDIR\System32\imageres.dll,-27"
+        "System Tools\Task Manager.lnk"             = "$env:WINDIR\System32\Taskmgr.exe,0"
+    }
+    foreach ($rel in $sysToolMap.Keys) {
+        foreach ($base in @($userStartDir, $allStartDir)) {
+            $p = Join-Path $base $rel
+            if (Test-Path $p) {
+                $sc = $wsh.CreateShortcut($p)
+                $sc.IconLocation = $sysToolMap[$rel]
+                $sc.Save()
+            }
         }
     }
 
-    # 5. Fix real installed apps (Discord, Steam, etc.) whose icons were customized
-    $discordLnk = Join-Path $taskbarDir "Discord.lnk"
-    $discordExe = "$env:LOCALAPPDATA\Discord\Discord.exe"
-    if ((Test-Path $discordLnk) -and (Test-Path $discordExe)) {
-        $sc = $wsh.CreateShortcut($discordLnk)
-        $sc.TargetPath = $discordExe
-        $sc.Arguments = ""
-        $sc.IconLocation = "$discordExe,0"
-        $sc.Save()
+    # 7. Restore Real Installed Desktop Apps (Discord, Steam)
+    $discordExe = "$env:LOCALAPPDATA\Discord\Update.exe"
+    if (-not (Test-Path $discordExe)) { $discordExe = "$env:LOCALAPPDATA\Discord\Discord.exe" }
+    if (Test-Path $discordExe) {
+        $discordLnks = @(
+            (Join-Path $taskbarDir "Discord.lnk"),
+            (Join-Path $userStartDir "Discord.lnk"),
+            (Join-Path $userStartDir "Discord Inc\Discord.lnk"),
+            (Join-Path $allStartDir "Discord.lnk")
+        )
+        foreach ($dl in $discordLnks) {
+            if (Test-Path $dl) {
+                $sc = $wsh.CreateShortcut($dl)
+                $sc.TargetPath = $discordExe
+                $sc.IconLocation = "$discordExe,0"
+                $sc.Save()
+            }
+        }
     }
 
-    $steamLnk = Join-Path $taskbarDir "Steam.lnk"
     $steamExe = "C:\Program Files (x86)\Steam\steam.exe"
-    if ((Test-Path $steamLnk) -and (Test-Path $steamExe)) {
-        $sc = $wsh.CreateShortcut($steamLnk)
-        $sc.TargetPath = $steamExe
-        $sc.Arguments = ""
-        $sc.IconLocation = "$steamExe,0"
-        $sc.Save()
+    if (-not (Test-Path $steamExe)) { $steamExe = "C:\Program Files\Steam\steam.exe" }
+    if (Test-Path $steamExe) {
+        $steamLnks = @(
+            (Join-Path $taskbarDir "Steam.lnk"),
+            (Join-Path $userStartDir "Steam.lnk"),
+            (Join-Path $allStartDir "Steam.lnk"),
+            (Join-Path $allStartDir "Steam\Steam.lnk")
+        )
+        foreach ($sl in $steamLnks) {
+            if (Test-Path $sl) {
+                $sc = $wsh.CreateShortcut($sl)
+                $sc.TargetPath = $steamExe
+                $sc.IconLocation = "$steamExe,0"
+                $sc.Save()
+            }
+        }
     }
 
-    # 6. Scan Start Menu and clean any shortcuts pointing to RohitBhaiMacOS
-    foreach ($dir in $shortcutDirs) {
+    # 8. Restore or clean Office shortcuts (Word, Excel, PowerPoint)
+    $officeRoots = @(
+        "C:\Program Files\Microsoft Office\root\Office16",
+        "C:\Program Files (x86)\Microsoft Office\root\Office16",
+        "C:\Program Files\Microsoft Office\Office16",
+        "C:\Program Files (x86)\Microsoft Office\Office16"
+    )
+    $wordExe = $null; $excelExe = $null; $pptExe = $null
+    foreach ($r in $officeRoots) {
+        if (Test-Path $r) {
+            if (Test-Path (Join-Path $r "WINWORD.EXE")) { $wordExe = Join-Path $r "WINWORD.EXE" }
+            if (Test-Path (Join-Path $r "EXCEL.EXE"))   { $excelExe = Join-Path $r "EXCEL.EXE" }
+            if (Test-Path (Join-Path $r "POWERPNT.EXE")) { $pptExe = Join-Path $r "POWERPNT.EXE" }
+            if ($wordExe) { break }
+        }
+    }
+
+    $officeFiles = @{
+        "Word.lnk" = $wordExe
+        "Excel.lnk" = $excelExe
+        "PowerPoint.lnk" = $pptExe
+    }
+    foreach ($base in @($userStartDir, $allStartDir, $taskbarDir, $userDesktop, $commonDesktop)) {
+        foreach ($of in $officeFiles.Keys) {
+            $p = Join-Path $base $of
+            if (Test-Path $p) {
+                $exe = $officeFiles[$of]
+                if ($exe -and (Test-Path $exe)) {
+                    $sc = $wsh.CreateShortcut($p)
+                    $sc.TargetPath = $exe
+                    $sc.IconLocation = "$exe,0"
+                    $sc.Save()
+                } else {
+                    Remove-Item -LiteralPath $p -Force -ErrorAction SilentlyContinue
+                }
+            }
+        }
+    }
+
+    # 9. Comprehensive Deep Scan for any remaining shortcuts pointing to RohitBhaiMacOS
+    $allShortcutDirs = @($taskbarDir, $userStartDir, $allStartDir, $userDesktop, $commonDesktop)
+    foreach ($dir in $allShortcutDirs) {
         if (-not (Test-Path $dir)) { continue }
         Get-ChildItem -Path $dir -Filter "*.lnk" -Recurse -ErrorAction SilentlyContinue | ForEach-Object {
             try {
                 $lnk = $wsh.CreateShortcut($_.FullName)
-                if ($lnk.TargetPath -like "*RohitBhaiMacOS*") {
+                $target = $lnk.TargetPath
+                $icon = $lnk.IconLocation
+                if ($target -like "*RohitBhaiMacOS*") {
                     Remove-Item -LiteralPath $_.FullName -Force -ErrorAction SilentlyContinue
-                } elseif ($lnk.IconLocation -like "*RohitBhaiMacOS*") {
-                    $lnk.IconLocation = ""
-                    $lnk.Save()
+                } elseif ($icon -like "*RohitBhaiMacOS*") {
+                    if ($target -and (Test-Path $target) -and ($target -match "\.exe$")) {
+                        $lnk.IconLocation = "$target,0"
+                        $lnk.Save()
+                    } else {
+                        Remove-Item -LiteralPath $_.FullName -Force -ErrorAction SilentlyContinue
+                    }
                 }
             } catch {}
         }
     }
 
-    # 7. Restore Windows Search Bar & Taskbar Buttons
+    # 10. Restore Windows Search Bar & Taskbar Buttons
     Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Search" -Name "SearchboxTaskbarMode" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ShowTaskViewButton" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarDa" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarMn" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarAl" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
 
-    Write-Host "  [OK] Original Microsoft Edge & File Explorer taskbar icons & search bar restored!" -ForegroundColor Green
+    Write-Host "  [OK] Original Microsoft Edge, File Explorer, Start Menu, and app icons restored!" -ForegroundColor Green
 } catch {
-    Write-Host "  [-] Skipped taskbar shortcut restoration." -ForegroundColor DarkGray
+    Write-Host "  [-] Skipped taskbar shortcut restoration: $($_.Exception.Message)" -ForegroundColor DarkGray
 }
 
 # -------------------------------------------------------------------------
@@ -466,9 +576,9 @@ public class Win32RestoreWall {
 }
 
 # -------------------------------------------------------------------------
-# Step 8: Clean AppData Directory & Rebuild Windows Explorer Icon Cache
+# Step 8: Clean AppData Directory & Rebuild Windows Explorer & Start Menu Cache
 # -------------------------------------------------------------------------
-Write-Host "`n[8/8] Rebuilding Windows Icon Cache & Refreshing Explorer..." -ForegroundColor Cyan
+Write-Host "`n[8/8] Rebuilding Windows Icon Cache & Refreshing Explorer & Start Menu..." -ForegroundColor Cyan
 
 # 1. Remove RohitBhaiMacOS data directory
 $appDir = "$env:LOCALAPPDATA\RohitBhaiMacOS"
@@ -476,8 +586,8 @@ if (Test-Path $appDir) {
     Remove-Item -Path $appDir -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-# 2. Terminate explorer to release icon database handles
-Stop-Process -Name explorer -Force -ErrorAction SilentlyContinue
+# 2. Terminate explorer, StartMenuExperienceHost, and SearchHost to release all icon databases
+Stop-Process -Name "StartMenuExperienceHost", "SearchHost", "ShellExperienceHost", "explorer" -Force -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 2
 
 # 3. Flush icon and thumbnail cache files
@@ -490,7 +600,20 @@ if (Test-Path $expCache) {
     Get-ChildItem -Path $expCache -Filter "*thumbcache*.db" -Force -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
 }
 
-# 4. Relaunch Windows Explorer cleanly
+# 4. Clear Start Menu & Search tile caches
+$startCacheDirs = @(
+    "$env:LOCALAPPDATA\Packages\Microsoft.Windows.StartMenuExperienceHost_cw5n1h2txyewy\LocalState",
+    "$env:LOCALAPPDATA\Packages\Microsoft.Windows.StartMenuExperienceHost_cw5n1h2txyewy\TempState",
+    "$env:LOCALAPPDATA\Packages\Microsoft.Windows.Search_cw5n1h2txyewy\LocalState",
+    "$env:LOCALAPPDATA\Packages\Microsoft.Windows.Search_cw5n1h2txyewy\TempState"
+)
+foreach ($scd in $startCacheDirs) {
+    if (Test-Path $scd) {
+        Get-ChildItem -Path $scd -Recurse -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+# 5. Relaunch Windows Explorer cleanly
 Start-Process explorer.exe
 Start-Sleep -Seconds 2
 & ie4uinit.exe -show 2>$null

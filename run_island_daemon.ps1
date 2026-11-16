@@ -274,6 +274,45 @@ public class IslandDaemon {
         CloseDesktop(hDesk);
     }
 
+    public static void EnforceTopRightBar() {
+        try {
+            string[] subKeys = new string[] {
+                @"Software\Windhawk\Engine\ModsWritable\mac-island-dock\LocalStorage",
+                @"Software\WOW6432Node\Windhawk\Engine\ModsWritable\mac-island-dock\LocalStorage"
+            };
+            foreach (string sk in subKeys) {
+                using (RegistryKey key = Registry.LocalMachine.CreateSubKey(sk)) {
+                    if (key != null) {
+                        object barVal = key.GetValue("islandBar");
+                        object alignVal = key.GetValue("islandBarAlign");
+                        object pillVal = key.GetValue("islandZoneAsPill");
+                        object placeXVal = key.GetValue("placeX");
+                        if (barVal == null || Convert.ToInt32(barVal) != 1 ||
+                            alignVal == null || Convert.ToInt32(alignVal) != 3 ||
+                            pillVal == null || Convert.ToInt32(pillVal) != 0 ||
+                            placeXVal == null || Convert.ToInt32(placeXVal) != 1000) {
+                            key.SetValue("islandBar", 1, RegistryValueKind.DWord);
+                            key.SetValue("islandBarSide", 0, RegistryValueKind.DWord);
+                            key.SetValue("islandBarAlign", 3, RegistryValueKind.DWord);
+                            key.SetValue("placeX", 1000, RegistryValueKind.DWord);
+                            key.SetValue("placeY", 0, RegistryValueKind.DWord);
+                            key.SetValue("islandNotches", 0, RegistryValueKind.DWord);
+                            key.SetValue("islandPillNotches", 0, RegistryValueKind.DWord);
+                            key.SetValue("islandZoneAsPill", 0, RegistryValueKind.DWord);
+                            key.SetValue("islandBarCorners", 0, RegistryValueKind.DWord);
+                            key.SetValue("islandBarFixedSides", 0, RegistryValueKind.DWord);
+                            key.SetValue("islandGap", 0, RegistryValueKind.DWord);
+                            key.SetValue("islandVerticalSides", 1, RegistryValueKind.DWord);
+                            key.SetValue("islandLiquidGlass", 1, RegistryValueKind.DWord);
+                            key.SetValue("islandGlassBlur", 70, RegistryValueKind.DWord);
+                            key.SetValue("islandGlassLight", 1, RegistryValueKind.DWord);
+                        }
+                    }
+                }
+            }
+        } catch {}
+    }
+
     public static void Run() {
         string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         string iconsDir = Path.Combine(localAppData, "RohitBhaiMacOS", "Icons", "Apps");
@@ -297,6 +336,7 @@ public class IslandDaemon {
                         }
                     }
                 }
+                EnforceTopRightBar();
                 CleanArtifactsAndInjectIcons(iconsDir);
             } catch {}
             Thread.Sleep(3000);
