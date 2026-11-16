@@ -64,7 +64,12 @@
                                                               "placeY":  0,
                                                               "islandBar":  1,
                                                               "islandBarAlign":  3,
-                                                              "islandBarCorners":  0
+                                                              "islandBarCorners":  0,
+                                                              "islandBarSide":  0,
+                                                              "islandBarFixedSides":  0,
+                                                              "islandOverFullscreen":  1,
+                                                              "islandAutoHide":  0,
+                                                              "islandHideWhen":  0
                                                           }
                                      },
                  "macos-minimize-animation":  {

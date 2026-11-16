@@ -279,16 +279,31 @@ try {
     }
 
     Set-MacSound -App "Explorer" -Event "EmptyRecycleBin" -WavName "macOS_Trash_Empty.wav"
+    Set-MacSound -App "Explorer" -Event "Navigating" -WavName "macOS_Pop.wav"
+    Set-MacSound -App ".Default" -Event ".Default" -WavName "macOS_Pop.wav"
     Set-MacSound -App ".Default" -Event "DeviceConnect" -WavName "macOS_Device_Connect.wav"
     Set-MacSound -App ".Default" -Event "DeviceDisconnect" -WavName "macOS_Device_Disconnect.wav"
+    Set-MacSound -App ".Default" -Event "DeviceFail" -WavName "macOS_Basso.wav"
     Set-MacSound -App ".Default" -Event "Notification.Default" -WavName "macOS_Notification.wav"
-    Set-MacSound -App ".Default" -Event "SystemAsterisk" -WavName "macOS_Notification.wav"
+    Set-MacSound -App ".Default" -Event "SystemNotification" -WavName "macOS_Notification.wav"
+    Set-MacSound -App ".Default" -Event "SystemAsterisk" -WavName "macOS_Hero.wav"
     Set-MacSound -App ".Default" -Event "SystemExclamation" -WavName "macOS_Funk.wav"
-    Set-MacSound -App ".Default" -Event "SystemHand" -WavName "macOS_Sosumi.wav"
+    Set-MacSound -App ".Default" -Event "SystemHand" -WavName "macOS_Basso.wav"
     Set-MacSound -App ".Default" -Event "SystemQuestion" -WavName "macOS_Pop.wav"
     Set-MacSound -App ".Default" -Event "LowBatteryAlarm" -WavName "macOS_Basso.wav"
     Set-MacSound -App ".Default" -Event "CriticalBatteryAlarm" -WavName "macOS_Sosumi.wav"
     Set-MacSound -App ".Default" -Event "PrintComplete" -WavName "macOS_Hero.wav"
+
+    # Audio Unmute & Test Boost
+    try {
+        $wsh = New-Object -ComObject WScript.Shell
+        for ($i = 0; $i -lt 15; $i++) { $wsh.SendKeys([char]175) }
+        $heroWav = Join-Path $soundsTarget "macOS_Hero.wav"
+        if (Test-Path $heroWav) {
+            $player = New-Object System.Media.SoundPlayer($heroWav)
+            $player.Play()
+        }
+    } catch {}
 
     Write-Host "  [OK] Apple macOS Sound Scheme (Trash, USB, Alert, Notification) activated!" -ForegroundColor Green
 } catch {
@@ -380,11 +395,11 @@ try {
     # 4. User Profile Special Folders (Downloads, Documents, Pictures, Music, Videos, Desktop)
     $folderMap = @(
         @{ Name = "Downloads"; Paths = @("$env:USERPROFILE\Downloads"); Ico = Join-Path $iconsTarget "macOS_Downloads.ico"; GUIDs = @("{374DE290-123F-4565-9164-39C4925E467B}", "{7d83ee9b-2244-4e70-b1f5-5393042af1e4}") }
-        @{ Name = "Documents"; Paths = @("$env:USERPROFILE\Documents", [Environment]::GetFolderPath('MyDocuments')); Ico = Join-Path $iconsTarget "macOS_Documents.ico"; GUIDs = @("{FDD39AD0-238F-46AF-ADB4-6C85480369C7}", "{f42ee2d3-909f-4907-8871-4c22fc0bf756}") }
-        @{ Name = "Pictures";  Paths = @("$env:USERPROFILE\Pictures", [Environment]::GetFolderPath('MyPictures'));  Ico = Join-Path $iconsTarget "macOS_Pictures.ico";  GUIDs = @("{33E28130-4E1E-4676-835A-98395C3BC3BB}", "{0ddd0157-5467-4334-96c9-78ec10e39588}") }
+        @{ Name = "Documents"; Paths = @("$env:USERPROFILE\OneDrive\Documents", "$env:USERPROFILE\Documents", [Environment]::GetFolderPath('MyDocuments')); Ico = Join-Path $iconsTarget "macOS_Documents.ico"; GUIDs = @("{FDD39AD0-238F-46AF-ADB4-6C85480369C7}", "{f42ee2d3-909f-4907-8871-4c22fc0bf756}") }
+        @{ Name = "Pictures";  Paths = @("$env:USERPROFILE\OneDrive\Pictures", "$env:USERPROFILE\Pictures", [Environment]::GetFolderPath('MyPictures'));  Ico = Join-Path $iconsTarget "macOS_Pictures.ico";  GUIDs = @("{33E28130-4E1E-4676-835A-98395C3BC3BB}", "{0ddd0157-5467-4334-96c9-78ec10e39588}") }
         @{ Name = "Music";     Paths = @("$env:USERPROFILE\Music", [Environment]::GetFolderPath('MyMusic'));     Ico = Join-Path $iconsTarget "macOS_Music.ico";     GUIDs = @("{4BD8D571-6D19-48D3-BE97-422220080E43}", "{a0c69a99-21c8-4671-8703-7934162fbe1d}") }
         @{ Name = "Videos";    Paths = @("$env:USERPROFILE\Videos", [Environment]::GetFolderPath('MyVideos'));    Ico = Join-Path $iconsTarget "macOS_Videos.ico";    GUIDs = @("{18989B1D-99B5-455B-841C-AB7C74E4DDFC}", "{35286161-5079-4140-9a09-7b505a4f2791}") }
-        @{ Name = "Desktop";   Paths = @("$env:USERPROFILE\Desktop", [Environment]::GetFolderPath('Desktop'));   Ico = Join-Path $iconsTarget "macOS_Desktop.ico";   GUIDs = @("{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}") }
+        @{ Name = "Desktop";   Paths = @("$env:USERPROFILE\OneDrive\Desktop", "$env:USERPROFILE\Desktop", [Environment]::GetFolderPath('Desktop'));   Ico = Join-Path $iconsTarget "macOS_Desktop.ico";   GUIDs = @("{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}") }
     )
 
     foreach ($f in $folderMap) {
@@ -493,11 +508,30 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
     Set-ItemProperty -Path $islandStoragePath -Name "islandAutoHide" -Value 0 -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $islandStoragePath -Name "islandHideWhen" -Value 0 -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $islandStoragePath -Name "islandHideClock" -Value 0 -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandOverFullscreen" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandBarSide" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $islandStoragePath -Name "islandBarFixedSides" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $islandStoragePath -Name "placeX" -Value 1000 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $islandStoragePath -Name "placeY" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $islandStoragePath -Name "islandBar" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $islandStoragePath -Name "islandBarAlign" -Value 3 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $islandStoragePath -Name "islandBarCorners" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+
+    # Register permanent silent startup for Mac Island Top Bar
+    $appDir = "$env:LOCALAPPDATA\RohitBhaiMacOS"
+    if (-not (Test-Path $appDir)) { New-Item -ItemType Directory -Path $appDir -Force | Out-Null }
+    $daemonPs1 = Join-Path $appDir "run_island_daemon.ps1"
+    $localDaemon = if ($ScriptDir) { Join-Path $ScriptDir "run_island_daemon.ps1" } else { $null }
+    if ($localDaemon -and (Test-Path $localDaemon)) {
+        Copy-Item $localDaemon -Destination $daemonPs1 -Force -ErrorAction SilentlyContinue
+    }
+    $startupFolder = [Environment]::GetFolderPath('Startup')
+    $vbsPath = Join-Path $startupFolder "RohitBhai_Mac_Island.vbs"
+    $vbsContent = "Set WshShell = CreateObject(""WScript.Shell"")`r`nWshShell.Run ""powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden -File """"$daemonPs1"""""", 0, False"
+    [System.IO.File]::WriteAllText($vbsPath, $vbsContent, [System.Text.Encoding]::ASCII)
+    Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'Windhawk' -Value '"C:\Program Files\Windhawk\windhawk.exe" -tray-only' -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'RohitBhai_Mac_Island' -Value "wscript.exe `"$vbsPath`"" -Force -ErrorAction SilentlyContinue
+
     & "C:\Program Files\Windhawk\windhawk.exe" -restart -tray-only 2>$null
     Write-Host "  [OK] Maximized window guard active: Top Bar fixed at top-right & Bottom Dock stay ALWAYS visible with zero overlap!" -ForegroundColor Green
 } else {
