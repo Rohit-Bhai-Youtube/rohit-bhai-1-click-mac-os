@@ -1,4 +1,4 @@
-﻿# ==============================================================================
+# ==============================================================================
 # Rohit Bhai Mac OS for Windows 11 - 1-Click Ultimate Suite v4.4 Pro
 # Target: Windows 11 (22H2 / 23H2 / 24H2) and Windows 10
 # Includes: Windhawk Mac Island Dock, Genie, Net Speed, SF Pro Fonts,
@@ -280,8 +280,18 @@ try {
     }
 
     Set-MacSound -App "Explorer" -Event "EmptyRecycleBin" -WavName "macOS_Trash_Empty.wav"
-    Set-MacSound -App "Explorer" -Event "Navigating" -WavName "macOS_Pop.wav"
-    Set-MacSound -App ".Default" -Event ".Default" -WavName "macOS_Pop.wav"
+    # Windows 11 Explorer Navigation Sound Enable
+    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ShowExplorerAudio" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+
+    $clickWav = if (Test-Path (Join-Path $soundsTarget "macOS_Click.wav")) { "macOS_Click.wav" } else { "macOS_Pop.wav" }
+
+    Set-MacSound -App "Explorer" -Event "Navigating" -WavName $clickWav
+    Set-MacSound -App ".Default" -Event "Navigating" -WavName $clickWav
+    Set-MacSound -App ".Default" -Event "CCSelect" -WavName $clickWav
+    Set-MacSound -App ".Default" -Event "MenuCommand" -WavName $clickWav
+    Set-MacSound -App ".Default" -Event "MenuPopup" -WavName $clickWav
+    Set-MacSound -App ".Default" -Event "ShowFPane" -WavName $clickWav
+    Set-MacSound -App ".Default" -Event ".Default" -WavName $clickWav
     Set-MacSound -App ".Default" -Event "DeviceConnect" -WavName "macOS_Device_Connect.wav"
     Set-MacSound -App ".Default" -Event "DeviceDisconnect" -WavName "macOS_Device_Disconnect.wav"
     Set-MacSound -App ".Default" -Event "DeviceFail" -WavName "macOS_Basso.wav"
@@ -290,7 +300,7 @@ try {
     Set-MacSound -App ".Default" -Event "SystemAsterisk" -WavName "macOS_Hero.wav"
     Set-MacSound -App ".Default" -Event "SystemExclamation" -WavName "macOS_Funk.wav"
     Set-MacSound -App ".Default" -Event "SystemHand" -WavName "macOS_Basso.wav"
-    Set-MacSound -App ".Default" -Event "SystemQuestion" -WavName "macOS_Pop.wav"
+    Set-MacSound -App ".Default" -Event "SystemQuestion" -WavName $clickWav
     Set-MacSound -App ".Default" -Event "LowBatteryAlarm" -WavName "macOS_Basso.wav"
     Set-MacSound -App ".Default" -Event "CriticalBatteryAlarm" -WavName "macOS_Sosumi.wav"
     Set-MacSound -App ".Default" -Event "PrintComplete" -WavName "macOS_Hero.wav"

@@ -3,58 +3,65 @@ using System;
 using System.IO;
 using System.Text;
 using System.Threading;
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using Microsoft.Win32;
 
 public class IslandDaemon {
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    public struct STARTUPINFO {
-        public int cb;
-        public string lpReserved;
-        public string lpDesktop;
-        public string lpTitle;
-        public int dwX;
-        public int dwY;
-        public int dwXSize;
-        public int dwYSize;
-        public int dwXCountChars;
-        public int dwYCountChars;
-        public int dwFillAttribute;
-        public int dwFlags;
-        public short wShowWindow;
-        public short cbReserved2;
-        public IntPtr lpReserved2;
-        public IntPtr hStdInput;
-        public IntPtr hStdOutput;
-        public IntPtr hStdError;
+    [DllImport("winmm.dll", SetLastError = true)]
+    public static extern bool PlaySound(byte[] ptrToSound, IntPtr hmod, uint fdwSound);
+
+    private const uint SND_ASYNC = 0x0001;
+    private const uint SND_MEMORY = 0x0004;
+    private const uint SND_NODEFAULT = 0x0002;
+
+    private const int WH_MOUSE_LL = 14;
+    private const int WM_LBUTTONDOWN = 0x0201;
+    private const int WM_RBUTTONDOWN = 0x0204;
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelMouseProc lpfn, IntPtr hMod, uint dwThreadId);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool UnhookWindowsHookEx(IntPtr hhk);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    private static extern IntPtr GetModuleHandle(string lpModuleName);
+
+    [DllImport("user32.dll")]
+    private static extern int GetMessage(out MSG lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax);
+
+    [DllImport("user32.dll")]
+    private static extern bool TranslateMessage([In] ref MSG lpMsg);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr DispatchMessage([In] ref MSG lpMsg);
+
+    private delegate IntPtr LowLevelMouseProc(int nCode, IntPtr wParam, IntPtr lParam);
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MSG {
+        public IntPtr hwnd;
+        public uint message;
+        public IntPtr wParam;
+        public IntPtr lParam;
+        public uint time;
+        public POINT pt;
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    public struct PROCESS_INFORMATION {
-        public IntPtr hProcess;
-        public IntPtr hThread;
-        public int dwProcessId;
-        public int dwThreadId;
-    }
+    public struct POINT { public int x; public int y; }
 
-    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-    public static extern bool CreateProcess(
-        string lpApplicationName,
-        string lpCommandLine,
-        IntPtr lpProcessAttributes,
-        IntPtr lpThreadAttributes,
-        bool bInheritHandles,
-        uint dwCreationFlags,
-        IntPtr lpEnvironment,
-        string lpCurrentDirectory,
-        ref STARTUPINFO lpStartupInfo,
-        out PROCESS_INFORMATION lpProcessInformation);
-
-    [DllImport("kernel32.dll")]
-    public static extern bool CloseHandle(IntPtr hObject);
-
-    [DllImport("kernel32.dll")]
-    public static extern uint WaitForSingleObject(IntPtr hHandle, uint dwMilliseconds);
+    private static LowLevelMouseProc _proc = HookCallback;
+    private static IntPtr _hookID = IntPtr.Zero;
+    private static byte[] _soundBytes = null;
+    private static long _lastTick = 0;
+    public static bool SoundEnabled = true;
 
     [DllImport("user32.dll", SetLastError = true)]
     public static extern IntPtr OpenDesktop(string lpszDesktop, int dwFlags, bool fInherit, uint dwDesiredAccess);
@@ -123,6 +130,47 @@ public class IslandDaemon {
             return hicon;
         }
         return IntPtr.Zero;
+    }
+
+    private static IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam) {
+        if (nCode >= 0 && SoundEnabled) {
+            int msg = wParam.ToInt32();
+            if (msg == WM_LBUTTONDOWN || msg == WM_RBUTTONDOWN) {
+                long now = Stopwatch.GetTimestamp();
+                double ms = (now - _lastTick) * 1000.0 / Stopwatch.Frequency;
+                if (ms > 35) {
+                    _lastTick = now;
+                    if (_soundBytes != null) {
+                        PlaySound(_soundBytes, IntPtr.Zero, SND_ASYNC | SND_MEMORY | SND_NODEFAULT);
+                    }
+                }
+            }
+        }
+        return CallNextHookEx(_hookID, nCode, wParam, lParam);
+    }
+
+    public static void StartMouseSound(string soundPath) {
+        if (File.Exists(soundPath)) {
+            _soundBytes = File.ReadAllBytes(soundPath);
+        }
+        Thread hookThread = new Thread(() => {
+            using (Process curProcess = Process.GetCurrentProcess())
+            using (ProcessModule curModule = curProcess.MainModule) {
+                _hookID = SetWindowsHookEx(WH_MOUSE_LL, _proc, GetModuleHandle(curModule.ModuleName), 0);
+            }
+            MSG msg;
+            while (GetMessage(out msg, IntPtr.Zero, 0, 0) > 0) {
+                TranslateMessage(ref msg);
+                DispatchMessage(ref msg);
+            }
+            if (_hookID != IntPtr.Zero) {
+                UnhookWindowsHookEx(_hookID);
+                _hookID = IntPtr.Zero;
+            }
+        });
+        hookThread.IsBackground = true;
+        hookThread.SetApartmentState(ApartmentState.STA);
+        hookThread.Start();
     }
 
     public static void CleanArtifactsAndInjectIcons(string iconsDir) {
@@ -229,10 +277,28 @@ public class IslandDaemon {
     public static void Run() {
         string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         string iconsDir = Path.Combine(localAppData, "RohitBhaiMacOS", "Icons", "Apps");
+        string clickSound = Path.Combine(localAppData, "RohitBhaiMacOS", "Sounds", "macOS_Click.wav");
+        if (!File.Exists(clickSound)) {
+            clickSound = Path.Combine(localAppData, "RohitBhaiMacOS", "Sounds", "macOS_Pop.wav");
+        }
 
-        Console.WriteLine("IslandDaemon: Active background monitor running.");
+        // Start ultra-low-latency macOS tactile click sound hook
+        StartMouseSound(clickSound);
+
+        Console.WriteLine("IslandDaemon: Active background monitor & smooth tactile sound running.");
         while (true) {
-            try { CleanArtifactsAndInjectIcons(iconsDir); } catch {}
+            try {
+                // Check registry toggle for click sound
+                using (RegistryKey rk = Registry.CurrentUser.OpenSubKey(@"Software\RohitBhaiMacOS")) {
+                    if (rk != null) {
+                        object val = rk.GetValue("ClickSound");
+                        if (val != null) {
+                            SoundEnabled = (Convert.ToInt32(val) != 0);
+                        }
+                    }
+                }
+                CleanArtifactsAndInjectIcons(iconsDir);
+            } catch {}
             Thread.Sleep(3000);
         }
     }
