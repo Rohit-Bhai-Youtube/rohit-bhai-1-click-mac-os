@@ -1111,8 +1111,8 @@ function Set-AppleNetSpeedStorage {
         Set-ItemProperty -Path $p -Name "theme" -Value "Chart" -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $p -Name "showBox" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $p -Name "horizontalPosition" -Value 10 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "rightOffset" -Value 6 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "verticalNudge" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "rightOffset" -Value 12 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "verticalNudge" -Value 6 -Type DWord -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $p -Name "updateIntervalMs" -Value 1000 -Type DWord -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $p -Name "fontSize" -Value 13 -Type DWord -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $p -Name "opacity" -Value 255 -Type DWord -Force -ErrorAction SilentlyContinue
