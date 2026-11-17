@@ -1,4 +1,4 @@
-﻿{
+{
     "format":  "windhawk-user-data-v1",
     "appSettings":  {
                         "language":  "en",
@@ -122,7 +122,7 @@
                      "settings":  {
                                       "theme":  "Translucent Explorer11",
                                       "backgroundTranslucentEffect":  "",
-                                      "backgroundTranslucentEffectRegion":  "entireWindow",
+                                      "backgroundTranslucentEffectRegion":  "explorerFrame",
                                       "styleConstants[0]":  "",
                                       "controlStyles[0].target":  "Grid#NavigationBarControlGrid",
                                       "controlStyles[0].styles[0]":  "Background:=\u003cWindhawkBlur BlurAmount=\"1\" TintColor=\"#18202020\" TintOpacity=\"0.25\"/\u003e",

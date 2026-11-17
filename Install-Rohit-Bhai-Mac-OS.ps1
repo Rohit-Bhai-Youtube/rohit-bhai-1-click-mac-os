@@ -994,9 +994,8 @@ public static class MacAppShortcutHelper {
                 $userSlPath = Join-Path $userStartDir $sl
                 $allSlPath = Join-Path $allStartDir $sl
 
-                # Only update Start Menu shortcut if it ALREADY EXISTS on the machine
-                # NEVER create fake duplicate .lnk files in user Start Menu!
-                if (Test-Path $userSlPath) {
+                # Deploy custom squircle icon shortcut to Start Menu for installed apps
+                if ($app.Installed -and $app.Target) {
                     [MacAppShortcutHelper]::CreateOrUpdateShortcut($userSlPath, $app.Target, $app.Args, $icoPath, $app.AppId)
                 }
                 if (Test-Path $allSlPath) {
@@ -1019,6 +1018,14 @@ public static class MacAppShortcutHelper {
 Write-Host "
 [8/9] Applying 4K macOS Wallpaper & Deep Dark Mode..." -ForegroundColor Cyan
 try {
+    # Disable Windows Spotlight & Slideshow so picture wallpaper displays
+    $wpReg = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Wallpapers"
+    if (Test-Path $wpReg) {
+        Set-ItemProperty -Path $wpReg -Name "BackgroundType" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $wpReg -Name "SlideshowSourceDirectoriesSet" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+        Remove-ItemProperty -Path $wpReg -Name "SlideshowDirectoryPath1" -Force -ErrorAction SilentlyContinue
+    }
+
     # 1. Dark Mode
     $themeReg = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
     if (Test-Path $themeReg) {
@@ -1092,7 +1099,7 @@ function Set-RegString($key, $name, $val) {
 }
 
 function Set-MacIslandStorage {
-    $targetOrder = 'd12356;<8?0479:=>@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcefghijklm'
+    $targetOrder = 'de12635;<8?0479:=>@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcfghijklm'
     $key = "HKLM\SOFTWARE\Windhawk\Engine\ModsWritable\mac-island-dock\LocalStorage"
     
     # Read user SID to ensure per-user storage also receives all values
@@ -1122,8 +1129,8 @@ function Set-MacIslandStorage {
         "clockYear" = 0
         "islandMedia" = 0
         "islandMediaAlways" = 0
-        "islandMediaPlayOnly" = 0
-        "mediaButtons" = 0
+        "islandMediaPlayOnly" = 1
+        "mediaButtons" = 1
         "mediaTitle" = 1
         "islandMediaButtonsSize" = 130
         "islandMediaTitleLimit" = 210

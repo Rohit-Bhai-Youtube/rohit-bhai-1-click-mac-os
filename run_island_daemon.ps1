@@ -275,7 +275,7 @@ public class IslandDaemon {
                 @"Software\Windhawk\Engine\ModsWritable\mac-island-dock\LocalStorage",
                 @"Software\WOW6432Node\Windhawk\Engine\ModsWritable\mac-island-dock\LocalStorage"
             };
-            string targetOrder = @"d12356;<8?0479:=>@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcefghijklm";
+            string targetOrder = @"de12635;<8?0479:=>@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcfghijklm";
 
             foreach (string sk in subKeys) {
                 using (RegistryKey key = Registry.LocalMachine.CreateSubKey(sk)) {
@@ -321,9 +321,9 @@ public class IslandDaemon {
                             key.SetValue("clockYear", 0, RegistryValueKind.DWord);
                             key.SetValue("islandMedia", 0, RegistryValueKind.DWord);
                             key.SetValue("islandMediaAlways", 0, RegistryValueKind.DWord);
-                            key.SetValue("islandMediaPlayOnly", 0, RegistryValueKind.DWord);
+                            key.SetValue("islandMediaPlayOnly", 1, RegistryValueKind.DWord);
                             key.SetValue("islandTheme", 4, RegistryValueKind.DWord);
-                            key.SetValue("mediaButtons", 0, RegistryValueKind.DWord);
+                            key.SetValue("mediaButtons", 1, RegistryValueKind.DWord);
                             key.SetValue("mediaTitle", 1, RegistryValueKind.DWord);
                             key.SetValue("islandApps", 0, RegistryValueKind.DWord);
                             key.SetValue("islandNetSpeed", 0, RegistryValueKind.DWord);
