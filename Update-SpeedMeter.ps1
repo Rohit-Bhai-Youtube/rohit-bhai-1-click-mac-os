@@ -5,14 +5,13 @@
 # Auto-elevate to Administrator using native Shell
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {
-    try {
-        $sh = New-Object -ComObject Shell.Application
-        $sh.ShellExecute("powershell.exe", "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"", "", "runas", 1)
-        exit
-    } catch {
+    $scriptUrl = "https://raw.githubusercontent.com/Rohit-Bhai-Youtube/rohit-bhai-1-click-mac-os/main/Update-SpeedMeter.ps1"
+    if ($PSCommandPath -and (Test-Path $PSCommandPath)) {
         Start-Process powershell.exe -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
-        exit
+    } else {
+        Start-Process powershell.exe -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"irm '$scriptUrl' | iex`""
     }
+    exit
 }
 
 try {
@@ -27,29 +26,52 @@ Write-Host "====================================================================
 Write-Host ""
 
 $WindhawkCli = "C:\Program Files\Windhawk\windhawk-cli.exe"
-$speedModSource = Join-Path $PSScriptRoot "Mods-Source\local@net-speed-taskbar-apple.wh.cpp"
-$progDataSource = "C:\ProgramData\Windhawk\ModsSource\local@net-speed-taskbar-apple.wh.cpp"
+$RepoOwner = "Rohit-Bhai-Youtube"
+$RepoName  = "rohit-bhai-1-click-mac-os"
+$Branch    = "main"
+$RawBase   = "https://raw.githubusercontent.com/$RepoOwner/$RepoName/$Branch"
 
-if (-not (Test-Path $speedModSource)) {
-    Write-Host "  [-] Mod source file not found at: $speedModSource" -ForegroundColor Red
-    Write-Host ""
+$speedModSource = $null
+
+# Check local repo path
+if ($PSScriptRoot -and (Test-Path (Join-Path $PSScriptRoot "Mods-Source\local@net-speed-taskbar-apple.wh.cpp"))) {
+    $speedModSource = Join-Path $PSScriptRoot "Mods-Source\local@net-speed-taskbar-apple.wh.cpp"
+} elseif (Test-Path "C:\Users\rohit\.gemini\antigravity\scratch\Rohit-Bhai-Mac-OS\Mods-Source\local@net-speed-taskbar-apple.wh.cpp") {
+    $speedModSource = "C:\Users\rohit\.gemini\antigravity\scratch\Rohit-Bhai-Mac-OS\Mods-Source\local@net-speed-taskbar-apple.wh.cpp"
+} else {
+    Write-Host "  [*] Downloading latest C++ mod source from GitHub..." -ForegroundColor Yellow
+    $tempCpp = Join-Path $env:TEMP "local@net-speed-taskbar-apple.wh.cpp"
+    try {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        Invoke-WebRequest -Uri "$RawBase/Mods-Source/local@net-speed-taskbar-apple.wh.cpp" -OutFile $tempCpp -UseBasicParsing
+        $speedModSource = $tempCpp
+        Write-Host "  [OK] Downloaded latest C++ mod source!" -ForegroundColor Green
+    } catch {
+        Write-Host "  [-] Failed to download mod source: $_" -ForegroundColor Red
+    }
+}
+
+if (-not $speedModSource -or -not (Test-Path $speedModSource)) {
+    Write-Host "  [-] Mod source file not found!" -ForegroundColor Red
     Read-Host "Press Enter to exit..."
     exit
 }
 
+$progDataSource = "C:\ProgramData\Windhawk\ModsSource\local@net-speed-taskbar-apple.wh.cpp"
+
 # 1. Deploy source to ProgramData
-Write-Host "  [1/4] Deploying updated C++ mod source to Windhawk repository..." -ForegroundColor Yellow
+Write-Host "  [1/4] Deploying updated C++ mod source to Windhawk..." -ForegroundColor Yellow
 try {
     $destDir = Split-Path $progDataSource -Parent
     if (-not (Test-Path $destDir)) { New-Item -ItemType Directory -Path $destDir -Force | Out-Null }
     Copy-Item -Path $speedModSource -Destination $progDataSource -Force
-    Write-Host "  [OK] C++ mod source updated successfully!" -ForegroundColor Green
+    Write-Host "  [OK] C++ mod source deployed!" -ForegroundColor Green
 } catch {
     Write-Host "  [!] Warning while copying: $_" -ForegroundColor Yellow
 }
 
 # 2. Pre-seed registry settings (Theme: Chart, showBox: 0, verticalNudge: 0)
-Write-Host "  [2/4] Setting frameless colorful chart parameters in Windows Registry..." -ForegroundColor Yellow
+Write-Host "  [2/4] Setting frameless colorful chart parameters..." -ForegroundColor Yellow
 $speedPaths = @(
     "HKLM:\SOFTWARE\Windhawk\Engine\Mods\local@net-speed-taskbar-apple\Settings",
     "HKLM:\SOFTWARE\WOW6432Node\Windhawk\Engine\Mods\local@net-speed-taskbar-apple\Settings"
@@ -70,13 +92,17 @@ Write-Host "  [OK] Registry settings saved (Theme: Chart, Box: Disabled)!" -Fore
 # 3. Compile and load via Windhawk CLI
 Write-Host "  [3/4] Compiling and linking mod with Windhawk Clang Compiler..." -ForegroundColor Yellow
 if (Test-Path $WindhawkCli) {
+    # Install from file compiles the source and links the DLL
     $installOutput = & $WindhawkCli mod install --file "$speedModSource" --yes 2>&1
     Write-Host "  $installOutput"
+
+    # Enforce runtime settings
+    & $WindhawkCli mod settings set local@net-speed-taskbar-apple theme=Chart showBox=false verticalNudge=0 rightOffset=6 fontSize=13 opacity=255 2>$null
     
     # 4. Reload mod so new DLL is injected immediately
     Write-Host "  [4/4] Reloading speed meter live on taskbar..." -ForegroundColor Yellow
     & $WindhawkCli mod disable local@net-speed-taskbar-apple --yes 2>$null
-    Start-Sleep -Milliseconds 500
+    Start-Sleep -Milliseconds 600
     & $WindhawkCli mod enable local@net-speed-taskbar-apple --yes 2>$null
     Write-Host "  [OK] Speed meter mod reloaded!" -ForegroundColor Green
 } else {
