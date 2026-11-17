@@ -1,4 +1,4 @@
-﻿# ==============================================================================
+# ==============================================================================
 # Rohit Bhai Mac OS for Windows 11 - 1-Click Ultimate Suite v4.4 Pro
 # Target: Windows 11 (22H2 / 23H2 / 24H2) and Windows 10
 # Includes: Windhawk Mac Island Dock, Genie, Net Speed, SF Pro Fonts,
@@ -1033,106 +1033,122 @@ if (-not $WindhawkCli) {
 }
 $windhawkExe = if ($WindhawkCli) { Join-Path (Split-Path $WindhawkCli -Parent) "windhawk.exe" } else { Find-WindhawkExe }
 
-function Set-MacIslandStorage {
-    $storagePaths = @(
-        "HKLM:\SOFTWARE\Windhawk\Engine\ModsWritable\mac-island-dock\LocalStorage",
-        "HKLM:\SOFTWARE\WOW6432Node\Windhawk\Engine\ModsWritable\mac-island-dock\LocalStorage"
-    )
-    $targetOrder = '7dce-012346-f89gh:;<E-=>5o-?@ABCDFGJKLMNOPQRSTUVWXY\ajklmb]^_`Zn[HiI'
+function Set-RegDword($key, $name, $val) {
+    & reg.exe add "$key" /v "$name" /t REG_DWORD /d $val /f /reg:64 2>$null | Out-Null
+    & reg.exe add "$key" /v "$name" /t REG_DWORD /d $val /f /reg:32 2>$null | Out-Null
+}
+function Set-RegString($key, $name, $val) {
+    & reg.exe add "$key" /v "$name" /t REG_SZ /d "$val" /f /reg:64 2>$null | Out-Null
+    & reg.exe add "$key" /v "$name" /t REG_SZ /d "$val" /f /reg:32 2>$null | Out-Null
+}
 
-    foreach ($p in $storagePaths) {
-        if (-not (Test-Path $p)) {
-            New-Item -Path $p -Force | Out-Null
+function Set-MacIslandStorage {
+    $targetOrder = '?<7dec]12356;48:=>09@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\^_`abfghijklmno'
+    $key = "HKLM\SOFTWARE\Windhawk\Engine\ModsWritable\mac-island-dock\LocalStorage"
+    
+    # Read user SID to ensure per-user storage also receives all values
+    $userSid = $null
+    try {
+        $userSid = ([System.Security.Principal.WindowsIdentity]::GetCurrent()).User.Value
+    } catch {}
+
+    $dwords = @{
+        "islandBar" = 1
+        "islandBarSide" = 0
+        "islandBarAlign" = 3
+        "placeX" = 1000
+        "placeY" = 0
+        "islandZoneAsPill" = 0
+        "islandLiquidGlass" = 1
+        "islandGlassBlur" = 70
+        "islandGlassLight" = 1
+        "islandWeather" = 1
+        "islandWeatherUnit" = 1
+        "weatherMyLocation" = 1
+        "islandNotes" = 1
+        "islandClock" = 1
+        "clockWeekday" = 1
+        "clockDate" = 1
+        "clockSeconds" = 0
+        "clockYear" = 0
+        "islandMedia" = 1
+        "islandMediaAlways" = 1
+        "islandMediaPlayOnly" = 0
+        "mediaButtons" = 1
+        "mediaTitle" = 1
+        "islandMediaButtonsSize" = 130
+        "islandMediaTitleLimit" = 210
+        "islandMicrophone" = 1
+        "islandVisualizer" = 1
+        "islandVizSensitivity" = 100
+        "islandVisualizerColor" = 0
+        "islandVisualizerSmooth" = 0
+        "islandNetSpeed" = 1
+        "islandVolume" = 1
+        "islandNetwork" = 1
+        "islandTray" = 1
+        "islandBell" = 1
+        "islandOrderDrag" = 1
+        "islandIconSize" = 85
+        "islandTextSize" = 100
+        "islandPanelSize" = 100
+        "islandPanelsFollow" = 1
+        "islandIconPack" = 1
+        "islandBattery" = 0
+        "islandPower" = 1
+        "islandApps" = 1
+        "islandUsbDrives" = 1
+        "islandUsbNotify" = 1
+        "islandNoticeCharger" = 1
+        "islandNoticeLowBattery" = 1
+        "islandNotches" = 0
+        "islandPillNotches" = 0
+        "islandBarCorners" = 0
+        "islandBarFixedSides" = 0
+        "islandGap" = 0
+        "islandVerticalSides" = 1
+        "islandAutoHide" = 0
+        "islandHideWhen" = 0
+        "islandHideClock" = 0
+        "islandOverFullscreen" = 1
+        "islandTheme" = 4
+        "islandStatusNotices" = 1
+        "islandCapsLock" = 1
+        "trayListIsland" = 12
+        "animationsIsland" = 4002
+        "islandOpacity" = 80
+        "islandNotchCurve" = 80
+        "islandPillHeight" = 100
+        "islandSize" = 100
+    }
+
+    foreach ($entry in $dwords.GetEnumerator()) {
+        Set-RegDword $key $entry.Key $entry.Value
+        if ($userSid) {
+            Set-RegDword $key "$($entry.Key)_$userSid" $entry.Value
         }
-        # Configure Fixed Top-Right macOS Status Bar (Right Side, Liquid Glass, No Notch)
-        Set-ItemProperty -Path $p -Name "islandBar" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandBarSide" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandBarAlign" -Value 3 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "placeX" -Value 1000 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "placeY" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandOrder" -Value $targetOrder -Type String -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandVisualizer" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandVizSensitivity" -Value 100 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandVisualizerColor" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandVisualizerSmooth" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandMicrophone" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandNotes" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandWeather" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandWeatherUnit" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "weatherMyLocation" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandClock" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "clockWeekday" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "clockSeconds" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "clockYear" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandMedia" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandMediaAlways" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandMediaPlayOnly" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "mediaButtons" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "mediaTitle" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandMediaButtonsSize" -Value 130 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandMediaTitleLimit" -Value 210 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandLiquidGlass" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandGlassBlur" -Value 70 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandGlassLight" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandIconSize" -Value 85 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandTextSize" -Value 100 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandPanelSize" -Value 100 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandPanelsFollow" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandIconPack" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandBattery" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandVolume" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandNetwork" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandPower" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandApps" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandUsbDrives" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandUsbNotify" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandNoticeCharger" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandNoticeLowBattery" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandNotches" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandPillNotches" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandZoneAsPill" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandBarCorners" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandBarFixedSides" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandGap" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandVerticalSides" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandAutoHide" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandHideWhen" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandHideClock" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandOverFullscreen" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandTheme" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandBell" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandStatusNotices" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandCapsLock" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "trayListIsland" -Value 12 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "animationsIsland" -Value 4002 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandOpacity" -Value 100 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandNotchCurve" -Value 80 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandPillHeight" -Value 100 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandSize" -Value 100 -Type DWord -Force -ErrorAction SilentlyContinue
+    }
+
+    Set-RegString $key "islandOrder" $targetOrder
+    if ($userSid) {
+        Set-RegString $key "islandOrder_$userSid" $targetOrder
     }
 }
 
 function Set-AppleNetSpeedStorage {
-    $speedPaths = @(
-        "HKLM:\SOFTWARE\Windhawk\Engine\Mods\local@net-speed-taskbar-apple\Settings",
-        "HKLM:\SOFTWARE\WOW6432Node\Windhawk\Engine\Mods\local@net-speed-taskbar-apple\Settings"
-    )
-    foreach ($p in $speedPaths) {
-        if (-not (Test-Path $p)) { New-Item -Path $p -Force | Out-Null }
-        # Frameless Apple Speed Meter: Vibrant live sparkline charts with top/down speeds, ZERO bounding box
-        Set-ItemProperty -Path $p -Name "theme" -Value "Chart" -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "showBox" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "horizontalPosition" -Value 10 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "rightOffset" -Value 16 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "verticalNudge" -Value 18 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "updateIntervalMs" -Value 1000 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "fontSize" -Value 15 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "opacity" -Value 255 -Type DWord -Force -ErrorAction SilentlyContinue
+    foreach ($mId in @("local@net-speed-taskbar-apple", "net-speed-taskbar-apple")) {
+        $key = "HKLM\SOFTWARE\Windhawk\Engine\Mods\$mId\Settings"
+        Set-RegString $key "theme" "Chart"
+        Set-RegDword $key "showBox" 0
+        Set-RegDword $key "horizontalPosition" 10
+        Set-RegDword $key "rightOffset" 16
+        Set-RegDword $key "verticalNudge" 18
+        Set-RegDword $key "updateIntervalMs" 1000
+        Set-RegDword $key "fontSize" 15
+        Set-RegDword $key "opacity" 255
     }
 }
 
-# 1. Pre-seed LocalStorage & NetSpeed into Registry BEFORE starting Windhawk/importing mods
-# This ensures that whenever mac-island-dock & net-speed initialize, they read the top-right bar geometry & frameless look directly!
 Set-MacIslandStorage
 Set-AppleNetSpeedStorage
 
@@ -1192,6 +1208,7 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
     & $WindhawkCli mod disable mac-island-dock --yes 2>$null
     Start-Sleep -Milliseconds 400
     & $WindhawkCli mod enable mac-island-dock --yes 2>$null
+    Stop-Process -Name windhawk-mod -Force -ErrorAction SilentlyContinue
 
 } elseif ($windhawkExe -and (Test-Path $windhawkExe)) {
     Write-Host "  [*] Activating all 8 mods directly via Registry injection..." -ForegroundColor Yellow

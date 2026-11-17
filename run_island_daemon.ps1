@@ -275,7 +275,7 @@ public class IslandDaemon {
                 @"Software\Windhawk\Engine\ModsWritable\mac-island-dock\LocalStorage",
                 @"Software\WOW6432Node\Windhawk\Engine\ModsWritable\mac-island-dock\LocalStorage"
             };
-            string targetOrder = @"7dce-012346-f89gh:;<E-=>5o-?@ABCDFGJKLMNOPQRSTUVWXY\ajklmb]^_`Zn[HiI";
+            string targetOrder = @"?<7dec]12356;48:=>09@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\^_`abfghijklmno";
 
             foreach (string sk in subKeys) {
                 using (RegistryKey key = Registry.LocalMachine.CreateSubKey(sk)) {
@@ -319,9 +319,10 @@ public class IslandDaemon {
                             key.SetValue("clockWeekday", 1, RegistryValueKind.DWord);
                             key.SetValue("clockSeconds", 0, RegistryValueKind.DWord);
                             key.SetValue("clockYear", 0, RegistryValueKind.DWord);
-                            key.SetValue("islandMedia", 0, RegistryValueKind.DWord);
-                            key.SetValue("islandMediaAlways", 0, RegistryValueKind.DWord);
-                            key.SetValue("islandMediaPlayOnly", 1, RegistryValueKind.DWord);
+                            key.SetValue("islandMedia", 1, RegistryValueKind.DWord);
+                            key.SetValue("islandMediaAlways", 1, RegistryValueKind.DWord);
+                            key.SetValue("islandMediaPlayOnly", 0, RegistryValueKind.DWord);
+                            key.SetValue("islandTheme", 4, RegistryValueKind.DWord);
                             key.SetValue("mediaButtons", 1, RegistryValueKind.DWord);
                             key.SetValue("mediaTitle", 1, RegistryValueKind.DWord);
                             key.SetValue("islandMediaButtonsSize", 130, RegistryValueKind.DWord);
@@ -361,7 +362,7 @@ public class IslandDaemon {
                             key.SetValue("trayListIsland", 12, RegistryValueKind.DWord);
                             key.SetValue("animationsIsland", 4002, RegistryValueKind.DWord);
                             key.SetValue("islandDownloadFill", 1, RegistryValueKind.DWord);
-                            key.SetValue("islandOpacity", 100, RegistryValueKind.DWord);
+                            key.SetValue("islandOpacity", 80, RegistryValueKind.DWord);
                             key.SetValue("islandNotchCurve", 80, RegistryValueKind.DWord);
                             key.SetValue("islandPillHeight", 100, RegistryValueKind.DWord);
                             key.SetValue("islandSize", 100, RegistryValueKind.DWord);

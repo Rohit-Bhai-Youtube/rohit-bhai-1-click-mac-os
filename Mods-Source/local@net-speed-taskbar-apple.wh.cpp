@@ -96,6 +96,7 @@ worth knowing:
 // pulled in explicitly below.
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <windhawk_api.h>
 #include <windhawk_utils.h>
 #include <windows.h>
 #include <shellapi.h>
@@ -254,15 +255,15 @@ void LoadSettings() {
 void RebuildGdiObjects(int fontSize, const std::wstring& theme, UINT dpi) {
     auto newGdi = std::make_unique<GdiObjects>();
 
-    Gdiplus::FontFamily fontFamily(L"Segoe UI Variable Text");
-    if (fontFamily.GetLastStatus() != Ok) {
-        fontFamily = Gdiplus::FontFamily(L"Segoe UI");
+    auto fontFamily = std::make_unique<Gdiplus::FontFamily>(L"Segoe UI Variable Text");
+    if (fontFamily->GetLastStatus() != Ok) {
+        fontFamily = std::make_unique<Gdiplus::FontFamily>(L"Segoe UI");
     }
     float scaledFontSize = (float)MulDiv(fontSize, dpi, 96);
 
-    newGdi->font = std::make_unique<Gdiplus::Font>(&fontFamily, scaledFontSize, FontStyleBold, UnitPixel);
-    newGdi->largeFont = std::make_unique<Gdiplus::Font>(&fontFamily, scaledFontSize * 1.25f, FontStyleBold, UnitPixel);
-    newGdi->labelFont = std::make_unique<Gdiplus::Font>(&fontFamily, scaledFontSize * 0.95f, FontStyleRegular, UnitPixel);
+    newGdi->font = std::make_unique<Gdiplus::Font>(fontFamily.get(), scaledFontSize, FontStyleBold, UnitPixel);
+    newGdi->largeFont = std::make_unique<Gdiplus::Font>(fontFamily.get(), scaledFontSize * 1.25f, FontStyleBold, UnitPixel);
+    newGdi->labelFont = std::make_unique<Gdiplus::Font>(fontFamily.get(), scaledFontSize * 0.95f, FontStyleRegular, UnitPixel);
 
     Color bgColor = Color(0, 0, 0, 0);
     // Vibrant Apple System Sky Blue & Apple System Mint Green
@@ -407,6 +408,18 @@ bool IsFullScreenBlockingTaskbar(HWND hTaskbar) {
     return EqualRect(&fgRect, &mi.rcMonitor);
 }
 
+UINT GetWindowDpi(HWND hWnd) {
+    using GetDpiForWindow_t = UINT(WINAPI*)(HWND);
+    static auto pfnGetDpiForWindow = (GetDpiForWindow_t)GetProcAddress(GetModuleHandleW(L"user32.dll"), "GetDpiForWindow");
+    if (pfnGetDpiForWindow) {
+        return pfnGetDpiForWindow(hWnd);
+    }
+    HDC hdc = GetDC(hWnd);
+    UINT dpi = hdc ? GetDeviceCaps(hdc, LOGPIXELSY) : 96;
+    if (hdc) ReleaseDC(hWnd, hdc);
+    return dpi;
+}
+
 void RepositionWidget(HWND hWnd, const Settings& s) {
     if (!IsWindow(g_hCachedTaskbar) || !IsWindowVisible(g_hCachedTaskbar) ||
         IsFullScreenBlockingTaskbar(g_hCachedTaskbar)) {
@@ -420,7 +433,7 @@ void RepositionWidget(HWND hWnd, const Settings& s) {
         return;
     }
 
-    UINT dpi = GetDpiForWindow(g_hCachedTaskbar);
+    UINT dpi = GetWindowDpi(g_hCachedTaskbar);
     if (dpi == 0) dpi = 96;
 
     if (dpi != g_currentDpi || !g_gdi || !g_gdi->IsValid()) {
