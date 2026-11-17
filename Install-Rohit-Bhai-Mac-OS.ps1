@@ -1,4 +1,4 @@
-# ==============================================================================
+﻿# ==============================================================================
 # Rohit Bhai Mac OS for Windows 11 - 1-Click Ultimate Suite v4.4 Pro
 # Target: Windows 11 (22H2 / 23H2 / 24H2) and Windows 10
 # Includes: Windhawk Mac Island Dock, Genie, Net Speed, SF Pro Fonts,
@@ -382,6 +382,14 @@ try {
     if (-not (Test-Path $darkDir)) { $darkDir = Join-Path $cursorsTarget "dist-dark" }
     if (-not (Test-Path "$darkDir\pointer.cur")) { $darkDir = $cursorsTarget }
     if (Test-Path "$darkDir\pointer.cur") {
+        # Copy to official Windows Cursors directory for system-wide access
+        $sysCurDir = "$env:WINDIR\Cursors\Capitaine Dark"
+        try {
+            if (-not (Test-Path $sysCurDir)) { New-Item -ItemType Directory -Path $sysCurDir -Force | Out-Null }
+            Copy-Item "$darkDir\*" -Destination $sysCurDir -Force -ErrorAction SilentlyContinue
+            if (Test-Path "$sysCurDir\pointer.cur") { $darkDir = $sysCurDir }
+        } catch {}
+
         $schemePath = "HKCU:\Control Panel\Cursors"
         $schemeName = "Capitaine Dark W11 HiDPI"
         Set-ItemProperty -Path $schemePath -Name "(Default)" -Value $schemeName -Force
@@ -404,10 +412,15 @@ try {
         Set-ItemProperty -Path $schemePath -Name "Pin" -Value "$darkDir\pin.cur" -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $schemePath -Name "Person" -Value "$darkDir\person.cur" -Force -ErrorAction SilentlyContinue
 
+        $schemeVal = "$darkDir\pointer.cur,$darkDir\help.cur,$darkDir\working.ani,$darkDir\busy.ani,$darkDir\precision.cur,$darkDir\text.cur,$darkDir\handwriting.cur,$darkDir\unavailable.cur,$darkDir\vert.cur,$darkDir\horz.cur,$darkDir\dgn1.cur,$darkDir\dgn2.cur,$darkDir\move.cur,$darkDir\alternate.cur,$darkDir\link.cur,$darkDir\pin.cur,$darkDir\person.cur"
         $schemesReg = "HKCU:\Control Panel\Cursors\Schemes"
         if (-not (Test-Path $schemesReg)) { New-Item -Path $schemesReg -Force | Out-Null }
-        $schemeVal = "$darkDir\pointer.cur,$darkDir\help.cur,$darkDir\working.ani,$darkDir\busy.ani,$darkDir\precision.cur,$darkDir\text.cur,$darkDir\handwriting.cur,$darkDir\unavailable.cur,$darkDir\vert.cur,$darkDir\horz.cur,$darkDir\dgn1.cur,$darkDir\dgn2.cur,$darkDir\move.cur,$darkDir\alternate.cur,$darkDir\link.cur,$darkDir\pin.cur,$darkDir\person.cur"
         Set-ItemProperty -Path $schemesReg -Name $schemeName -Value $schemeVal -Force
+
+        $hklmSchemes = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Control Panel\Cursors\Schemes"
+        if (Test-Path $hklmSchemes) {
+            Set-ItemProperty -Path $hklmSchemes -Name $schemeName -Value $schemeVal -Force -ErrorAction SilentlyContinue
+        }
 
         Add-Type @"
 using System;
@@ -421,7 +434,6 @@ public class Win32Cursor {
     public static extern bool SetSystemCursor(IntPtr hcur, uint id);
 }
 "@ -ErrorAction SilentlyContinue
-        [Win32Cursor]::SystemParametersInfo(0x0057, 0, [IntPtr]::Zero, 0) | Out-Null
         try {
             $hCur = [Win32Cursor]::LoadCursorFromFile("$darkDir\pointer.cur")
             if ($hCur -ne [IntPtr]::Zero) { [Win32Cursor]::SetSystemCursor($hCur, 32512) | Out-Null }
@@ -432,6 +444,8 @@ public class Win32Cursor {
             $hWork = [Win32Cursor]::LoadCursorFromFile("$darkDir\working.ani")
             if ($hWork -ne [IntPtr]::Zero) { [Win32Cursor]::SetSystemCursor($hWork, 32650) | Out-Null }
         } catch {}
+        [Win32Cursor]::SystemParametersInfo(0x0057, 0, [IntPtr]::Zero, 3) | Out-Null
+        rundll32.exe user32.dll,UpdatePerUserSystemParameters 1, True
         Write-Host "  [OK] macOS Capitaine Dark Cursors scheme registered & live applied!" -ForegroundColor Green
     }
 } catch {
@@ -997,15 +1011,19 @@ public static class MacAppShortcutHelper {
                 # Deploy custom squircle icon shortcut to Start Menu for installed apps
                 if ($app.Installed -and $app.Target) {
                     [MacAppShortcutHelper]::CreateOrUpdateShortcut($userSlPath, $app.Target, $app.Args, $icoPath, $app.AppId)
-                }
-                if (Test-Path $allSlPath) {
                     try {
+                        $allParent = Split-Path $allSlPath -Parent
+                        if (-not (Test-Path $allParent)) { New-Item -ItemType Directory -Path $allParent -Force | Out-Null }
                         [MacAppShortcutHelper]::CreateOrUpdateShortcut($allSlPath, $app.Target, $app.Args, $icoPath, $app.AppId)
                     } catch {}
                 }
             }
         }
     }
+
+    # Refresh Windows 11 Start Menu and Search Host cache
+    Stop-Process -Name "StartMenuExperienceHost" -Force -ErrorAction SilentlyContinue
+    Stop-Process -Name "SearchHost" -Force -ErrorAction SilentlyContinue
 
     Write-Host "  [OK] Apple macOS Squircle App Icons successfully deployed to Dock & Start Menu!" -ForegroundColor Green
 } catch {
@@ -1061,6 +1079,14 @@ try {
 
     if (Test-Path $wallTarget) {
         Copy-Item $wallTarget -Destination $transcodedTarget -Force -ErrorAction SilentlyContinue
+        Copy-Item $wallTarget -Destination "$env:APPDATA\Microsoft\Windows\Themes\Transcoded_000" -Force -ErrorAction SilentlyContinue
+        if (Test-Path "$env:APPDATA\Microsoft\Windows\Themes\TranscodedWallpaperCache") {
+            Get-ChildItem -Path "$env:APPDATA\Microsoft\Windows\Themes\TranscodedWallpaperCache" -Filter "TranscodedWallpaper_*" -File -ErrorAction SilentlyContinue | ForEach-Object {
+                if (-not $_.Name.EndsWith(".meta")) {
+                    Copy-Item $wallTarget -Destination $_.FullName -Force -ErrorAction SilentlyContinue
+                }
+            }
+        }
         Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "Wallpaper" -Value $wallTarget -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "WallpaperStyle" -Value "10" -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "TileWallpaper" -Value "0" -Force -ErrorAction SilentlyContinue
@@ -1205,8 +1231,14 @@ function Set-AppleNetSpeedStorage {
     }
 }
 
+function Set-FileExplorerStylerStorage {
+    $key = "HKLM\SOFTWARE\Windhawk\Engine\Mods\windows-11-file-explorer-styler\Settings"
+    Set-RegString $key "backgroundTranslucentEffectRegion" "explorerFrame"
+}
+
 Set-MacIslandStorage
 Set-AppleNetSpeedStorage
+Set-FileExplorerStylerStorage
 
 if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
     # Ensure Windhawk background service is running
@@ -1261,6 +1293,7 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
     # Re-apply LocalStorage & restart mac-island-dock so it immediately docks to top-right
     Set-MacIslandStorage
     Set-AppleNetSpeedStorage
+    Set-FileExplorerStylerStorage
     & $WindhawkCli mod disable mac-island-dock --yes 2>$null
     Start-Sleep -Milliseconds 400
     & $WindhawkCli mod enable mac-island-dock --yes 2>$null
@@ -1275,6 +1308,7 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
     }
     Set-MacIslandStorage
     Set-AppleNetSpeedStorage
+    Set-FileExplorerStylerStorage
 }
 
 if ($windhawkExe -or $WindhawkCli) {
