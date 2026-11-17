@@ -1,5 +1,5 @@
 ﻿# ==============================================================================
-# Rohit Bhai Mac OS - Complete 1-Click Uninstaller & Windows Restore Suite
+# Rohit Bhai 1 Click Mac OS - Complete 1-Click Uninstaller & Windows Restore Suite
 # Target: Windows 11 / Windows 10
 # Reverts 100% of Windhawk mods, cursor schemes, sound schemes, folder & drive icons,
 # taskbar shortcuts, wallpaper, and restores original Windows defaults.
@@ -10,7 +10,7 @@
 $ErrorActionPreference = "Continue"
 
 $RepoOwner = "Rohit-Bhai-Youtube"
-$RepoName  = "rohit-bhai-mac-os"
+$RepoName  = "rohit-bhai-1-click-mac-os"
 $Branch    = "main"
 $WebUninstallUrl = "https://raw.githubusercontent.com/$RepoOwner/$RepoName/$Branch/uninstall.ps1"
 
@@ -36,7 +36,7 @@ Write-Host @"
    ██╔══██╗██║   ██║██╔══██╗   ██╔══╝  ██║    ██╔══██║╚════██║██╔══██║
    ██║  ██║╚██████╔╝██████╔╝   ██║     ███████╗██║  ██║███████║██║  ██║
    ╚═╝  ╚═╝ ╚═════╝ ╚═════╝    ╚═╝     ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
-              ROHIT BHAI MAC OS - 1-CLICK UNINSTALLER & RESTORER
+              ROHIT BHAI 1 CLICK MAC OS - 1-CLICK UNINSTALLER & RESTORER
                                Crafted for Rohit Bhai
 ========================================================================================
 "@ -ForegroundColor Yellow
@@ -73,7 +73,7 @@ try {
 }
 
 # -------------------------------------------------------------------------
-# Step 2: Disable and Remove Windhawk Mods
+# Step 2: Disable and Remove Windhawk Mods & Reset Engine
 # -------------------------------------------------------------------------
 Write-Host "`n[2/8] Removing Windhawk Mods (Island Dock, Genie Animation, Net Speed)..." -ForegroundColor Cyan
 
@@ -137,11 +137,19 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
     }
 }
 
-# Clean all Windhawk Engine custom mods & local storage
+# Stop Windhawk service and processes before wiping registry keys
+Stop-Process -Name "windhawk", "windhawk-cli" -Force -ErrorAction SilentlyContinue
+Stop-Service -Name "windhawk" -Force -ErrorAction SilentlyContinue
+Start-Sleep -Milliseconds 600
+
+# Clean all Windhawk Engine custom mods & local storage across 64-bit and 32-bit registry
 Remove-Item -Path "HKLM:\SOFTWARE\Windhawk\Engine\Mods\*" -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item -Path "HKLM:\SOFTWARE\Windhawk\Engine\ModsWritable\*" -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -Path "HKLM:\SOFTWARE\WOW6432Node\Windhawk\Engine\Mods\*" -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -Path "HKLM:\SOFTWARE\WOW6432Node\Windhawk\Engine\ModsWritable\*" -Recurse -Force -ErrorAction SilentlyContinue
 
 if ($WindhawkExe -and (Test-Path $WindhawkExe)) {
+    Start-Service -Name "windhawk" -ErrorAction SilentlyContinue
     & $WindhawkExe -restart -tray-only 2>$null
     Write-Host "  [OK] Windhawk mods removed & engine reset to clean default!" -ForegroundColor Green
 } else {
@@ -171,6 +179,7 @@ try {
     try {
         Set-Volume -DriveLetter C -NewFileSystemLabel "Windows" -ErrorAction SilentlyContinue
     } catch {}
+    cmd.exe /c "label C: Windows" 2>$null
 
     Write-Host "  [OK] Drive C: restored back to original 'Windows (C:)'! No more Macintosh HD!" -ForegroundColor Green
 } catch {
@@ -227,7 +236,7 @@ try {
         Set-ItemProperty -Path $pcKey -Name "(Default)" -Value "C:\WINDOWS\System32\imageres.dll,-109" -Force -ErrorAction SilentlyContinue
     }
 
-    # Reset FolderDescriptions
+    # Reset FolderDescriptions to official Windows imageres.dll defaults
     $folderDefaults = @{
         "{374DE290-123F-4565-9164-39C4925E467B}" = "C:\WINDOWS\system32\imageres.dll,-184" # Downloads
         "{7d83ee9b-2244-4e70-b1f5-5393042af1e4}" = "C:\WINDOWS\system32\imageres.dll,-184" # Downloads 2
@@ -248,7 +257,7 @@ try {
         }
     }
 
-    # Clean desktop.ini in user profile folders
+    # Clean custom desktop.ini in user profile folders
     $userDirs = @(
         "$env:USERPROFILE\Downloads",
         "$env:USERPROFILE\Documents",
@@ -280,25 +289,118 @@ try {
 }
 
 # -------------------------------------------------------------------------
-# Step 5: Restore Taskbar & Start Menu App Icons (Edge, Explorer, Store)
+# Step 5: Restore Taskbar & Start Menu Shortcuts (Edge, Explorer, Native Apps)
 # -------------------------------------------------------------------------
-Write-Host "`n[5/8] Restoring Original Taskbar & Start Menu Icons (Edge, Explorer, Apps)..." -ForegroundColor Cyan
+Write-Host "`n[5/8] Restoring Native Taskbar & Start Menu Shortcuts..." -ForegroundColor Cyan
 try {
-    $taskbarDir   = Join-Path $env:APPDATA 'Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar'
-    $userStartDir = [Environment]::GetFolderPath('Programs')
-    $allStartDir  = [Environment]::GetFolderPath('CommonPrograms')
-    $userDesktop  = [Environment]::GetFolderPath('Desktop')
-    $commonDesktop = [Environment]::GetFolderPath('CommonDesktop')
+    Add-Type @'
+using System;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.ComTypes;
 
-    $wsh = New-Object -ComObject WScript.Shell
+public static class MacAppShortcutHelper {
+    [ComImport]
+    [Guid("00021401-0000-0000-C000-000000000046")]
+    internal class ShellLink {}
+
+    [ComImport]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    [Guid("000214F9-0000-0000-C000-000000000046")]
+    internal interface IShellLinkW {
+        void GetPath([Out, MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder pszFile, int cchMaxPath, out IntPtr pfd, uint fFlags);
+        void GetIDList(out IntPtr ppidl);
+        void SetIDList(IntPtr pidl);
+        void GetDescription([Out, MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder pszName, int cchMaxName);
+        void SetDescription([MarshalAs(UnmanagedType.LPWStr)] string pszName);
+        void GetWorkingDirectory([Out, MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder pszDir, int cchMaxPath);
+        void SetWorkingDirectory([MarshalAs(UnmanagedType.LPWStr)] string pszDir);
+        void GetArguments([Out, MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder pszArgs, int cchMaxPath);
+        void SetArguments([MarshalAs(UnmanagedType.LPWStr)] string pszArgs);
+        void GetHotkey(out short pwHotkey);
+        void SetHotkey(short wHotkey);
+        void GetShowCmd(out int piShowCmd);
+        void SetShowCmd(int iShowCmd);
+        void GetIconLocation([Out, MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder pszIconPath, int cchIconPath, out int piIcon);
+        void SetIconLocation([MarshalAs(UnmanagedType.LPWStr)] string pszIconPath, int iIcon);
+        void SetRelativePath([MarshalAs(UnmanagedType.LPWStr)] string pszPathRel, uint dwReserved);
+        void Resolve(IntPtr hwnd, uint fFlags);
+        void SetPath([MarshalAs(UnmanagedType.LPWStr)] string pszFile);
+    }
+
+    [ComImport]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    [Guid("886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99")]
+    internal interface IPropertyStore {
+        uint GetCount();
+        void GetAt(uint iProp, out PROPERTYKEY pkey);
+        void GetValue(ref PROPERTYKEY key, out PROPVARIANT pv);
+        void SetValue(ref PROPERTYKEY key, ref PROPVARIANT pv);
+        void Commit();
+    }
+
+    [StructLayout(LayoutKind.Sequential, Pack = 4)]
+    internal struct PROPERTYKEY {
+        public Guid fmtid;
+        public uint pid;
+        public PROPERTYKEY(Guid guid, uint id) {
+            fmtid = guid;
+            pid = id;
+        }
+    }
+
+    [StructLayout(LayoutKind.Explicit)]
+    internal struct PROPVARIANT {
+        [FieldOffset(0)] public ushort vt;
+        [FieldOffset(8)] public IntPtr pwszVal;
+    }
+
+    private static PROPERTYKEY PKEY_AppUserModel_ID = new PROPERTYKEY(new Guid("9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3"), 5);
+
+    public static void CreateOrUpdateShortcut(string lnkPath, string targetPath, string arguments, string iconPath, string appUserModelId) {
+        if (File.Exists(lnkPath)) {
+            try { File.Delete(lnkPath); } catch {}
+        }
+
+        ShellLink link = new ShellLink();
+        IShellLinkW shellLink = (IShellLinkW)link;
+        IPersistFile persistFile = (IPersistFile)link;
+
+        if (!string.IsNullOrEmpty(targetPath)) shellLink.SetPath(targetPath);
+        if (!string.IsNullOrEmpty(arguments)) shellLink.SetArguments(arguments);
+        if (!string.IsNullOrEmpty(iconPath)) shellLink.SetIconLocation(iconPath, 0);
+
+        if (!string.IsNullOrEmpty(appUserModelId)) {
+            IPropertyStore store = (IPropertyStore)link;
+            PROPVARIANT pv = new PROPVARIANT();
+            pv.vt = 31; // VT_LPWSTR
+            pv.pwszVal = Marshal.StringToCoTaskMemUni(appUserModelId);
+            try {
+                store.SetValue(ref PKEY_AppUserModel_ID, ref pv);
+                store.Commit();
+            } finally {
+                Marshal.FreeCoTaskMem(pv.pwszVal);
+            }
+        }
+
+        persistFile.Save(lnkPath, true);
+    }
+}
+'@ -ErrorAction SilentlyContinue
+
+    $taskbarDir    = Join-Path $env:APPDATA 'Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar'
+    $userStartDir  = [Environment]::GetFolderPath('Programs')
+    $allStartDir   = [Environment]::GetFolderPath('CommonPrograms')
+    $userDesktop   = [Environment]::GetFolderPath('Desktop')
+    $commonDesktop = [Environment]::GetFolderPath('CommonDesktop')
 
     # 1. Clean duplicate *(2).lnk, *(3).lnk in taskbar
     if (Test-Path $taskbarDir) {
         Get-ChildItem -Path $taskbarDir -Filter "*(*).lnk" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
     }
 
-    # 2. Delete artificial UWP launcher shortcuts created by install.ps1 in user Start Menu
-    # On clean Windows 11, these apps are UWP apps enumerated directly by AppX, not .lnk files in Programs!
+    # 2. Delete artificial UWP launcher shortcuts created in user Start Menu & All Users Start Menu
+    # On clean Windows 11, UWP apps are enumerated directly by AppX, not .lnk files in Programs!
     $uwpShortcutsToRemove = @(
         "Apple Music.lnk",
         "Calculator.lnk",
@@ -317,21 +419,15 @@ try {
         "Activity Monitor.lnk"
     )
     foreach ($scName in $uwpShortcutsToRemove) {
-        $p = Join-Path $userStartDir $scName
-        if (Test-Path $p) {
-            Remove-Item -LiteralPath $p -Force -ErrorAction SilentlyContinue
+        foreach ($base in @($userStartDir, $allStartDir)) {
+            $p = Join-Path $base $scName
+            if (Test-Path $p) {
+                Remove-Item -LiteralPath $p -Force -ErrorAction SilentlyContinue
+            }
         }
     }
 
-    # 3. Remove fake launcher shortcuts created in Taskbar
-    foreach ($scName in $uwpShortcutsToRemove) {
-        $p = Join-Path $taskbarDir $scName
-        if (Test-Path $p) {
-            Remove-Item -LiteralPath $p -Force -ErrorAction SilentlyContinue
-        }
-    }
-
-    # 4. Restore 100% Native Microsoft Edge Shortcuts across Taskbar, User Start, and All Users Start
+    # 3. Restore 100% Native Microsoft Edge Shortcut with official AUMID (MSEdge)
     $edgeExe = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
     if (-not (Test-Path $edgeExe)) { $edgeExe = "C:\Program Files\Microsoft\Edge\Application\msedge.exe" }
     if (Test-Path $edgeExe) {
@@ -343,31 +439,85 @@ try {
             (Join-Path $commonDesktop "Microsoft Edge.lnk")
         )
         foreach ($edgeLnk in $edgeLocations) {
-            if (Test-Path $edgeLnk) {
-                $sc = $wsh.CreateShortcut($edgeLnk)
-                $sc.TargetPath = $edgeExe
-                $sc.Arguments = ""
-                $sc.IconLocation = "$edgeExe,0"
-                $sc.Save()
-            }
+            [MacAppShortcutHelper]::CreateOrUpdateShortcut($edgeLnk, $edgeExe, "", "$edgeExe,0", "MSEdge")
         }
     }
 
-    # 5. Restore 100% Native File Explorer Taskbar Shortcut
+    # 4. Restore 100% Native File Explorer Shortcut with official AUMID (Microsoft.Windows.Explorer)
     $explorerLnk = Join-Path $taskbarDir "File Explorer.lnk"
-    $sc = $wsh.CreateShortcut($explorerLnk)
-    $sc.TargetPath = "$env:WINDIR\explorer.exe"
-    $sc.Arguments = ""
-    $sc.IconLocation = "$env:WINDIR\explorer.exe,0"
-    $sc.Save()
+    [MacAppShortcutHelper]::CreateOrUpdateShortcut($explorerLnk, "$env:WINDIR\explorer.exe", "", "$env:WINDIR\explorer.exe,0", "Microsoft.Windows.Explorer")
 
-    # 6. Restore System Tools shortcuts to native system binaries
+    # 5. Restore Microsoft Store Taskbar Shortcut with official AUMID
+    $storeLnk = Join-Path $taskbarDir "Microsoft Store.lnk"
+    if (Test-Path $storeLnk) {
+        [MacAppShortcutHelper]::CreateOrUpdateShortcut($storeLnk, "$env:WINDIR\explorer.exe", "shell:AppsFolder\Microsoft.WindowsStore_8wekyb3d8bbwe!App", "", "Microsoft.WindowsStore_8wekyb3d8bbwe!App")
+    }
+
+    # 6. Restore Real Installed Desktop Apps (Discord, Steam)
+    $discordExe = "$env:LOCALAPPDATA\Discord\Update.exe"
+    if (-not (Test-Path $discordExe)) { $discordExe = "$env:LOCALAPPDATA\Discord\Discord.exe" }
+    $discordInstalled = (Test-Path $discordExe)
+    $discordLnks = @(
+        (Join-Path $taskbarDir "Discord.lnk"),
+        (Join-Path $userStartDir "Discord.lnk"),
+        (Join-Path $userStartDir "Discord Inc\Discord.lnk"),
+        (Join-Path $allStartDir "Discord.lnk")
+    )
+    foreach ($dl in $discordLnks) {
+        if ($discordInstalled) {
+            if (Test-Path $dl) {
+                [MacAppShortcutHelper]::CreateOrUpdateShortcut($dl, $discordExe, "--processStart Discord.exe", "$discordExe,0", "com.squirrel.Discord.Discord")
+            }
+        } else {
+            if (Test-Path $dl) { Remove-Item -LiteralPath $dl -Force -ErrorAction SilentlyContinue }
+        }
+    }
+
+    $steamExe = "C:\Program Files (x86)\Steam\steam.exe"
+    if (-not (Test-Path $steamExe)) { $steamExe = "C:\Program Files\Steam\steam.exe" }
+    $steamInstalled = (Test-Path $steamExe)
+    $steamLnks = @(
+        (Join-Path $taskbarDir "Steam.lnk"),
+        (Join-Path $userStartDir "Steam.lnk"),
+        (Join-Path $allStartDir "Steam.lnk"),
+        (Join-Path $allStartDir "Steam\Steam.lnk")
+    )
+    foreach ($sl in $steamLnks) {
+        if ($steamInstalled) {
+            if (Test-Path $sl) {
+                [MacAppShortcutHelper]::CreateOrUpdateShortcut($sl, $steamExe, "", "$steamExe,0", "Valve.Steam")
+            }
+        } else {
+            if (Test-Path $sl) { Remove-Item -LiteralPath $sl -Force -ErrorAction SilentlyContinue }
+        }
+    }
+
+    # 7. Restore WhatsApp & Telegram on Taskbar: remove if not installed, restore native if installed
+    $waApp = Get-AppxPackage -Name "*WhatsApp*" -ErrorAction SilentlyContinue | Select-Object -First 1
+    $waExe = "$env:LOCALAPPDATA\WhatsApp\WhatsApp.exe"
+    $waInstalled = ($waApp -ne $null) -or (Test-Path $waExe)
+    $waTb = Join-Path $taskbarDir "WhatsApp.lnk"
+    if (-not $waInstalled -and (Test-Path $waTb)) {
+        Remove-Item -LiteralPath $waTb -Force -ErrorAction SilentlyContinue
+    }
+
+    $tgApp = Get-AppxPackage -Name "*Telegram*" -ErrorAction SilentlyContinue | Select-Object -First 1
+    $tgExe = "$env:APPDATA\Telegram Desktop\Telegram.exe"
+    if (-not (Test-Path $tgExe)) { $tgExe = "C:\Program Files\Telegram Desktop\Telegram.exe" }
+    $tgInstalled = ($tgApp -ne $null) -or (Test-Path $tgExe)
+    $tgTb = Join-Path $taskbarDir "Telegram.lnk"
+    if (-not $tgInstalled -and (Test-Path $tgTb)) {
+        Remove-Item -LiteralPath $tgTb -Force -ErrorAction SilentlyContinue
+    }
+
+    # 8. Restore System Tools shortcuts to native system binaries
     $sysToolMap = @{
         "System Tools\Command Prompt.lnk"           = "$env:WINDIR\System32\cmd.exe,0"
         "Windows PowerShell\Windows PowerShell.lnk" = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe,0"
         "System Tools\Control Panel.lnk"            = "$env:WINDIR\System32\imageres.dll,-27"
         "System Tools\Task Manager.lnk"             = "$env:WINDIR\System32\Taskmgr.exe,0"
     }
+    $wsh = New-Object -ComObject WScript.Shell
     foreach ($rel in $sysToolMap.Keys) {
         foreach ($base in @($userStartDir, $allStartDir)) {
             $p = Join-Path $base $rel
@@ -375,84 +525,6 @@ try {
                 $sc = $wsh.CreateShortcut($p)
                 $sc.IconLocation = $sysToolMap[$rel]
                 $sc.Save()
-            }
-        }
-    }
-
-    # 7. Restore Real Installed Desktop Apps (Discord, Steam)
-    $discordExe = "$env:LOCALAPPDATA\Discord\Update.exe"
-    if (-not (Test-Path $discordExe)) { $discordExe = "$env:LOCALAPPDATA\Discord\Discord.exe" }
-    if (Test-Path $discordExe) {
-        $discordLnks = @(
-            (Join-Path $taskbarDir "Discord.lnk"),
-            (Join-Path $userStartDir "Discord.lnk"),
-            (Join-Path $userStartDir "Discord Inc\Discord.lnk"),
-            (Join-Path $allStartDir "Discord.lnk")
-        )
-        foreach ($dl in $discordLnks) {
-            if (Test-Path $dl) {
-                $sc = $wsh.CreateShortcut($dl)
-                $sc.TargetPath = $discordExe
-                $sc.IconLocation = "$discordExe,0"
-                $sc.Save()
-            }
-        }
-    }
-
-    $steamExe = "C:\Program Files (x86)\Steam\steam.exe"
-    if (-not (Test-Path $steamExe)) { $steamExe = "C:\Program Files\Steam\steam.exe" }
-    if (Test-Path $steamExe) {
-        $steamLnks = @(
-            (Join-Path $taskbarDir "Steam.lnk"),
-            (Join-Path $userStartDir "Steam.lnk"),
-            (Join-Path $allStartDir "Steam.lnk"),
-            (Join-Path $allStartDir "Steam\Steam.lnk")
-        )
-        foreach ($sl in $steamLnks) {
-            if (Test-Path $sl) {
-                $sc = $wsh.CreateShortcut($sl)
-                $sc.TargetPath = $steamExe
-                $sc.IconLocation = "$steamExe,0"
-                $sc.Save()
-            }
-        }
-    }
-
-    # 8. Restore or clean Office shortcuts (Word, Excel, PowerPoint)
-    $officeRoots = @(
-        "C:\Program Files\Microsoft Office\root\Office16",
-        "C:\Program Files (x86)\Microsoft Office\root\Office16",
-        "C:\Program Files\Microsoft Office\Office16",
-        "C:\Program Files (x86)\Microsoft Office\Office16"
-    )
-    $wordExe = $null; $excelExe = $null; $pptExe = $null
-    foreach ($r in $officeRoots) {
-        if (Test-Path $r) {
-            if (Test-Path (Join-Path $r "WINWORD.EXE")) { $wordExe = Join-Path $r "WINWORD.EXE" }
-            if (Test-Path (Join-Path $r "EXCEL.EXE"))   { $excelExe = Join-Path $r "EXCEL.EXE" }
-            if (Test-Path (Join-Path $r "POWERPNT.EXE")) { $pptExe = Join-Path $r "POWERPNT.EXE" }
-            if ($wordExe) { break }
-        }
-    }
-
-    $officeFiles = @{
-        "Word.lnk" = $wordExe
-        "Excel.lnk" = $excelExe
-        "PowerPoint.lnk" = $pptExe
-    }
-    foreach ($base in @($userStartDir, $allStartDir, $taskbarDir, $userDesktop, $commonDesktop)) {
-        foreach ($of in $officeFiles.Keys) {
-            $p = Join-Path $base $of
-            if (Test-Path $p) {
-                $exe = $officeFiles[$of]
-                if ($exe -and (Test-Path $exe)) {
-                    $sc = $wsh.CreateShortcut($p)
-                    $sc.TargetPath = $exe
-                    $sc.IconLocation = "$exe,0"
-                    $sc.Save()
-                } else {
-                    Remove-Item -LiteralPath $p -Force -ErrorAction SilentlyContinue
-                }
             }
         }
     }
@@ -469,7 +541,7 @@ try {
                 if ($target -like "*RohitBhaiMacOS*") {
                     Remove-Item -LiteralPath $_.FullName -Force -ErrorAction SilentlyContinue
                 } elseif ($icon -like "*RohitBhaiMacOS*") {
-                    if ($target -and (Test-Path $target) -and ($target -match "\.exe$")) {
+                    if ($target -and (Test-Path $target) -and ($target -match "\.exe$") -and ($target -notlike "*explorer.exe")) {
                         $lnk.IconLocation = "$target,0"
                         $lnk.Save()
                     } else {
@@ -545,6 +617,7 @@ public class Win32CursorReset {
 Write-Host "`n[7/8] Restoring Default Windows Wallpaper..." -ForegroundColor Cyan
 try {
     $defaultWallpapers = @(
+        "C:\Windows\Web\4K\Wallpaper\Windows\img0_3840x2160.jpg",
         "C:\Windows\Web\Wallpaper\Windows\img0.jpg",
         "C:\Windows\Web\Wallpaper\Windows\img19.jpg",
         "$env:WINDIR\Web\Wallpaper\Windows\img0.jpg"
@@ -558,7 +631,11 @@ try {
     }
 
     if ($restoredWall) {
+        $transcoded = "$env:APPDATA\Microsoft\Windows\Themes\TranscodedWallpaper"
+        Copy-Item -Path $restoredWall -Destination $transcoded -Force -ErrorAction SilentlyContinue
+
         Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name 'Wallpaper' -Value $restoredWall -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name 'WallpaperStyle' -Value '10' -Force -ErrorAction SilentlyContinue
         Add-Type @"
 using System;
 using System.Runtime.InteropServices;
@@ -576,7 +653,7 @@ public class Win32RestoreWall {
 }
 
 # -------------------------------------------------------------------------
-# Step 8: Clean AppData Directory & Rebuild Windows Explorer & Start Menu Cache
+# Step 8: Clean AppData Directory & Nuclear Rebuild of Windows Icon Cache
 # -------------------------------------------------------------------------
 Write-Host "`n[8/8] Rebuilding Windows Icon Cache & Refreshing Explorer & Start Menu..." -ForegroundColor Cyan
 
@@ -586,11 +663,11 @@ if (Test-Path $appDir) {
     Remove-Item -Path $appDir -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-# 2. Terminate explorer, StartMenuExperienceHost, and SearchHost to release all icon databases
-Stop-Process -Name "StartMenuExperienceHost", "SearchHost", "ShellExperienceHost", "explorer" -Force -ErrorAction SilentlyContinue
-Start-Sleep -Seconds 2
+# 2. Terminate explorer and shell host processes forcefully to release file locks
+taskkill.exe /F /IM explorer.exe /IM StartMenuExperienceHost.exe /IM SearchHost.exe /IM ShellExperienceHost.exe 2>$null
+Start-Sleep -Milliseconds 800
 
-# 3. Flush icon and thumbnail cache files
+# 3. Flush icon and thumbnail cache databases
 $iconCache = "$env:LOCALAPPDATA\IconCache.db"
 if (Test-Path $iconCache) { Remove-Item $iconCache -Force -ErrorAction SilentlyContinue }
 
@@ -613,14 +690,21 @@ foreach ($scd in $startCacheDirs) {
     }
 }
 
-# 5. Relaunch Windows Explorer cleanly
+# 5. Relaunch Windows Explorer cleanly and rebuild system icon registry
 Start-Process explorer.exe
 Start-Sleep -Seconds 2
+& ie4uinit.exe -ClearIconCache 2>$null
 & ie4uinit.exe -show 2>$null
 
 Write-Host ""
 Write-Host "========================================================================================" -ForegroundColor Green
-Write-Host "         CONGRATULATIONS! ROHIT BHAI MAC OS HAS BEEN COMPLETELY UNINSTALLED!            " -ForegroundColor Green
+Write-Host "     CONGRATULATIONS! ROHIT BHAI 1 CLICK MAC OS HAS BEEN COMPLETELY UNINSTALLED!        " -ForegroundColor Green
 Write-Host "              All icons, Edge, Explorer, wallpaper, and labels restored!                " -ForegroundColor Green
 Write-Host "========================================================================================" -ForegroundColor Green
 Write-Host ""
+try {
+    Write-Host "Press any key to close..."
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+} catch {
+    Start-Sleep -Seconds 3
+}

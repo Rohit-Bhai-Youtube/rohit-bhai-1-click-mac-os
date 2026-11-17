@@ -14,7 +14,7 @@ $ProgressPreference = "SilentlyContinue"
 
 # Repository Configuration
 $RepoOwner = "Rohit-Bhai-Youtube"
-$RepoName  = "rohit-bhai-mac-os"
+$RepoName  = "rohit-bhai-1-click-mac-os"
 $Branch    = "main"
 $WebScriptUrl = "https://raw.githubusercontent.com/$RepoOwner/$RepoName/$Branch/install.ps1"
 
@@ -40,7 +40,7 @@ Write-Host @"
    ██╔══██╗██║   ██║██╔══██╗   ██╔══╝  ██║    ██╔══██║╚════██║██╔══██║
    ██║  ██║╚██████╔╝██████╔╝   ██║     ███████╗██║  ██║███████║██║  ██║
    ╚═╝  ╚═╝ ╚═════╝ ╚═════╝    ╚═╝     ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
-              ROHIT BHAI MAC OS FOR WINDOWS 11 - v4.7 [TOP-RIGHT STATUS BAR & DOCK]
+              ROHIT BHAI 1 CLICK MAC OS FOR WINDOWS 11 - v4.7 [TOP-RIGHT STATUS BAR & DOCK]
                                Crafted for Rohit Bhai
 ========================================================================================
 "@ -ForegroundColor Cyan
@@ -1155,6 +1155,17 @@ if ($windhawkExe -or $WindhawkCli) {
     $localDaemon = if ($ScriptDir) { Join-Path $ScriptDir "run_island_daemon.ps1" } else { $null }
     if ($localDaemon -and (Test-Path $localDaemon)) {
         Copy-Item $localDaemon -Destination $daemonPs1 -Force -ErrorAction SilentlyContinue
+    } else {
+        $daemonUrls = @(
+            "https://raw.githubusercontent.com/$RepoOwner/$RepoName/$Branch/run_island_daemon.ps1",
+            "https://raw.githubusercontent.com/$RepoOwner/rohit-bhai-mac-os/$Branch/run_island_daemon.ps1"
+        )
+        foreach ($dUrl in $daemonUrls) {
+            try {
+                Invoke-WebRequest -Uri $dUrl -OutFile $daemonPs1 -UseBasicParsing -ErrorAction SilentlyContinue
+                if ((Test-Path $daemonPs1) -and (Get-Item $daemonPs1).Length -gt 500) { break }
+            } catch {}
+        }
     }
     $startupFolder = [Environment]::GetFolderPath('Startup')
     $vbsPath = Join-Path $startupFolder "RohitBhai_Mac_Island.vbs"
@@ -1217,7 +1228,7 @@ Remove-Item -Path $WorkDir -Recurse -Force -ErrorAction SilentlyContinue
 
 Write-Host ""
 Write-Host "========================================================================================" -ForegroundColor Green
-Write-Host "            CONGRATULATIONS! ROHIT BHAI MAC OS v4.7 IS NOW ACTIVE!                     " -ForegroundColor Green
+Write-Host "        CONGRATULATIONS! ROHIT BHAI 1 CLICK MAC OS v4.7 IS NOW ACTIVE!                 " -ForegroundColor Green
 Write-Host "========================================================================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "  * Official Apple macOS Folder Icons (Sonoma Aqua, Documents, Downloads, etc.) active" -ForegroundColor White
@@ -1232,7 +1243,11 @@ Write-Host "  * macOS Capitaine Dark Cursors (with rainbow spinning beach-ball) 
 Write-Host "  * 4K Ultra-HD macOS Wallpaper & Deep Dark Mode applied" -ForegroundColor White
 Write-Host ""
 Write-Host "  Crafted with love by: Rohit Bhai" -ForegroundColor Cyan
-Write-Host "  Repository: https://github.com/Rohit-Bhai-Youtube/rohit-bhai-mac-os" -ForegroundColor DarkGray
+Write-Host "  Repository: https://github.com/Rohit-Bhai-Youtube/rohit-bhai-1-click-mac-os" -ForegroundColor DarkGray
 Write-Host ""
-Write-Host "Press any key to close..."
-$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+try {
+    Write-Host "Press any key to close..."
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+} catch {
+    Start-Sleep -Seconds 3
+}

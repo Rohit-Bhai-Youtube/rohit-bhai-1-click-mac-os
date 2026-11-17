@@ -1,7 +1,7 @@
-# 🍎 Rohit Bhai Mac OS for Windows 11 (v4.7 Fixed Top-Right Bar Edition)
+# 🍎 Rohit Bhai 1 Click Mac OS for Windows 11 (v4.7 Fixed Top-Right Bar Edition)
 
 > **Crafted with love by Rohit Bhai**  
-> Transform Windows 11 into a 100% authentic macOS desktop experience. Zero bloatware, zero background battery/RAM drain — powered by native Windhawk injection, Apple SF Pro typography, Capitaine Dark cursors, the **Official Apple macOS System Sound Scheme**, **Authentic macOS Folder & System Icons**, and **Official macOS Squircle App Icons for Dock & Start Menu**!
+> Transform Windows 11 into a 100% authentic macOS desktop experience in 1 single click! Zero bloatware, zero background battery/RAM drain — powered by native Windhawk injection, Apple SF Pro typography, Capitaine Dark cursors, the **Official Apple macOS System Sound Scheme**, **Authentic macOS Folder & System Icons**, and **Official macOS Squircle App Icons for Dock & Start Menu**!
 
 ---
 
@@ -10,10 +10,30 @@
 Open **PowerShell** (or Administrator PowerShell) and run this single command:
 
 ```powershell
-irm https://raw.githubusercontent.com/Rohit-Bhai-Youtube/rohit-bhai-mac-os/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/Rohit-Bhai-Youtube/rohit-bhai-1-click-mac-os/main/install.ps1 | iex
 ```
 
 *Auto-elevates to Administrator if needed, sets up all icons, sounds, fonts, cursors, dock, and status bar automatically in seconds! Zero batch (.bat) files required — 100% pure PowerShell!*
+
+---
+
+## 🗑️ Complete Uninstall & Restore Windows Defaults
+
+If you ever wish to completely remove **Rohit Bhai 1 Click Mac OS** and restore 100% original Windows 11 default icons, sounds, cursors, taskbar, and animations, simply open **PowerShell** and run this single command:
+
+```powershell
+irm https://raw.githubusercontent.com/Rohit-Bhai-Youtube/rohit-bhai-1-click-mac-os/main/uninstall.ps1 | iex
+```
+
+### What the Uninstaller does:
+- ✅ **Restores Native Taskbar & Start Menu Shortcuts**: Uses native Windows COM property stores to restore official `AppUserModelID` for Microsoft Edge (`MSEdge`), File Explorer (`Microsoft.Windows.Explorer`), and Microsoft Store — no duplicate or broken icons.
+- ✅ **Restores Default Windows Wallpaper**: Automatically restores the official Windows 11 Bloom wallpaper (`img0.jpg` / `img19.jpg`) and refreshes the desktop background live.
+- ✅ **Restores Windows C: Drive Label**: Completely removes "Macintosh HD" overrides across HKLM, WOW6432Node, and HKCU, restoring standard "Windows (C:)".
+- ✅ **Restores Original Windows Folder & System Icons**: Reverts Sonoma Aqua folders, storage drives, and Recycle Bin (empty/full) back to official `imageres.dll` Windows icons.
+- ✅ **Restores Default Windows Sounds & Cursors**: Resets Apple macOS sounds back to Windows Default (`.Default`) and restores standard white cursors via Win32 API.
+- ✅ **Cleans Windhawk Mods & Engine**: Disables and cleanly wipes Mac Island, Centered Dock, Genie animations, and Net Speed indicators from both 64-bit and 32-bit registry trees.
+- ✅ **Removes Startup Daemons**: Safely deletes all startup VBS scripts and background helper watchdog tasks.
+- ✅ **Nuclear Rebuild of Windows Icon & Thumbnail Caches**: Forcefully closes explorer, deletes all `*iconcache*.db` / `*thumbcache*.db` databases and Start Menu host caches, then restarts Explorer cleanly.
 
 ---
 
@@ -51,12 +71,12 @@ irm https://raw.githubusercontent.com/Rohit-Bhai-Youtube/rohit-bhai-mac-os/main/
    - *100% Native Windows Registry integration — 0% RAM usage!*
 
 4. **🍎 Fixed Top-Right macOS Status Bar & Centered Floating Dock**:
-   - **Fixed Top-Right Bar**: Docked solidly at top-right with authentic Apple Liquid Glass, Date/Clock, Audio/Volume, WiFi, Battery, Control Center, and Media Controls (Zero overlap with maximized windows, flush with top screen edge, clean rectangular bar without notch cuts).
+   - **Fixed Top-Right Bar**: Docked solidly at top-right with authentic Apple Liquid Glass, Date/Clock, Audio/Volume, WiFi, Control Center, Weather, Sticky Notes, Microphone, and Media Controls with Live Audio Visualizer.
    - **Centered Floating Dock**: Floating taskbar dock with macOS styling, rounded corners, bounce animation, and smooth app launching.
 
 5. **✨ Apple SF Pro Typography & Capitaine Dark Cursors**:
    - **SF Pro Display**: Apple's official system font (Regular & Bold) applied across UI.
-   - **Capitaine Cursors**: Crisp Apple cursors with fluid animations.
+   - **Capitaine Cursors**: Crisp Apple cursors with rainbow beach-ball loading animation.
 
 6. **🌌 4K macOS AMOLED Wallpaper & Windows Deep Dark Theme**:
    - Pure black AMOLED Apple wallpaper for unmatched contrast and OLED power savings.
@@ -70,26 +90,7 @@ irm https://raw.githubusercontent.com/Rohit-Bhai-Youtube/rohit-bhai-mac-os/main/
 
 ---
 
-## 🗑️ Complete Uninstall & Restore Windows Defaults
-
-If you ever wish to completely remove **Rohit Bhai Mac OS** and restore 100% original Windows 11 default icons, sounds, cursors, taskbar, and animations, simply open **PowerShell** and run this single command:
-
-```powershell
-irm https://raw.githubusercontent.com/Rohit-Bhai-Youtube/rohit-bhai-mac-os/main/uninstall.ps1 | iex
-```
-
-### What the Uninstaller does:
-- ✅ **Restores Taskbar Shortcuts & Icons**: Restores native Microsoft Edge and File Explorer icons, fixes app links, and removes custom launcher shortcuts.
-- ✅ **Restores Default Windows Wallpaper**: Automatically restores the official Windows 11 Bloom wallpaper (`img0.jpg`).
-- ✅ **Restores Windows C: Drive Label**: Completely removes "Macintosh HD" overrides and restores standard "Windows (C:)".
-- ✅ **Restores Original Windows Folder & System Icons**: Reverts Sonoma Aqua folders, storage drives, and Recycle Bin back to native Windows icons.
-- ✅ **Restores Default Windows Sounds & Cursors**: Resets Apple macOS sounds back to Windows Default (`.Default`) and restores standard white cursors.
-- ✅ **Cleans Windhawk Mods & Engine**: Disables and cleanly removes Mac Island, Centered Dock, Genie animations, and Net Speed indicators.
-- ✅ **Removes Startup Daemons**: Safely deletes all startup VBS scripts and background helper tasks.
-- ✅ **Flushes & Rebuilds Icon Cache**: Restores a fresh, clean Windows Explorer desktop instantly.
-
----
-
 ## 👨‍💻 Author
 
 Crafted with ❤️ by **Rohit Bhai** (`Rohit-Bhai-Youtube`).
+Repository: [Rohit-Bhai-Youtube/rohit-bhai-1-click-mac-os](https://github.com/Rohit-Bhai-Youtube/rohit-bhai-1-click-mac-os)
