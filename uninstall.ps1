@@ -218,9 +218,9 @@ try {
 
     Remove-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item -Path "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" -Recurse -Force -ErrorAction SilentlyContinue
-    cmd.exe /c 'reg delete "HKLM\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" /f >nul 2>&1'
-    cmd.exe /c 'reg delete "HKLM\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" /f >nul 2>&1'
-    cmd.exe /c 'reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" /f >nul 2>&1'
+    & reg.exe delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" /f 2>$null
+    & reg.exe delete "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" /f 2>$null
+    & reg.exe delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" /f 2>$null
 
     # Remove custom CLSID overrides in HKCU Classes
     $customClsids = @(
@@ -681,7 +681,7 @@ if (Test-Path $appDir) {
     } catch {}
 
     if ($hklmStillHas) {
-        # Fallback: populate with native Windows 11 yellow icons so folders are NEVER blank
+        # Fallback: populate with 4K Ultra HD multi-resolution Windows 11 icons so folders are NEVER blank
         $icoDir = Join-Path $appDir "Icons"
         New-Item -ItemType Directory -Path $icoDir -Force | Out-Null
         $imageres = Join-Path ([Environment]::GetFolderPath('System')) "imageres.dll"
@@ -689,39 +689,89 @@ if (Test-Path $appDir) {
             Add-Type -TypeDefinition @"
 using System;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
-public class WinIconFallbackUn {
-    [DllImport("shell32.dll", CharSet = CharSet.Auto)]
-    public static extern int ExtractIconEx(string lpszFile, int nIconIndex, IntPtr[] phiconLarge, IntPtr[] phiconSmall, int nIcons);
+
+public class MultiResIcoUninstaller {
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    public static extern int PrivateExtractIcons(
+        string lpszFile, int nIconIndex, int cxIcon, int cyIcon,
+        IntPtr[] phicon, int[] piconid, int nIcons, int flags
+    );
+
     [DllImport("user32.dll")]
     public static extern bool DestroyIcon(IntPtr hIcon);
-    public static void Save(string dll, int idx, string outPath) {
-        IntPtr[] l = new IntPtr[1]; IntPtr[] s = new IntPtr[1];
-        ExtractIconEx(dll, idx, l, s, 1);
-        if (l[0] != IntPtr.Zero) {
-            using (Icon ico = Icon.FromHandle(l[0])) {
-                using (FileStream fs = new FileStream(outPath, FileMode.Create)) { ico.Save(fs); }
+
+    public static void Save(string dllPath, int iconIndex, string outIcoPath) {
+        int[] sizes = new int[] { 16, 24, 32, 48, 64, 128, 256 };
+        List<byte[]> pngBuffers = new List<byte[]>();
+        List<int> validSizes = new List<int>();
+
+        foreach (int sz in sizes) {
+            IntPtr[] ph = new IntPtr[1];
+            int[] pid = new int[1];
+            int c = PrivateExtractIcons(dllPath, iconIndex, sz, sz, ph, pid, 1, 0);
+            if (c > 0 && ph[0] != IntPtr.Zero) {
+                using (Icon ico = Icon.FromHandle(ph[0])) {
+                    using (Bitmap bmp = ico.ToBitmap()) {
+                        using (MemoryStream ms = new MemoryStream()) {
+                            bmp.Save(ms, ImageFormat.Png);
+                            pngBuffers.Add(ms.ToArray());
+                            validSizes.Add(sz);
+                        }
+                    }
+                }
+                DestroyIcon(ph[0]);
             }
-            DestroyIcon(l[0]);
-            if (s[0] != IntPtr.Zero) DestroyIcon(s[0]);
+        }
+
+        if (pngBuffers.Count == 0) return;
+
+        using (MemoryStream msOut = new MemoryStream()) {
+            using (BinaryWriter bw = new BinaryWriter(msOut)) {
+                bw.Write((short)0);
+                bw.Write((short)1);
+                bw.Write((short)pngBuffers.Count);
+
+                int offset = 6 + (16 * pngBuffers.Count);
+                for (int i = 0; i < pngBuffers.Count; i++) {
+                    int sz = validSizes[i];
+                    byte bSz = (byte)(sz == 256 ? 0 : sz);
+                    bw.Write(bSz);
+                    bw.Write(bSz);
+                    bw.Write((byte)0);
+                    bw.Write((byte)0);
+                    bw.Write((short)1);
+                    bw.Write((short)32);
+                    bw.Write((int)pngBuffers[i].Length);
+                    bw.Write((int)offset);
+                    offset += pngBuffers[i].Length;
+                }
+
+                for (int i = 0; i < pngBuffers.Count; i++) {
+                    bw.Write(pngBuffers[i]);
+                }
+            }
+            File.WriteAllBytes(outIcoPath, msOut.ToArray());
         }
     }
 }
 "@ -ReferencedAssemblies System.Drawing -ErrorAction SilentlyContinue
-            [WinIconFallbackUn]::Save($imageres, 3, "$icoDir\macOS_Folder.ico")
-            [WinIconFallbackUn]::Save($imageres, 4, "$icoDir\macOS_Folder_Open.ico")
-            [WinIconFallbackUn]::Save($imageres, 27, "$icoDir\macOS_Drive.ico")
-            [WinIconFallbackUn]::Save($imageres, 26, "$icoDir\macOS_Drive_System.ico")
-            [WinIconFallbackUn]::Save($imageres, 54, "$icoDir\macOS_Trash_Empty.ico")
-            [WinIconFallbackUn]::Save($imageres, 55, "$icoDir\macOS_Trash_Full.ico")
-            [WinIconFallbackUn]::Save($imageres, 110, "$icoDir\macOS_Desktop.ico")
-            [WinIconFallbackUn]::Save($imageres, 109, "$icoDir\macOS_ThisPC.ico")
-            [WinIconFallbackUn]::Save($imageres, 112, "$icoDir\macOS_Documents.ico")
-            [WinIconFallbackUn]::Save($imageres, 184, "$icoDir\macOS_Downloads.ico")
-            [WinIconFallbackUn]::Save($imageres, 108, "$icoDir\macOS_Music.ico")
-            [WinIconFallbackUn]::Save($imageres, 113, "$icoDir\macOS_Pictures.ico")
-            [WinIconFallbackUn]::Save($imageres, 18, "$icoDir\macOS_Videos.ico")
+            [MultiResIcoUninstaller]::Save($imageres, 3, "$icoDir\macOS_Folder.ico")
+            [MultiResIcoUninstaller]::Save($imageres, 4, "$icoDir\macOS_Folder_Open.ico")
+            [MultiResIcoUninstaller]::Save($imageres, 27, "$icoDir\macOS_Drive.ico")
+            [MultiResIcoUninstaller]::Save($imageres, 26, "$icoDir\macOS_Drive_System.ico")
+            [MultiResIcoUninstaller]::Save($imageres, 54, "$icoDir\macOS_Trash_Empty.ico")
+            [MultiResIcoUninstaller]::Save($imageres, 55, "$icoDir\macOS_Trash_Full.ico")
+            [MultiResIcoUninstaller]::Save($imageres, 110, "$icoDir\macOS_Desktop.ico")
+            [MultiResIcoUninstaller]::Save($imageres, 109, "$icoDir\macOS_ThisPC.ico")
+            [MultiResIcoUninstaller]::Save($imageres, 112, "$icoDir\macOS_Documents.ico")
+            [MultiResIcoUninstaller]::Save($imageres, 184, "$icoDir\macOS_Downloads.ico")
+            [MultiResIcoUninstaller]::Save($imageres, 108, "$icoDir\macOS_Music.ico")
+            [MultiResIcoUninstaller]::Save($imageres, 113, "$icoDir\macOS_Pictures.ico")
+            [MultiResIcoUninstaller]::Save($imageres, 18, "$icoDir\macOS_Videos.ico")
         } catch {}
     } else {
         Remove-Item -Path $appDir -Recurse -Force -ErrorAction SilentlyContinue

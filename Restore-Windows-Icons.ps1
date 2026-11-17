@@ -49,7 +49,7 @@ foreach ($k in $shellKeys) {
     & reg.exe delete "$k" /f 2>$null
 }
 
-# Fallback: Populate RohitBhaiMacOS\Icons with native Windows 11 icons as a permanent safety net
+# Fallback: Populate RohitBhaiMacOS\Icons with 4K Ultra HD Windows 11 icons as a permanent safety net
 try {
     $icoDir = "$env:LOCALAPPDATA\RohitBhaiMacOS\Icons"
     New-Item -ItemType Directory -Path $icoDir -Force | Out-Null
@@ -57,39 +57,89 @@ try {
     Add-Type -TypeDefinition @"
 using System;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
-public class WinIconFallbackRest {
-    [DllImport("shell32.dll", CharSet = CharSet.Auto)]
-    public static extern int ExtractIconEx(string lpszFile, int nIconIndex, IntPtr[] phiconLarge, IntPtr[] phiconSmall, int nIcons);
+
+public class MultiResIcoRest {
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    public static extern int PrivateExtractIcons(
+        string lpszFile, int nIconIndex, int cxIcon, int cyIcon,
+        IntPtr[] phicon, int[] piconid, int nIcons, int flags
+    );
+
     [DllImport("user32.dll")]
     public static extern bool DestroyIcon(IntPtr hIcon);
-    public static void Save(string dll, int idx, string outPath) {
-        IntPtr[] l = new IntPtr[1]; IntPtr[] s = new IntPtr[1];
-        ExtractIconEx(dll, idx, l, s, 1);
-        if (l[0] != IntPtr.Zero) {
-            using (Icon ico = Icon.FromHandle(l[0])) {
-                using (FileStream fs = new FileStream(outPath, FileMode.Create)) { ico.Save(fs); }
+
+    public static void Save(string dllPath, int iconIndex, string outIcoPath) {
+        int[] sizes = new int[] { 16, 24, 32, 48, 64, 128, 256 };
+        List<byte[]> pngBuffers = new List<byte[]>();
+        List<int> validSizes = new List<int>();
+
+        foreach (int sz in sizes) {
+            IntPtr[] ph = new IntPtr[1];
+            int[] pid = new int[1];
+            int c = PrivateExtractIcons(dllPath, iconIndex, sz, sz, ph, pid, 1, 0);
+            if (c > 0 && ph[0] != IntPtr.Zero) {
+                using (Icon ico = Icon.FromHandle(ph[0])) {
+                    using (Bitmap bmp = ico.ToBitmap()) {
+                        using (MemoryStream ms = new MemoryStream()) {
+                            bmp.Save(ms, ImageFormat.Png);
+                            pngBuffers.Add(ms.ToArray());
+                            validSizes.Add(sz);
+                        }
+                    }
+                }
+                DestroyIcon(ph[0]);
             }
-            DestroyIcon(l[0]);
-            if (s[0] != IntPtr.Zero) DestroyIcon(s[0]);
+        }
+
+        if (pngBuffers.Count == 0) return;
+
+        using (MemoryStream msOut = new MemoryStream()) {
+            using (BinaryWriter bw = new BinaryWriter(msOut)) {
+                bw.Write((short)0);
+                bw.Write((short)1);
+                bw.Write((short)pngBuffers.Count);
+
+                int offset = 6 + (16 * pngBuffers.Count);
+                for (int i = 0; i < pngBuffers.Count; i++) {
+                    int sz = validSizes[i];
+                    byte bSz = (byte)(sz == 256 ? 0 : sz);
+                    bw.Write(bSz);
+                    bw.Write(bSz);
+                    bw.Write((byte)0);
+                    bw.Write((byte)0);
+                    bw.Write((short)1);
+                    bw.Write((short)32);
+                    bw.Write((int)pngBuffers[i].Length);
+                    bw.Write((int)offset);
+                    offset += pngBuffers[i].Length;
+                }
+
+                for (int i = 0; i < pngBuffers.Count; i++) {
+                    bw.Write(pngBuffers[i]);
+                }
+            }
+            File.WriteAllBytes(outIcoPath, msOut.ToArray());
         }
     }
 }
 "@ -ReferencedAssemblies System.Drawing -ErrorAction SilentlyContinue
-    [WinIconFallbackRest]::Save($imageres, 3, "$icoDir\macOS_Folder.ico")
-    [WinIconFallbackRest]::Save($imageres, 4, "$icoDir\macOS_Folder_Open.ico")
-    [WinIconFallbackRest]::Save($imageres, 27, "$icoDir\macOS_Drive.ico")
-    [WinIconFallbackRest]::Save($imageres, 26, "$icoDir\macOS_Drive_System.ico")
-    [WinIconFallbackRest]::Save($imageres, 54, "$icoDir\macOS_Trash_Empty.ico")
-    [WinIconFallbackRest]::Save($imageres, 55, "$icoDir\macOS_Trash_Full.ico")
-    [WinIconFallbackRest]::Save($imageres, 110, "$icoDir\macOS_Desktop.ico")
-    [WinIconFallbackRest]::Save($imageres, 109, "$icoDir\macOS_ThisPC.ico")
-    [WinIconFallbackRest]::Save($imageres, 112, "$icoDir\macOS_Documents.ico")
-    [WinIconFallbackRest]::Save($imageres, 184, "$icoDir\macOS_Downloads.ico")
-    [WinIconFallbackRest]::Save($imageres, 108, "$icoDir\macOS_Music.ico")
-    [WinIconFallbackRest]::Save($imageres, 113, "$icoDir\macOS_Pictures.ico")
-    [WinIconFallbackRest]::Save($imageres, 18, "$icoDir\macOS_Videos.ico")
+    [MultiResIcoRest]::Save($imageres, 3, "$icoDir\macOS_Folder.ico")
+    [MultiResIcoRest]::Save($imageres, 4, "$icoDir\macOS_Folder_Open.ico")
+    [MultiResIcoRest]::Save($imageres, 27, "$icoDir\macOS_Drive.ico")
+    [MultiResIcoRest]::Save($imageres, 26, "$icoDir\macOS_Drive_System.ico")
+    [MultiResIcoRest]::Save($imageres, 54, "$icoDir\macOS_Trash_Empty.ico")
+    [MultiResIcoRest]::Save($imageres, 55, "$icoDir\macOS_Trash_Full.ico")
+    [MultiResIcoRest]::Save($imageres, 110, "$icoDir\macOS_Desktop.ico")
+    [MultiResIcoRest]::Save($imageres, 109, "$icoDir\macOS_ThisPC.ico")
+    [MultiResIcoRest]::Save($imageres, 112, "$icoDir\macOS_Documents.ico")
+    [MultiResIcoRest]::Save($imageres, 184, "$icoDir\macOS_Downloads.ico")
+    [MultiResIcoRest]::Save($imageres, 108, "$icoDir\macOS_Music.ico")
+    [MultiResIcoRest]::Save($imageres, 113, "$icoDir\macOS_Pictures.ico")
+    [MultiResIcoRest]::Save($imageres, 18, "$icoDir\macOS_Videos.ico")
 } catch {}
 
 # 2. Remove custom Icon values from FolderDescriptions
