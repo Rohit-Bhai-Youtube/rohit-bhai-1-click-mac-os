@@ -718,6 +718,29 @@ try {
         }
     }
 
+    # 4b. System & Program Directories in FolderDescriptions (Program Files, Users, ProgramData)
+    $systemFolderGuids = @(
+        "{905e63b6-c1bf-494e-b29c-65b732d3d21a}", # ProgramFiles
+        "{6D809377-6AF0-444b-8957-A3773F02200E}", # ProgramFilesX64
+        "{7C5A40EF-A0FB-4BFC-874A-C0F2E0B9FA8E}", # ProgramFilesX86
+        "{0762D272-C50A-4BB0-A382-697DCD729B80}", # UserProfiles (C:\Users)
+        "{f3ce0f7c-4901-4acc-8648-d5d44b04ef8f}", # UsersFilesFolder
+        "{F7F1ED05-9F6D-47A2-AAAE-29D317C6F066}", # ProgramFilesCommon
+        "{6365D5A7-0F0D-45e5-87F6-0DA56B6A4F7D}", # ProgramFilesCommonX64
+        "{DE974D24-D9C6-4D3E-BF91-F4455120B917}", # ProgramFilesCommonX86
+        "{559D40A3-A036-40FA-AF61-84CB430A4D34}"  # AppDataProgramData (C:\ProgramData)
+    )
+    if (Test-Path $folderIco) {
+        foreach ($sg in $systemFolderGuids) {
+            $regPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\$sg"
+            if (Test-Path $regPath) {
+                Set-ItemProperty -Path $regPath -Name "Icon" -Value "$folderIco,0" -Force -ErrorAction SilentlyContinue
+            }
+            & reg.exe add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\$sg" /v "Icon" /t REG_SZ /d "$folderIco,0" /f /reg:64 2>$null
+            & reg.exe add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\$sg" /v "Icon" /t REG_SZ /d "$folderIco,0" /f /reg:32 2>$null
+        }
+    }
+
     # Apply macOS Blue folder icon to all user folders in $env:USERPROFILE & OneDrive
     if (Test-Path $folderIco) {
         $scanRoots = @($env:USERPROFILE, "$env:USERPROFILE\OneDrive")

@@ -7621,9 +7621,7 @@ void UseBigOverlay(DockIcon& icon,
         sources.push_back({key, big});
     }
     const auto source = image.Source();
-    if (!big || !source || source == big ||
-        image.ReadLocalValue(Controls::Image::SourceProperty())
-            .try_as<Data::BindingExpression>()) {
+    if (!big || !source || source == big) {
         return;
     }
     // (At the size it has: a bigger picture mustn't make it bigger.)
@@ -7968,10 +7966,7 @@ void UseBigIcon(DockIcon& icon, FrameworkElement const& button, int pixels) {
     if (shownBig && sameApp && icon.bigPixels == BigIconPixels(pixels)) {
         return;
     }
-    if (image.ReadLocalValue(Controls::Image::SourceProperty())
-            .try_as<Data::BindingExpression>()) {
-        return;
-    }
+    // Allow overriding icon even when XAML Data::BindingExpression is present
     auto big = appId.empty() ? nullptr : BigAppIcon(appId, pixels);
     if (!big) {
         // The button reused for this app still showing the big picture of
