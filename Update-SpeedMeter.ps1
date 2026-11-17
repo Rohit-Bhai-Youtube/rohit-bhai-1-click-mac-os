@@ -97,7 +97,7 @@ if (Test-Path $WindhawkCli) {
     Write-Host "  $installOutput"
 
     # Enforce runtime settings
-    & $WindhawkCli mod settings set local@net-speed-taskbar-apple theme=Chart showBox=false verticalNudge=18 rightOffset=16 fontSize=15 opacity=255 2>$null
+    & $WindhawkCli mod settings set local@net-speed-taskbar-apple theme=Chart showBox=0 verticalNudge=18 rightOffset=16 fontSize=15 opacity=255 2>$null
     
     # 4. Reload mod so new DLL is injected immediately
     Write-Host "  [4/4] Reloading speed meter live on taskbar..." -ForegroundColor Yellow

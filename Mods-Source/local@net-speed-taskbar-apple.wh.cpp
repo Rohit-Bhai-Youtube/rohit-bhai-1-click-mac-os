@@ -68,7 +68,7 @@ worth knowing:
     - Top-Down: Top-Down (Compact)
     - Chart: Chart (Sparklines)
     - Minimal: Minimal (Text Only)
-- showBox: false
+- showBox: 0
   $name: Show Box/Square Background
   $description: "Enable to wrap the speed meter in a rounded square box with border; disable for a clean, direct floating look without any box."
 - horizontalPosition: 10

@@ -623,8 +623,8 @@ try {
             foreach ($p in $uniquePaths) {
                 if ($p -and (Test-Path $p)) {
                     try {
-                        $item = Get-Item -LiteralPath $p -Force -ErrorAction Stop
-                        if ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) { continue }
+                        $item = Get-Item -LiteralPath $p -Force -ErrorAction SilentlyContinue
+                        if ($item -and ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) { continue }
                     } catch { continue }
 
                     $ini = Join-Path $p "desktop.ini"
@@ -1169,7 +1169,17 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
     & $WindhawkCli mod settings set mac-island-dock hiding.autoHide=0 2>$null
 
     # Install updated Frameless Apple Net Speed mod (Live Sparklines & Top/Down speeds with zero bounding box)
-    $speedModSource = Join-Path $PSScriptRoot "Mods-Source\local@net-speed-taskbar-apple.wh.cpp"
+    $speedModSource = if ($PSScriptRoot) {
+        Join-Path $PSScriptRoot "Mods-Source\local@net-speed-taskbar-apple.wh.cpp"
+    } else {
+        Join-Path $WorkDir "local@net-speed-taskbar-apple.wh.cpp"
+    }
+    if (-not (Test-Path $speedModSource)) {
+        $speedUrl = "https://raw.githubusercontent.com/$RepoOwner/$RepoName/$Branch/Mods-Source/local@net-speed-taskbar-apple.wh.cpp"
+        try {
+            Invoke-WebRequest -Uri $speedUrl -OutFile $speedModSource -UseBasicParsing -ErrorAction SilentlyContinue
+        } catch {}
+    }
     if (Test-Path $speedModSource) {
         & $WindhawkCli mod install --file "$speedModSource" --yes 2>$null
         $progDataSource = "C:\ProgramData\Windhawk\ModsSource\local@net-speed-taskbar-apple.wh.cpp"
