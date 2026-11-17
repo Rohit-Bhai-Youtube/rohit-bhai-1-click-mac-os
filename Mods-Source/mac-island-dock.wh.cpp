@@ -7718,6 +7718,34 @@ DWORD WINAPI BigIconThreadProc(LPVOID) {
             if (!bitmap) {
                 bitmap = drawn(AppWindowIconBitmap(appId, window, pixels));
             }
+            // Rohit Bhai Custom App Icon Fallback: ensure official Apple squircle icons always show for AppStore, WhatsApp, Safari, etc.
+            if (!bitmap) {
+                WCHAR localAppData[MAX_PATH];
+                if (SUCCEEDED(SHGetFolderPathW(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, localAppData))) {
+                    std::wstring customIconsDir = std::wstring(localAppData) + L"\\RohitBhaiMacOS\\Icons\\Apps\\";
+                    std::wstring iconFile;
+                    if (appId.find(L"WindowsStore") != std::wstring::npos || appId.find(L"AppStore") != std::wstring::npos) iconFile = L"AppStore.ico";
+                    else if (appId.find(L"WhatsApp") != std::wstring::npos) iconFile = L"WhatsApp.ico";
+                    else if (appId.find(L"MSEdge") != std::wstring::npos || appId.find(L"Edge") != std::wstring::npos) iconFile = L"Safari.ico";
+                    else if (appId.find(L"Discord") != std::wstring::npos) iconFile = L"Discord.ico";
+                    else if (appId.find(L"Telegram") != std::wstring::npos) iconFile = L"Telegram.ico";
+                    else if (appId.find(L"Notepad") != std::wstring::npos) iconFile = L"Notes.ico";
+                    else if (appId.find(L"Calculator") != std::wstring::npos) iconFile = L"Calculator.ico";
+                    else if (appId.find(L"Photos") != std::wstring::npos) iconFile = L"Photos.ico";
+                    else if (appId.find(L"ZuneMusic") != std::wstring::npos) iconFile = L"Music.ico";
+                    else if (appId.find(L"Terminal") != std::wstring::npos) iconFile = L"Terminal.ico";
+                    else if (appId.find(L"Explorer") != std::wstring::npos) iconFile = L"Finder.ico";
+                    
+                    if (!iconFile.empty()) {
+                        std::wstring fullIco = customIconsDir + iconFile;
+                        HICON hIcon = nullptr;
+                        if (PrivateExtractIconsW(fullIco.c_str(), 0, pixels, pixels, &hIcon, nullptr, 1, 0) == 1 && hIcon) {
+                            bitmap = drawn(IconBitmap(hIcon));
+                            DestroyIcon(hIcon);
+                        }
+                    }
+                }
+            }
             AcquireSRWLockExclusive(&g_bigIconJobsLock);
             auto it = std::find_if(
                 g_bigIconJobs.begin(), g_bigIconJobs.end(),
@@ -14019,6 +14047,11 @@ HBITMAP LoadAppIconBitmap(HWND hWnd, std::wstring appId, int size) {
     if (!appId.empty()) {
         SHCreateItemInKnownFolder(kFOLDERID_AppsFolder, 0, appId.c_str(),
                                   IID_PPV_ARGS(factory.put()));
+        if (!factory && appId.find(L'!') != std::wstring::npos) {
+            std::wstring shellPath = L"shell:AppsFolder\\" + appId;
+            SHCreateItemFromParsingName(shellPath.c_str(), nullptr,
+                                        IID_PPV_ARGS(factory.put()));
+        }
     }
     // Notifications of a packaged app may come under an ID of their own (like
     // Phone Link's, one for each phone app): its package's app then.

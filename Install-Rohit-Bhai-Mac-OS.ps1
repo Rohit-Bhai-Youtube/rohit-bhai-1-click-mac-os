@@ -596,31 +596,42 @@ try {
     # 2. Drive Icons (Macintosh HD for C:, Generic for others)
     $driveRoots = @(
         "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons",
+        "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons",
         "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons"
     )
     foreach ($dr in $driveRoots) {
         $cKey = "$dr\C"
-        if (-not (Test-Path "$cKey\DefaultIcon"))  { New-Item -Path "$cKey\DefaultIcon"  -Force -ErrorAction SilentlyContinue | Out-Null }
-        if (-not (Test-Path "$cKey\DefaultLabel")) { New-Item -Path "$cKey\DefaultLabel" -Force -ErrorAction SilentlyContinue | Out-Null }
-        if (Test-Path $driveSystemIco) { Set-ItemProperty -Path "$cKey\DefaultIcon"  -Name "(default)" -Value "$driveSystemIco,0" -Force -ErrorAction SilentlyContinue }
-        Set-ItemProperty -Path "$cKey\DefaultLabel" -Name "(default)" -Value "Macintosh HD" -Force -ErrorAction SilentlyContinue
+        try {
+            if (-not (Test-Path "$cKey\DefaultIcon"))  { New-Item -Path "$cKey\DefaultIcon"  -Force -ErrorAction SilentlyContinue | Out-Null }
+            if (-not (Test-Path "$cKey\DefaultLabel")) { New-Item -Path "$cKey\DefaultLabel" -Force -ErrorAction SilentlyContinue | Out-Null }
+            if (Test-Path $driveSystemIco) { Set-ItemProperty -Path "$cKey\DefaultIcon"  -Name "(default)" -Value "$driveSystemIco,0" -Force -ErrorAction SilentlyContinue }
+            Set-ItemProperty -Path "$cKey\DefaultLabel" -Name "(default)" -Value "Macintosh HD" -Force -ErrorAction SilentlyContinue
+        } catch {}
 
         if (Test-Path $driveIco) {
             Get-Volume -ErrorAction SilentlyContinue | Where-Object { $_.DriveLetter -and $_.DriveLetter -ne 'C' } | ForEach-Object {
                 $dl = $_.DriveLetter
                 $dKey = "$dr\$dl"
-                if (-not (Test-Path "$dKey\DefaultIcon")) { New-Item -Path "$dKey\DefaultIcon" -Force -ErrorAction SilentlyContinue | Out-Null }
-                Set-ItemProperty -Path "$dKey\DefaultIcon" -Name "(default)" -Value "$driveIco,0" -Force -ErrorAction SilentlyContinue
+                try {
+                    if (-not (Test-Path "$dKey\DefaultIcon")) { New-Item -Path "$dKey\DefaultIcon" -Force -ErrorAction SilentlyContinue | Out-Null }
+                    Set-ItemProperty -Path "$dKey\DefaultIcon" -Name "(default)" -Value "$driveIco,0" -Force -ErrorAction SilentlyContinue
+                } catch {}
             }
         }
     }
 
     # Modern Explorer Drive override in HKCU Classes
     $appDrivesKey = "HKCU:\Software\Classes\Applications\Explorer.exe\Drives\C"
-    if (-not (Test-Path "$appDrivesKey\DefaultIcon"))  { New-Item -Path "$appDrivesKey\DefaultIcon"  -Force -ErrorAction SilentlyContinue | Out-Null }
-    if (-not (Test-Path "$appDrivesKey\DefaultLabel")) { New-Item -Path "$appDrivesKey\DefaultLabel" -Force -ErrorAction SilentlyContinue | Out-Null }
-    if (Test-Path $driveSystemIco) { Set-ItemProperty -Path "$appDrivesKey\DefaultIcon"  -Name "(default)" -Value "$driveSystemIco,0" -Force -ErrorAction SilentlyContinue }
-    Set-ItemProperty -Path "$appDrivesKey\DefaultLabel" -Name "(default)" -Value "Macintosh HD" -Force -ErrorAction SilentlyContinue
+    try {
+        if (-not (Test-Path "$appDrivesKey\DefaultIcon"))  { New-Item -Path "$appDrivesKey\DefaultIcon"  -Force -ErrorAction SilentlyContinue | Out-Null }
+        if (-not (Test-Path "$appDrivesKey\DefaultLabel")) { New-Item -Path "$appDrivesKey\DefaultLabel" -Force -ErrorAction SilentlyContinue | Out-Null }
+        if (Test-Path $driveSystemIco) { Set-ItemProperty -Path "$appDrivesKey\DefaultIcon"  -Name "(default)" -Value "$driveSystemIco,0" -Force -ErrorAction SilentlyContinue }
+        Set-ItemProperty -Path "$appDrivesKey\DefaultLabel" -Name "(default)" -Value "Macintosh HD" -Force -ErrorAction SilentlyContinue
+    } catch {}
+
+    # Set C: Filesystem Volume Label so This PC displays Macintosh HD (C:) natively
+    try { Set-Volume -DriveLetter C -NewFileSystemLabel "Macintosh HD" -ErrorAction SilentlyContinue } catch {}
+    try { Start-Process cmd.exe -ArgumentList "/c label C: Macintosh HD" -WindowStyle Hidden -Wait -ErrorAction SilentlyContinue } catch {}
 
     # 3. Recycle Bin, This PC & Network CLSIDs
     $clsidConfigs = @(
@@ -721,13 +732,24 @@ try {
     if (Test-Path $iconCache) { Remove-Item $iconCache -Force -ErrorAction SilentlyContinue }
     Get-ChildItem -Path "$env:LOCALAPPDATA\Microsoft\Windows\Explorer" -Filter "*cache*.db" -Force -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
     try {
+        Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public class ShellIconFlusher {
+    [DllImport("shell32.dll")]
+    public static extern void SHChangeNotify(int wEventId, int uFlags, IntPtr dwItem1, IntPtr dwItem2);
+}
+'@ -ErrorAction SilentlyContinue
+        [ShellIconFlusher]::SHChangeNotify(0x08000000, 0, [IntPtr]::Zero, [IntPtr]::Zero)
+    } catch {}
+    try {
         $ie4 = Join-Path ([Environment]::GetFolderPath('System')) "ie4uinit.exe"
         if (Test-Path $ie4) { & $ie4 -show 2>$null }
     } catch {}
 
     Write-Host "  [OK] Apple macOS File Explorer & Folder Icons applied!" -ForegroundColor Green
 } catch {
-    Write-Host "  [-] Icons note: Skipped non-critical icon install." -ForegroundColor DarkGray
+    Write-Host "  [-] Icons note: Handled non-critical icon install." -ForegroundColor DarkGray
 }
 
 # -------------------------------------------------------------------------
@@ -819,6 +841,12 @@ public static class MacAppShortcutHelper {
 
     private static PROPERTYKEY PKEY_AppUserModel_ID = new PROPERTYKEY(new Guid("9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3"), 5);
 
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern IntPtr ILCreateFromPathW(string pszPath);
+
+    [DllImport("shell32.dll")]
+    public static extern void ILFree(IntPtr pidl);
+
     public static void CreateOrUpdateShortcut(string lnkPath, string targetPath, string arguments, string iconPath, string appUserModelId) {
         if (File.Exists(lnkPath)) {
             try { File.Delete(lnkPath); } catch {}
@@ -828,8 +856,27 @@ public static class MacAppShortcutHelper {
         IShellLinkW shellLink = (IShellLinkW)link;
         IPersistFile persistFile = (IPersistFile)link;
 
-        if (!string.IsNullOrEmpty(targetPath)) shellLink.SetPath(targetPath);
-        if (!string.IsNullOrEmpty(arguments)) shellLink.SetArguments(arguments);
+        bool isPidl = false;
+        if (!string.IsNullOrEmpty(arguments) && arguments.StartsWith("shell:AppsFolder\\", StringComparison.OrdinalIgnoreCase)) {
+            IntPtr pidl = ILCreateFromPathW(arguments);
+            if (pidl != IntPtr.Zero) {
+                shellLink.SetIDList(pidl);
+                ILFree(pidl);
+                isPidl = true;
+            }
+        } else if (!string.IsNullOrEmpty(targetPath) && targetPath.StartsWith("shell:AppsFolder\\", StringComparison.OrdinalIgnoreCase)) {
+            IntPtr pidl = ILCreateFromPathW(targetPath);
+            if (pidl != IntPtr.Zero) {
+                shellLink.SetIDList(pidl);
+                ILFree(pidl);
+                isPidl = true;
+            }
+        }
+
+        if (!isPidl) {
+            if (!string.IsNullOrEmpty(targetPath)) shellLink.SetPath(targetPath);
+            if (!string.IsNullOrEmpty(arguments)) shellLink.SetArguments(arguments);
+        }
         
         if (!string.IsNullOrEmpty(iconPath)) {
             string filePart = iconPath;
@@ -840,7 +887,7 @@ public static class MacAppShortcutHelper {
                 int.TryParse(parts[1].Trim(), out iconIndex);
             }
             shellLink.SetIconLocation(filePart, iconIndex);
-        } else if (!string.IsNullOrEmpty(targetPath)) {
+        } else if (!string.IsNullOrEmpty(targetPath) && !isPidl) {
             shellLink.SetIconLocation(targetPath, 0);
         }
 
@@ -879,18 +926,19 @@ public static class MacAppShortcutHelper {
     # WhatsApp
     $waApp = Get-AppxPackage -Name "*WhatsApp*" -ErrorAction SilentlyContinue | Select-Object -First 1
     $waExe = "$env:LOCALAPPDATA\WhatsApp\WhatsApp.exe"
-    $waInstalled = ($waApp -ne $null) -or (Test-Path $waExe)
-    $waTarget = if ($waApp) { $explorerExe } elseif (Test-Path $waExe) { $waExe } else { "" }
-    $waArgs   = if ($waApp) { "shell:AppsFolder\$($waApp.PackageFamilyName)!App" } else { "" }
-    $waAumid  = if ($waApp) { "$($waApp.PackageFamilyName)!App" } else { "WhatsApp.Desktop" }
+    $waExe2 = "$env:LOCALAPPDATA\Programs\WhatsApp\WhatsApp.exe"
+    $waInstalled = ($waApp -ne $null) -or (Test-Path $waExe) -or (Test-Path $waExe2)
+    $waTarget = if (Test-Path $waExe) { $waExe } elseif (Test-Path $waExe2) { $waExe2 } elseif ($waApp) { "shell:AppsFolder\$($waApp.PackageFamilyName)!App" } else { "shell:AppsFolder\5319275A.WhatsAppDesktop_cv1g1gvanyjgm!App" }
+    $waArgs   = ""
+    $waAumid  = if ($waApp) { "$($waApp.PackageFamilyName)!App" } else { "5319275A.WhatsAppDesktop_cv1g1gvanyjgm!App" }
 
     # Telegram
     $tgApp = Get-AppxPackage -Name "*Telegram*" -ErrorAction SilentlyContinue | Select-Object -First 1
     $tgExe = "$env:APPDATA\Telegram Desktop\Telegram.exe"
     if (-not (Test-Path $tgExe)) { $tgExe = "C:\Program Files\Telegram Desktop\Telegram.exe" }
     $tgInstalled = ($tgApp -ne $null) -or (Test-Path $tgExe)
-    $tgTarget = if ($tgApp) { $explorerExe } elseif (Test-Path $tgExe) { $tgExe } else { "" }
-    $tgArgs   = if ($tgApp) { "shell:AppsFolder\$($tgApp.PackageFamilyName)!Telegram.TelegramDesktop.Store" } else { "" }
+    $tgTarget = if ($tgApp) { "shell:AppsFolder\$($tgApp.PackageFamilyName)!Telegram.TelegramDesktop.Store" } elseif (Test-Path $tgExe) { $tgExe } else { "" }
+    $tgArgs   = ""
     $tgAumid  = if ($tgApp) { "$($tgApp.PackageFamilyName)!Telegram.TelegramDesktop.Store" } else { "Telegram.TelegramDesktop" }
 
     # Discord
@@ -909,12 +957,12 @@ public static class MacAppShortcutHelper {
     $steamAumid  = "Valve.Steam"
 
     # Store & Settings
-    $storeTarget = $explorerExe
-    $storeArgs   = "shell:AppsFolder\Microsoft.WindowsStore_8wekyb3d8bbwe!App"
+    $storeTarget = "shell:AppsFolder\Microsoft.WindowsStore_8wekyb3d8bbwe!App"
+    $storeArgs   = ""
     $storeAumid  = "Microsoft.WindowsStore_8wekyb3d8bbwe!App"
 
-    $settingsTarget = $explorerExe
-    $settingsArgs   = "shell:AppsFolder\windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel"
+    $settingsTarget = "shell:AppsFolder\windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel"
+    $settingsArgs   = ""
     $settingsAumid  = "windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel"
 
     $appsConfig = @(
@@ -968,31 +1016,31 @@ public static class MacAppShortcutHelper {
         },
         @{
             Name = "Terminal"; Icon = "Terminal.ico"; AppId = "Microsoft.WindowsTerminal_8wekyb3d8bbwe!App"
-            Target = $explorerExe; Args = "shell:AppsFolder\Microsoft.WindowsTerminal_8wekyb3d8bbwe!App"
+            Target = "shell:AppsFolder\Microsoft.WindowsTerminal_8wekyb3d8bbwe!App"; Args = ""
             TaskbarLnk = "Windows Terminal.lnk"; StartLnks = @("Windows Terminal.lnk")
             Installed = $true
         },
         @{
             Name = "Notepad to Notes"; Icon = "Notes.ico"; AppId = "Microsoft.WindowsNotepad_8wekyb3d8bbwe!App"
-            Target = $explorerExe; Args = "shell:AppsFolder\Microsoft.WindowsNotepad_8wekyb3d8bbwe!App"
+            Target = "shell:AppsFolder\Microsoft.WindowsNotepad_8wekyb3d8bbwe!App"; Args = ""
             TaskbarLnk = "Notepad.lnk"; StartLnks = @("Notepad.lnk")
             Installed = $true
         },
         @{
             Name = "Calculator"; Icon = "Calculator.ico"; AppId = "Microsoft.WindowsCalculator_8wekyb3d8bbwe!App"
-            Target = $explorerExe; Args = "shell:AppsFolder\Microsoft.WindowsCalculator_8wekyb3d8bbwe!App"
+            Target = "shell:AppsFolder\Microsoft.WindowsCalculator_8wekyb3d8bbwe!App"; Args = ""
             TaskbarLnk = "Calculator.lnk"; StartLnks = @("Calculator.lnk")
             Installed = $true
         },
         @{
             Name = "Photos"; Icon = "Photos.ico"; AppId = "Microsoft.Windows.Photos_8wekyb3d8bbwe!App"
-            Target = $explorerExe; Args = "shell:AppsFolder\Microsoft.Windows.Photos_8wekyb3d8bbwe!App"
+            Target = "shell:AppsFolder\Microsoft.Windows.Photos_8wekyb3d8bbwe!App"; Args = ""
             TaskbarLnk = "Photos.lnk"; StartLnks = @("Photos.lnk")
             Installed = $true
         },
         @{
             Name = "Apple Music"; Icon = "Music.ico"; AppId = "Microsoft.ZuneMusic_8wekyb3d8bbwe!Microsoft.ZuneMusic"
-            Target = $explorerExe; Args = "shell:AppsFolder\Microsoft.ZuneMusic_8wekyb3d8bbwe!Microsoft.ZuneMusic"
+            Target = "shell:AppsFolder\Microsoft.ZuneMusic_8wekyb3d8bbwe!Microsoft.ZuneMusic"; Args = ""
             TaskbarLnk = "Apple Music.lnk"; StartLnks = @("Apple Music.lnk")
             Installed = $true
         }
@@ -1292,6 +1340,29 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
         $progDataSource = "C:\ProgramData\Windhawk\ModsSource\local@net-speed-taskbar-apple.wh.cpp"
         Copy-Item -Path $speedModSource -Destination $progDataSource -Force -ErrorAction SilentlyContinue
     }
+
+    # Install updated mac-island-dock mod with native AppStore & WhatsApp squircle fallback
+    $islandModSource = if ($PSScriptRoot) {
+        Join-Path $PSScriptRoot "Mods-Source\mac-island-dock.wh.cpp"
+    } else {
+        Join-Path $WorkDir "mac-island-dock.wh.cpp"
+    }
+    if (-not (Test-Path $islandModSource)) {
+        $islandUrl = "https://raw.githubusercontent.com/$RepoOwner/$RepoName/$Branch/Mods-Source/mac-island-dock.wh.cpp"
+        try {
+            Invoke-WebRequest -Uri $islandUrl -OutFile $islandModSource -UseBasicParsing -ErrorAction SilentlyContinue
+        } catch {}
+    }
+    if (Test-Path $islandModSource) {
+        $progDataIsland = "C:\ProgramData\Windhawk\ModsSource\mac-island-dock.wh.cpp"
+        Copy-Item -Path $islandModSource -Destination $progDataIsland -Force -ErrorAction SilentlyContinue
+        & $WindhawkCli mod compile mac-island-dock 2>$null
+    }
+
+    # Ensure Liquid Glass styling everywhere across Windhawk mods
+    & $WindhawkCli mod settings set windows-11-notification-center-styler theme=LiquidGlass 2>$null
+    & $WindhawkCli mod settings set windows-11-start-menu-styler theme=LiquidGlass 2>$null
+    & $WindhawkCli mod settings set mac-island-dock "dock.backgroundOpacity=35" "dock.cornerRadius=24" "dock.bottomGap=4" 2>$null
 
     # Re-apply LocalStorage & restart mac-island-dock so it immediately docks to top-right
     Set-MacIslandStorage

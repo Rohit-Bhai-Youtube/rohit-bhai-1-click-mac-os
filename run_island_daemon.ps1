@@ -194,6 +194,8 @@ public class IslandDaemon {
 
         IntPtr safariSm = GetCachedIcon(Path.Combine(iconsDir, "Safari.ico"), 32);
         IntPtr safariBg = GetCachedIcon(Path.Combine(iconsDir, "Safari.ico"), 256);
+        IntPtr storeSm = GetCachedIcon(Path.Combine(iconsDir, "AppStore.ico"), 32);
+        IntPtr storeBg = GetCachedIcon(Path.Combine(iconsDir, "AppStore.ico"), 256);
         IntPtr waSm = GetCachedIcon(Path.Combine(iconsDir, "WhatsApp.ico"), 32);
         IntPtr waBg = GetCachedIcon(Path.Combine(iconsDir, "WhatsApp.ico"), 256);
         IntPtr tgSm = GetCachedIcon(Path.Combine(iconsDir, "Telegram.ico"), 32);
@@ -237,6 +239,10 @@ public class IslandDaemon {
             // Edge -> Safari
             if (cls == "Chrome_WidgetWin_1" && (title.Contains("Edge") || title.Contains("YouTube") || title.Contains("Personal") || title.Contains("Work"))) {
                 InjectIconIfChanged(hWnd, safariSm, safariBg, ref anyInjected);
+            }
+            // Microsoft Store -> App Store
+            else if (cls == "ApplicationFrameWindow" && (title.Contains("Store") || title.Contains("Microsoft Store"))) {
+                InjectIconIfChanged(hWnd, storeSm, storeBg, ref anyInjected);
             }
             // WhatsApp
             else if (cls.Contains("WhatsApp") || title.Contains("WhatsApp") || (cls == "WinUIDesktopWin32WindowClass" && title.Contains("call"))) {
