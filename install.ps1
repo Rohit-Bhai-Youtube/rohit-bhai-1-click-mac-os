@@ -1107,14 +1107,14 @@ function Set-AppleNetSpeedStorage {
     )
     foreach ($p in $speedPaths) {
         if (-not (Test-Path $p)) { New-Item -Path $p -Force | Out-Null }
-        # Frameless Apple Speed Meter: Direct floating text with zero bounding box/square
-        Set-ItemProperty -Path $p -Name "theme" -Value "Minimal" -Force -ErrorAction SilentlyContinue
+        # Frameless Apple Speed Meter: Vibrant live sparkline charts with top/down speeds, ZERO bounding box
+        Set-ItemProperty -Path $p -Name "theme" -Value "Chart" -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $p -Name "showBox" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $p -Name "horizontalPosition" -Value 10 -Type DWord -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $p -Name "rightOffset" -Value 6 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "verticalNudge" -Value 15 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "verticalNudge" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $p -Name "updateIntervalMs" -Value 1000 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "fontSize" -Value 14 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "fontSize" -Value 13 -Type DWord -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $p -Name "opacity" -Value 255 -Type DWord -Force -ErrorAction SilentlyContinue
     }
 }
@@ -1155,6 +1155,14 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
 
     # Ensure Maximize Window Guard (Top Bar Fixed Top-Right & Bottom Dock Always Visible with Zero Overlap)
     & $WindhawkCli mod settings set mac-island-dock hiding.autoHide=0 2>$null
+
+    # Install updated Frameless Apple Net Speed mod (Live Sparklines & Top/Down speeds with zero bounding box)
+    $speedModSource = Join-Path $PSScriptRoot "Mods-Source\local@net-speed-taskbar-apple.wh.cpp"
+    if (Test-Path $speedModSource) {
+        & $WindhawkCli mod install --file "$speedModSource" --yes 2>$null
+        $progDataSource = "C:\ProgramData\Windhawk\ModsSource\local@net-speed-taskbar-apple.wh.cpp"
+        Copy-Item -Path $speedModSource -Destination $progDataSource -Force -ErrorAction SilentlyContinue
+    }
 
     # Re-apply LocalStorage & restart mac-island-dock so it immediately docks to top-right
     Set-MacIslandStorage

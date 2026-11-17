@@ -61,7 +61,7 @@ worth knowing:
 
 // ==WindhawkModSettings==
 /*
-- theme: Minimal
+- theme: Chart
   $name: Visual Theme
   $options:
     - Side-by-Side: Side-by-Side
@@ -73,7 +73,7 @@ worth knowing:
   $description: "Enable to wrap the speed meter in a rounded square box with border; disable for a clean, direct floating look without any box."
 - horizontalPosition: 10
   $name: Horizontal position (%)
-- rightOffset: 0
+- rightOffset: 6
   $name: Right anchor (px)
   $description: "Anchor the widget's right edge this many pixels from the taskbar's right edge; 0 uses Horizontal position percent instead."
 - verticalNudge: 0
@@ -82,7 +82,7 @@ worth knowing:
   $name: Update interval (ms)
 - fontSize: 13
   $name: Font size
-- opacity: 235
+- opacity: 255
   $name: Opacity (0-255)
 */
 // ==/WindhawkModSettings==
@@ -215,10 +215,11 @@ struct GdiObjects {
     std::unique_ptr<Gdiplus::Pen> dividerPen;
     std::unique_ptr<Gdiplus::Pen> downChartPen;
     std::unique_ptr<Gdiplus::Pen> upChartPen;
+    std::unique_ptr<Gdiplus::Pen> chartShadowPen;
 
     bool IsValid() const {
         return font && largeFont && labelFont && bgBrush && downBrush && upBrush &&
-               shadowBrush && borderPen && dividerPen && downChartPen && upChartPen;
+               shadowBrush && borderPen && dividerPen && downChartPen && upChartPen && chartShadowPen;
     }
 };
 
@@ -279,9 +280,11 @@ void RebuildGdiObjects(int fontSize, const std::wstring& theme, UINT dpi) {
     newGdi->dividerPen = std::make_unique<Gdiplus::Pen>(Color(60, 255, 255, 255), 1.0f * sc);
     newGdi->downChartPen = std::make_unique<Gdiplus::Pen>(downColor, 1.5f * sc);
     newGdi->upChartPen = std::make_unique<Gdiplus::Pen>(upColor, 1.5f * sc);
+    newGdi->chartShadowPen = std::make_unique<Gdiplus::Pen>(Color(160, 0, 0, 0), 2.2f * sc);
 
     newGdi->downChartPen->SetLineJoin(LineJoinRound);
     newGdi->upChartPen->SetLineJoin(LineJoinRound);
+    newGdi->chartShadowPen->SetLineJoin(LineJoinRound);
 
     if (newGdi->IsValid()) {
         g_gdi = std::move(newGdi);
@@ -470,18 +473,24 @@ void AddRoundRect(GraphicsPath& path, const RectF& r, float d) {
     path.CloseFigure();
 }
 
-void DrawSparkline(Graphics& g, Pen* pen, const std::vector<double>& hist, size_t head, RectF bounds) {
+void DrawSparkline(Graphics& g, Pen* pen, Pen* shadowPen, const std::vector<double>& hist, size_t head, RectF bounds, float sc) {
     double maxVal = 1024.0;
     for (double v : hist) maxVal = std::max(maxVal, v);
 
     PointF pts[kHistorySize];
+    PointF shadowPts[kHistorySize];
     float step = bounds.Width / (float)(kHistorySize - 1);
+    float shadowOffset = 1.0f * sc;
 
     for (size_t i = 0; i < kHistorySize; ++i) {
         size_t idx = (head + i) % kHistorySize;
         float x = bounds.X + (float)i * step;
         float y = bounds.Y + bounds.Height - (float)((hist[idx] / maxVal) * bounds.Height);
         pts[i] = PointF(x, y);
+        shadowPts[i] = PointF(x + shadowOffset, y + shadowOffset);
+    }
+    if (shadowPen) {
+        g.DrawLines(shadowPen, shadowPts, kHistorySize);
     }
     g.DrawLines(pen, pts, kHistorySize);
 }
@@ -556,14 +565,14 @@ void PaintWidgetContent(Graphics& graphics, int width, int height, const Setting
         float upLabelW = LabelWidth(kUpLabel, g_gdi->labelFont.get()) + 3 * sc;
 
         RectF chartDown(8.0f * sc, 6.0f * sc, chartW, halfH - 8.0f * sc);
-        DrawSparkline(graphics, g_gdi->downChartPen.get(), g_downHistory, g_historyIdx, chartDown);
+        DrawSparkline(graphics, g_gdi->downChartPen.get(), g_gdi->chartShadowPen.get(), g_downHistory, g_historyIdx, chartDown, sc);
         graphics.DrawString(kDownLabel, -1, g_gdi->labelFont.get(), RectF(textX + shadow, shadow, downLabelW, halfH), &format, g_gdi->shadowBrush.get());
         graphics.DrawString(strDown.c_str(), -1, g_gdi->font.get(), RectF(textX + downLabelW + shadow, shadow, w - textX - downLabelW, halfH), &format, g_gdi->shadowBrush.get());
         graphics.DrawString(kDownLabel, -1, g_gdi->labelFont.get(), RectF(textX, 0, downLabelW, halfH), &format, g_gdi->downBrush.get());
         graphics.DrawString(strDown.c_str(), -1, g_gdi->font.get(), RectF(textX + downLabelW, 0, w - textX - downLabelW, halfH), &format, g_gdi->downBrush.get());
 
         RectF chartUp(8.0f * sc, halfH + 2.0f * sc, chartW, halfH - 8.0f * sc);
-        DrawSparkline(graphics, g_gdi->upChartPen.get(), g_upHistory, g_historyIdx, chartUp);
+        DrawSparkline(graphics, g_gdi->upChartPen.get(), g_gdi->chartShadowPen.get(), g_upHistory, g_historyIdx, chartUp, sc);
         graphics.DrawString(kUpLabel, -1, g_gdi->labelFont.get(), RectF(textX + shadow, halfH + shadow, upLabelW, halfH), &format, g_gdi->shadowBrush.get());
         graphics.DrawString(strUp.c_str(), -1, g_gdi->font.get(), RectF(textX + upLabelW + shadow, halfH + shadow, w - textX - upLabelW, halfH), &format, g_gdi->shadowBrush.get());
         graphics.DrawString(kUpLabel, -1, g_gdi->labelFont.get(), RectF(textX, halfH, upLabelW, halfH), &format, g_gdi->upBrush.get());
