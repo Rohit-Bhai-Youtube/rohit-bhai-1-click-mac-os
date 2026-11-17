@@ -1,4 +1,4 @@
-﻿# ==============================================================================
+# ==============================================================================
 # Rohit Bhai 1 Click Mac OS - Complete 1-Click Uninstaller & Windows Restore Suite
 # Target: Windows 11 / Windows 10
 # Reverts 100% of Windhawk mods, cursor schemes, sound schemes, folder & drive icons,
@@ -713,11 +713,6 @@ if (Test-Path $expCache) {
     Get-ChildItem -Path $expCache -Filter "*thumbcache*.db" -Force -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
 }
 
-# 3. Cleanly restart Windows Explorer without breaking the Shell or XAML Islands
-Stop-Process -Name explorer -Force -ErrorAction SilentlyContinue
-Start-Sleep -Seconds 1
-Start-Process explorer.exe
-Start-Sleep -Seconds 2
 
 # 4. Notify Windows Shell of association and icon changes
 Add-Type -TypeDefinition @"

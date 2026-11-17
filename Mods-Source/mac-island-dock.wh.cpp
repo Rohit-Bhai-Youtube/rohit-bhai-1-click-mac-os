@@ -14118,6 +14118,50 @@ HBITMAP LoadAppIconBitmap(HWND hWnd, std::wstring appId, int size) {
             bitmap = LoadPictureBitmap(picture.c_str(), size);
         }
     }
+
+    // Rohit Bhai Custom Apple App Icon Fallback: ensure official squircle icons always show for AppStore, WhatsApp, Safari, etc.
+    if (!bitmap && !appId.empty()) {
+        WCHAR localApp[MAX_PATH];
+        if (GetEnvironmentVariableW(L"LOCALAPPDATA", localApp, ARRAYSIZE(localApp))) {
+            std::wstring baseDir = std::wstring(localApp) + L"\\RohitBhaiMacOS\\Icons\\Apps\\";
+            std::wstring iconFile;
+            
+            auto containsIgnoreCase = [](const std::wstring& str, const std::wstring& sub) {
+                if (sub.empty() || str.length() < sub.length()) return false;
+                auto it = std::search(str.begin(), str.end(), sub.begin(), sub.end(),
+                    [](wchar_t c1, wchar_t c2) { return towlower(c1) == towlower(c2); });
+                return it != str.end();
+            };
+
+            if (containsIgnoreCase(appId, L"WindowsStore") || containsIgnoreCase(appId, L"AppStore")) {
+                iconFile = baseDir + L"AppStore.png";
+            } else if (containsIgnoreCase(appId, L"WhatsApp")) {
+                iconFile = baseDir + L"WhatsApp.png";
+            } else if (containsIgnoreCase(appId, L"MSEdge") || containsIgnoreCase(appId, L"Edge")) {
+                iconFile = baseDir + L"Safari.png";
+            } else if (containsIgnoreCase(appId, L"Calculator")) {
+                iconFile = baseDir + L"Calculator.png";
+            } else if (containsIgnoreCase(appId, L"Weather")) {
+                iconFile = baseDir + L"Weather.png";
+            } else if (containsIgnoreCase(appId, L"Discord")) {
+                iconFile = baseDir + L"Discord.png";
+            } else if (containsIgnoreCase(appId, L"Steam")) {
+                iconFile = baseDir + L"Steam.png";
+            } else if (containsIgnoreCase(appId, L"Telegram")) {
+                iconFile = baseDir + L"Telegram.png";
+            } else if (containsIgnoreCase(appId, L"Notepad")) {
+                iconFile = baseDir + L"Notes.png";
+            } else if (containsIgnoreCase(appId, L"Photos")) {
+                iconFile = baseDir + L"Photos.png";
+            } else if (containsIgnoreCase(appId, L"ZuneMusic")) {
+                iconFile = baseDir + L"Music.png";
+            }
+
+            if (!iconFile.empty() && (GetFileAttributesW(iconFile.c_str()) != INVALID_FILE_ATTRIBUTES)) {
+                bitmap = LoadPictureBitmap(iconFile.c_str(), size);
+            }
+        }
+    }
     return bitmap;
 }
 

@@ -588,6 +588,23 @@ try {
         if (Test-Path $thisPcIco)      { Set-ItemProperty -Path $k -Name "109" -Value $thisPcIco      -Force -ErrorAction SilentlyContinue }
     }
 
+    # Direct reg.exe injection across 64-bit and 32-bit system keys
+    $hklmShellTargets = @(
+        "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons",
+        "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons"
+    )
+    foreach ($tgt in $hklmShellTargets) {
+        if (Test-Path $folderIco)      { & reg.exe add "$tgt" /v "3" /t REG_SZ /d "$folderIco" /f /reg:64 2>$null; & reg.exe add "$tgt" /v "3" /t REG_SZ /d "$folderIco" /f /reg:32 2>$null }
+        if (Test-Path $folderOpenIco)  { & reg.exe add "$tgt" /v "4" /t REG_SZ /d "$folderOpenIco" /f /reg:64 2>$null; & reg.exe add "$tgt" /v "4" /t REG_SZ /d "$folderOpenIco" /f /reg:32 2>$null }
+        if (Test-Path $driveIco)       { & reg.exe add "$tgt" /v "8" /t REG_SZ /d "$driveIco" /f /reg:64 2>$null; & reg.exe add "$tgt" /v "8" /t REG_SZ /d "$driveIco" /f /reg:32 2>$null }
+        if (Test-Path $driveSystemIco) { & reg.exe add "$tgt" /v "9" /t REG_SZ /d "$driveSystemIco" /f /reg:64 2>$null; & reg.exe add "$tgt" /v "9" /t REG_SZ /d "$driveSystemIco" /f /reg:32 2>$null }
+        if (Test-Path $thisPcIco)      { & reg.exe add "$tgt" /v "15" /t REG_SZ /d "$thisPcIco" /f /reg:64 2>$null; & reg.exe add "$tgt" /v "15" /t REG_SZ /d "$thisPcIco" /f /reg:32 2>$null }
+        if (Test-Path $trashEmptyIco)  { & reg.exe add "$tgt" /v "31" /t REG_SZ /d "$trashEmptyIco" /f /reg:64 2>$null; & reg.exe add "$tgt" /v "31" /t REG_SZ /d "$trashEmptyIco" /f /reg:32 2>$null }
+        if (Test-Path $trashFullIco)   { & reg.exe add "$tgt" /v "32" /t REG_SZ /d "$trashFullIco" /f /reg:64 2>$null; & reg.exe add "$tgt" /v "32" /t REG_SZ /d "$trashFullIco" /f /reg:32 2>$null }
+        if (Test-Path $desktopIco)     { & reg.exe add "$tgt" /v "34" /t REG_SZ /d "$desktopIco" /f /reg:64 2>$null; & reg.exe add "$tgt" /v "34" /t REG_SZ /d "$desktopIco" /f /reg:32 2>$null }
+        if (Test-Path $thisPcIco)      { & reg.exe add "$tgt" /v "109" /t REG_SZ /d "$thisPcIco" /f /reg:64 2>$null; & reg.exe add "$tgt" /v "109" /t REG_SZ /d "$thisPcIco" /f /reg:32 2>$null }
+    }
+
     foreach ($c in @("HKCU:\Software\Classes\Folder\DefaultIcon", "HKCU:\Software\Classes\Directory\DefaultIcon")) {
         if (-not (Test-Path $c)) { New-Item -Path $c -Force -ErrorAction SilentlyContinue | Out-Null }
         if (Test-Path $folderIco) { Set-ItemProperty -Path $c -Name "(default)" -Value $folderIco -Force -ErrorAction SilentlyContinue }
@@ -722,6 +739,26 @@ try {
                             (Get-Item -LiteralPath $p -Force).Attributes = ((Get-Item -LiteralPath $p -Force).Attributes -bor [System.IO.FileAttributes]::ReadOnly)
                         } catch {}
                     }
+                }
+            }
+        }
+
+        # Apply macOS Blue folder icon to non-system root directories on C:\
+        if (Test-Path "C:\") {
+            Get-ChildItem -Path "C:\" -Directory -Force -ErrorAction SilentlyContinue | ForEach-Object {
+                $n = $_.Name
+                if ($n -notin @("Windows", "Program Files", "Program Files (x86)", "Users", "System Volume Information", "`$Recycle.Bin", "`$WinREAgent", "Documents and Settings")) {
+                    $p = $_.FullName
+                    $ini = Join-Path $p "desktop.ini"
+                    try {
+                        if (Test-Path -LiteralPath $ini) {
+                            (Get-Item -LiteralPath $ini -Force).Attributes = 'Normal'
+                        }
+                        $iniContent = "[.ShellClassInfo]`r`nIconResource=$folderIco,0`r`n[ViewState]`r`nMode=`r`nVid=`r`nFolderType=Generic`r`n"
+                        [System.IO.File]::WriteAllText($ini, $iniContent, [System.Text.Encoding]::ASCII)
+                        (Get-Item -LiteralPath $ini -Force).Attributes = 'Hidden, System'
+                        (Get-Item -LiteralPath $p -Force).Attributes = ((Get-Item -LiteralPath $p -Force).Attributes -bor [System.IO.FileAttributes]::ReadOnly)
+                    } catch {}
                 }
             }
         }
@@ -1453,12 +1490,15 @@ try {
     }
 } catch {}
 
-# Refresh Shell
+# Refresh Shell smoothly without killing Explorer or black screen
 Write-Host "`n[*] Refreshing Windows Desktop, Folders & Dock..." -ForegroundColor Cyan
-Stop-Process -Name explorer -Force -ErrorAction SilentlyContinue
-Start-Sleep -Seconds 1
-Start-Process explorer.exe
-Start-Sleep -Seconds 2
+try {
+    [ShellIconFlusher]::SHChangeNotify(0x08000000, 0, [IntPtr]::Zero, [IntPtr]::Zero)
+} catch {}
+try {
+    $ie4 = Join-Path ([Environment]::GetFolderPath('System')) "ie4uinit.exe"
+    if (Test-Path $ie4) { & $ie4 -show 2>$null }
+} catch {}
 
 # Cleanup
 Remove-Item -Path $WorkDir -Recurse -Force -ErrorAction SilentlyContinue
