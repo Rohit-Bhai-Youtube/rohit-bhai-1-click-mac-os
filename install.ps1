@@ -1114,7 +1114,7 @@ function Set-AppleNetSpeedStorage {
         Set-ItemProperty -Path $p -Name "rightOffset" -Value 16 -Type DWord -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $p -Name "verticalNudge" -Value 18 -Type DWord -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $p -Name "updateIntervalMs" -Value 1000 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "fontSize" -Value 13 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "fontSize" -Value 15 -Type DWord -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $p -Name "opacity" -Value 255 -Type DWord -Force -ErrorAction SilentlyContinue
     }
 }

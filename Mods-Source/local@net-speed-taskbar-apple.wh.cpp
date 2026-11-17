@@ -80,7 +80,7 @@ worth knowing:
   $name: Vertical nudge (px)
 - updateIntervalMs: 1000
   $name: Update interval (ms)
-- fontSize: 13
+- fontSize: 15
   $name: Font size
 - opacity: 255
   $name: Opacity (0-255)
@@ -301,17 +301,17 @@ void GetThemeDimensions(const std::wstring& theme, int fontSize, int& width, int
     if (theme == L"Top-Down") {
         width = 132; height = 36;
     } else if (theme == L"Chart") {
-        width = 210; height = 38;
+        width = 240; height = 38;
     } else if (theme == L"Minimal") {
         width = 235; height = 20;
     } else {
         width = 158; height = 40;
     }
 
-    // Base dimensions above assume the default 13px font; widen/heighten
+    // Base dimensions above assume the default 15px font; widen/heighten
     // proportionally so a larger "Font size" setting doesn't push text
     // outside a fixed box.
-    float fontScale = fontSize / 13.0f;
+    float fontScale = fontSize / 15.0f;
     width = (int)(width * fontScale);
     height = (int)(height * fontScale);
 }
@@ -510,7 +510,8 @@ void PaintWidgetContent(Graphics& graphics, int width, int height, const Setting
         if (g_gdi->borderPen) graphics.DrawPath(g_gdi->borderPen.get(), &path);
     }
 
-    StringFormat format;
+    StringFormat format(StringFormat::GenericTypographic());
+    format.SetFormatFlags(StringFormatFlagsNoWrap | StringFormatFlagsMeasureTrailingSpaces);
     float w = bounds.Width;
     float h = bounds.Height;
     std::wstring strDown = FormatSpeed(g_downBps);
@@ -519,7 +520,8 @@ void PaintWidgetContent(Graphics& graphics, int width, int height, const Setting
     // Text labels are shown instead of the old up/down arrow glyphs.
     const wchar_t* kDownLabel = L"Download";
     const wchar_t* kUpLabel = L"Upload";
-    StringFormat measureFormat;
+    StringFormat measureFormat(StringFormat::GenericTypographic());
+    measureFormat.SetFormatFlags(StringFormatFlagsNoWrap | StringFormatFlagsMeasureTrailingSpaces);
     auto LabelWidth = [&](const wchar_t* text, Gdiplus::Font* font) -> float {
         RectF measureRect;
         graphics.MeasureString(text, -1, font, PointF(0, 0), &measureFormat, &measureRect);
@@ -561,19 +563,19 @@ void PaintWidgetContent(Graphics& graphics, int width, int height, const Setting
         format.SetAlignment(StringAlignmentNear);
         format.SetLineAlignment(StringAlignmentCenter);
         float halfH = h / 2.0f;
-        float chartW = w * 0.34f;
-        float textX = chartW + 12 * sc;
+        float chartW = w * 0.30f;
+        float textX = chartW + 10 * sc;
 
-        float downLabelW = LabelWidth(kDownLabel, g_gdi->labelFont.get()) + 4 * sc;
-        float upLabelW = LabelWidth(kUpLabel, g_gdi->labelFont.get()) + 4 * sc;
+        float downLabelW = LabelWidth(kDownLabel, g_gdi->labelFont.get()) + 6 * sc;
+        float upLabelW = LabelWidth(kUpLabel, g_gdi->labelFont.get()) + 6 * sc;
 
-        RectF chartDown(6.0f * sc, 3.0f * sc, chartW, halfH - 5.0f * sc);
-        DrawSparkline(graphics, g_gdi->downChartPen.get(), g_gdi->chartShadowPen.get(), g_downHistory, g_historyIdx, chartDown, sc);
+        RectF chartDown(4.0f * sc, 3.0f * sc, chartW, halfH - 4.0f * sc);
+        DrawSparkline(graphics, g_gdi->downChartPen.get(), nullptr, g_downHistory, g_historyIdx, chartDown, sc);
         graphics.DrawString(kDownLabel, -1, g_gdi->labelFont.get(), RectF(textX, 0, downLabelW, halfH), &format, g_gdi->downBrush.get());
         graphics.DrawString(strDown.c_str(), -1, g_gdi->font.get(), RectF(textX + downLabelW, 0, w - textX - downLabelW, halfH), &format, g_gdi->downBrush.get());
 
-        RectF chartUp(6.0f * sc, halfH + 2.0f * sc, chartW, halfH - 5.0f * sc);
-        DrawSparkline(graphics, g_gdi->upChartPen.get(), g_gdi->chartShadowPen.get(), g_upHistory, g_historyIdx, chartUp, sc);
+        RectF chartUp(4.0f * sc, halfH + 1.0f * sc, chartW, halfH - 4.0f * sc);
+        DrawSparkline(graphics, g_gdi->upChartPen.get(), nullptr, g_upHistory, g_historyIdx, chartUp, sc);
         graphics.DrawString(kUpLabel, -1, g_gdi->labelFont.get(), RectF(textX, halfH, upLabelW, halfH), &format, g_gdi->upBrush.get());
         graphics.DrawString(strUp.c_str(), -1, g_gdi->font.get(), RectF(textX + upLabelW, halfH, w - textX - upLabelW, halfH), &format, g_gdi->upBrush.get());
 
@@ -624,7 +626,7 @@ void RenderWidget(HWND hWnd, int opacity) {
         {
             Graphics graphics(hdcMem);
             graphics.SetSmoothingMode(SmoothingModeHighQuality);
-            graphics.SetTextRenderingHint(TextRenderingHintAntiAliasGridFit);
+            graphics.SetTextRenderingHint(TextRenderingHintAntiAlias);
             graphics.SetPixelOffsetMode(PixelOffsetModeHighQuality);
             graphics.SetInterpolationMode(InterpolationModeHighQualityBicubic);
             graphics.Clear(Color(0, 0, 0, 0));

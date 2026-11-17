@@ -34,7 +34,7 @@ $RawBase   = "https://raw.githubusercontent.com/$RepoOwner/$RepoName/$Branch"
 $speedModSource = $null
 
 # Check local repo path
-if ($PSScriptRoot -and (Test-Path (Join-Path $PSScriptRoot "Mods-Source\local@net-speed-taskbar-apple.wh.cpp"))) {
+if (-not [string]::IsNullOrWhiteSpace($PSScriptRoot) -and (Test-Path (Join-Path $PSScriptRoot "Mods-Source\local@net-speed-taskbar-apple.wh.cpp"))) {
     $speedModSource = Join-Path $PSScriptRoot "Mods-Source\local@net-speed-taskbar-apple.wh.cpp"
 } elseif (Test-Path "C:\Users\rohit\.gemini\antigravity\scratch\Rohit-Bhai-Mac-OS\Mods-Source\local@net-speed-taskbar-apple.wh.cpp") {
     $speedModSource = "C:\Users\rohit\.gemini\antigravity\scratch\Rohit-Bhai-Mac-OS\Mods-Source\local@net-speed-taskbar-apple.wh.cpp"
@@ -84,7 +84,7 @@ foreach ($p in $speedPaths) {
     Set-ItemProperty -Path $p -Name "rightOffset" -Value 16 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $p -Name "verticalNudge" -Value 18 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $p -Name "updateIntervalMs" -Value 1000 -Type DWord -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $p -Name "fontSize" -Value 13 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $p -Name "fontSize" -Value 15 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $p -Name "opacity" -Value 255 -Type DWord -Force -ErrorAction SilentlyContinue
 }
 Write-Host "  [OK] Registry settings saved (Theme: Chart, Box: Disabled)!" -ForegroundColor Green
@@ -97,7 +97,7 @@ if (Test-Path $WindhawkCli) {
     Write-Host "  $installOutput"
 
     # Enforce runtime settings
-    & $WindhawkCli mod settings set local@net-speed-taskbar-apple theme=Chart showBox=false verticalNudge=18 rightOffset=16 fontSize=13 opacity=255 2>$null
+    & $WindhawkCli mod settings set local@net-speed-taskbar-apple theme=Chart showBox=false verticalNudge=18 rightOffset=16 fontSize=15 opacity=255 2>$null
     
     # 4. Reload mod so new DLL is injected immediately
     Write-Host "  [4/4] Reloading speed meter live on taskbar..." -ForegroundColor Yellow
