@@ -802,153 +802,139 @@ public static class MacAppShortcutHelper {
     New-Item -ItemType Directory -Path $taskbarDir -Force | Out-Null
     New-Item -ItemType Directory -Path $userStartDir -Force | Out-Null
 
-    # Compile native Win32 protocol launcher binaries for UWP apps
-    # This solves the Dock click glitch and prevents grey squares permanently
-    $launchersDir = Join-Path $env:LOCALAPPDATA "RohitBhaiMacOS\Apps"
-    if (-not (Test-Path $launchersDir)) { New-Item -ItemType Directory -Path $launchersDir -Force | Out-Null }
+    # 1. Native application target resolution (No fake temporary binaries that trigger Defender!)
+    # Edge
+    $edgeExe = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+    if (-not (Test-Path $edgeExe)) { $edgeExe = "C:\Program Files\Microsoft\Edge\Application\msedge.exe" }
+    $edgeInstalled = Test-Path $edgeExe
 
-    $protocolLaunchers = @(
-        @{ Name = "WhatsApp"; Exe = "WhatsApp.exe"; Icon = "WhatsApp.ico"; Protocol = "whatsapp://"; FallbackAumid = "5319275A.WhatsAppDesktop_cv1g1gvanyjgm!App" },
-        @{ Name = "Telegram"; Exe = "Telegram.exe"; Icon = "Telegram.ico"; Protocol = "tg://"; FallbackAumid = "TelegramMessengerLLP.TelegramDesktop_t4vj0pshhgkwm!Telegram.TelegramDesktop.Store" },
-        @{ Name = "AppStore"; Exe = "AppStore.exe"; Icon = "AppStore.ico"; Protocol = "ms-windows-store:"; FallbackAumid = "Microsoft.WindowsStore_8wekyb3d8bbwe!App" }
-    )
+    # WhatsApp
+    $waApp = Get-AppxPackage -Name "*WhatsApp*" -ErrorAction SilentlyContinue | Select-Object -First 1
+    $waExe = "$env:LOCALAPPDATA\WhatsApp\WhatsApp.exe"
+    $waInstalled = ($waApp -ne $null) -or (Test-Path $waExe)
+    $waTarget = if ($waApp) { $explorerExe } elseif (Test-Path $waExe) { $waExe } else { "" }
+    $waArgs   = if ($waApp) { "shell:AppsFolder\$($waApp.PackageFamilyName)!App" } else { "" }
+    $waAumid  = if ($waApp) { "$($waApp.PackageFamilyName)!App" } else { "WhatsApp.Desktop" }
 
-    try {
-        $codeProvider = New-Object Microsoft.CSharp.CSharpCodeProvider
-        foreach ($pl in $protocolLaunchers) {
-            $exeOut = Join-Path $launchersDir $pl.Exe
-            $iconSrc = Join-Path $appsTarget $pl.Icon
-            $protoUri = $pl.Protocol
-            $aumidFb = $pl.FallbackAumid
+    # Telegram
+    $tgApp = Get-AppxPackage -Name "*Telegram*" -ErrorAction SilentlyContinue | Select-Object -First 1
+    $tgExe = "$env:APPDATA\Telegram Desktop\Telegram.exe"
+    if (-not (Test-Path $tgExe)) { $tgExe = "C:\Program Files\Telegram Desktop\Telegram.exe" }
+    $tgInstalled = ($tgApp -ne $null) -or (Test-Path $tgExe)
+    $tgTarget = if ($tgApp) { $explorerExe } elseif (Test-Path $tgExe) { $tgExe } else { "" }
+    $tgArgs   = if ($tgApp) { "shell:AppsFolder\$($tgApp.PackageFamilyName)!Telegram.TelegramDesktop.Store" } else { "" }
+    $tgAumid  = if ($tgApp) { "$($tgApp.PackageFamilyName)!Telegram.TelegramDesktop.Store" } else { "Telegram.TelegramDesktop" }
 
-            $baseProc = [System.IO.Path]::GetFileNameWithoutExtension($pl.Exe)
-            Get-Process -Name $baseProc -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+    # Discord
+    $discordUpdate = "$env:LOCALAPPDATA\Discord\Update.exe"
+    $discordExe = "$env:LOCALAPPDATA\Discord\Discord.exe"
+    $discordInstalled = (Test-Path $discordUpdate) -or (Test-Path $discordExe)
+    $discordTarget = if (Test-Path $discordUpdate) { $discordUpdate } elseif (Test-Path $discordExe) { $discordExe } else { "" }
+    $discordArgs   = if (Test-Path $discordUpdate) { "--processStart Discord.exe" } else { "" }
+    $discordAumid  = "com.squirrel.Discord.Discord"
 
-            $launcherCode = @"
-using System;
-using System.Diagnostics;
-class Program {
-    [STAThread]
-    static void Main(string[] args) {
-        try {
-            ProcessStartInfo psi = new ProcessStartInfo("$protoUri");
-            psi.UseShellExecute = true;
-            Process.Start(psi);
-        } catch {
-            try {
-                ProcessStartInfo psi = new ProcessStartInfo("explorer.exe", "shell:AppsFolder\\$aumidFb");
-                psi.UseShellExecute = true;
-                Process.Start(psi);
-            } catch {}
-        }
-    }
-}
-"@
-            $cParams = New-Object System.CodeDom.Compiler.CompilerParameters
-            $cParams.GenerateExecutable = $true
-            $cParams.OutputAssembly = $exeOut
-            $cParams.ReferencedAssemblies.Add("System.dll") | Out-Null
-            if (Test-Path $iconSrc) {
-                $cParams.CompilerOptions = "/target:winexe /win32icon:`"$iconSrc`""
-            } else {
-                $cParams.CompilerOptions = "/target:winexe"
-            }
-            $codeProvider.CompileAssemblyFromSource($cParams, $launcherCode) | Out-Null
-        }
-    } catch {}
+    # Steam
+    $steamExe = "C:\Program Files (x86)\Steam\steam.exe"
+    if (-not (Test-Path $steamExe)) { $steamExe = "C:\Program Files\Steam\steam.exe" }
+    $steamInstalled = Test-Path $steamExe
+    $steamTarget = if ($steamInstalled) { $steamExe } else { "" }
+    $steamAumid  = "Valve.Steam"
+
+    # Store & Settings
+    $storeTarget = $explorerExe
+    $storeArgs   = "shell:AppsFolder\Microsoft.WindowsStore_8wekyb3d8bbwe!App"
+    $storeAumid  = "Microsoft.WindowsStore_8wekyb3d8bbwe!App"
+
+    $settingsTarget = $explorerExe
+    $settingsArgs   = "shell:AppsFolder\windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel"
+    $settingsAumid  = "windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel"
 
     $appsConfig = @(
         @{
             Name = "Edge to Safari"; Icon = "Safari.ico"; AppId = "MSEdge"
-            Target = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"; Args = "--profile-directory=Default"
+            Target = $edgeExe; Args = "--profile-directory=Default"
             TaskbarLnk = "Microsoft Edge.lnk"; StartLnks = @("Microsoft Edge.lnk")
+            Installed = $edgeInstalled
         },
         @{
             Name = "Explorer to Finder"; Icon = "Finder.ico"; AppId = "Microsoft.Windows.Explorer"
             Target = $explorerExe; Args = ""
             TaskbarLnk = "File Explorer.lnk"; StartLnks = @("File Explorer.lnk")
+            Installed = $true
         },
         @{
-            Name = "Microsoft Store to App Store"; Icon = "AppStore.ico"; AppId = ""
-            Target = (Join-Path $launchersDir "AppStore.exe"); Args = ""
+            Name = "Microsoft Store to App Store"; Icon = "AppStore.ico"; AppId = $storeAumid
+            Target = $storeTarget; Args = $storeArgs
             TaskbarLnk = "Microsoft Store.lnk"; StartLnks = @("Microsoft Store.lnk")
+            Installed = $true
         },
         @{
-            Name = "Settings to macOS Settings"; Icon = "Settings.ico"; AppId = "windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel"
-            Target = $explorerExe; Args = "shell:AppsFolder\windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel"
-            TaskbarLnk = "Settings.lnk"; StartLnks = @("Settings.lnk", "System Tools\Control Panel.lnk")
+            Name = "Settings to macOS Settings"; Icon = "Settings.ico"; AppId = $settingsAumid
+            Target = $settingsTarget; Args = $settingsArgs
+            TaskbarLnk = "Settings.lnk"; StartLnks = @("Settings.lnk")
+            Installed = $true
         },
         @{
-            Name = "WhatsApp"; Icon = "WhatsApp.ico"; AppId = ""
-            Target = (Join-Path $launchersDir "WhatsApp.exe"); Args = ""
+            Name = "WhatsApp"; Icon = "WhatsApp.ico"; AppId = $waAumid
+            Target = $waTarget; Args = $waArgs
             TaskbarLnk = "WhatsApp.lnk"; StartLnks = @("WhatsApp.lnk")
+            Installed = $waInstalled
         },
         @{
-            Name = "Telegram"; Icon = "Telegram.ico"; AppId = ""
-            Target = (Join-Path $launchersDir "Telegram.exe"); Args = ""
+            Name = "Telegram"; Icon = "Telegram.ico"; AppId = $tgAumid
+            Target = $tgTarget; Args = $tgArgs
             TaskbarLnk = "Telegram.lnk"; StartLnks = @("Telegram.lnk")
+            Installed = $tgInstalled
         },
         @{
-            Name = "Discord"; Icon = "Discord.ico"; AppId = "com.squirrel.Discord.Discord"
-            Target = "$env:LOCALAPPDATA\Discord\Discord.exe"; Args = ""
+            Name = "Discord"; Icon = "Discord.ico"; AppId = $discordAumid
+            Target = $discordTarget; Args = $discordArgs
             TaskbarLnk = "Discord.lnk"; StartLnks = @("Discord.lnk", "Discord Inc\Discord.lnk")
+            Installed = $discordInstalled
         },
         @{
-            Name = "Steam"; Icon = "Steam.ico"; AppId = "Valve.Steam"
-            Target = "C:\Program Files (x86)\Steam\steam.exe"; Args = ""
+            Name = "Steam"; Icon = "Steam.ico"; AppId = $steamAumid
+            Target = $steamTarget; Args = ""
             TaskbarLnk = "Steam.lnk"; StartLnks = @("Steam.lnk", "Steam\Steam.lnk")
+            Installed = $steamInstalled
         },
         @{
             Name = "Terminal"; Icon = "Terminal.ico"; AppId = "Microsoft.WindowsTerminal_8wekyb3d8bbwe!App"
             Target = $explorerExe; Args = "shell:AppsFolder\Microsoft.WindowsTerminal_8wekyb3d8bbwe!App"
-            TaskbarLnk = "Windows Terminal.lnk"; StartLnks = @("Windows Terminal.lnk", "Windows PowerShell\Windows PowerShell.lnk", "System Tools\Command Prompt.lnk")
+            TaskbarLnk = "Windows Terminal.lnk"; StartLnks = @("Windows Terminal.lnk")
+            Installed = $true
         },
         @{
             Name = "Notepad to Notes"; Icon = "Notes.ico"; AppId = "Microsoft.WindowsNotepad_8wekyb3d8bbwe!App"
             Target = $explorerExe; Args = "shell:AppsFolder\Microsoft.WindowsNotepad_8wekyb3d8bbwe!App"
             TaskbarLnk = "Notepad.lnk"; StartLnks = @("Notepad.lnk")
+            Installed = $true
         },
         @{
             Name = "Calculator"; Icon = "Calculator.ico"; AppId = "Microsoft.WindowsCalculator_8wekyb3d8bbwe!App"
             Target = $explorerExe; Args = "shell:AppsFolder\Microsoft.WindowsCalculator_8wekyb3d8bbwe!App"
             TaskbarLnk = "Calculator.lnk"; StartLnks = @("Calculator.lnk")
+            Installed = $true
         },
         @{
             Name = "Photos"; Icon = "Photos.ico"; AppId = "Microsoft.Windows.Photos_8wekyb3d8bbwe!App"
             Target = $explorerExe; Args = "shell:AppsFolder\Microsoft.Windows.Photos_8wekyb3d8bbwe!App"
             TaskbarLnk = "Photos.lnk"; StartLnks = @("Photos.lnk")
+            Installed = $true
         },
         @{
             Name = "Apple Music"; Icon = "Music.ico"; AppId = "Microsoft.ZuneMusic_8wekyb3d8bbwe!Microsoft.ZuneMusic"
             Target = $explorerExe; Args = "shell:AppsFolder\Microsoft.ZuneMusic_8wekyb3d8bbwe!Microsoft.ZuneMusic"
-            TaskbarLnk = "Apple Music.lnk"; StartLnks = @("Apple Music.lnk", "Media Player.lnk")
-        },
-        @{
-            Name = "Task Manager to Activity Monitor"; Icon = "ActivityMonitor.ico"; AppId = ""
-            Target = "$env:WINDIR\System32\Taskmgr.exe"; Args = ""
-            TaskbarLnk = ""; StartLnks = @("Task Manager.lnk", "System Tools\Task Manager.lnk")
-        },
-        @{
-            Name = "Word to Pages"; Icon = "Word.ico"; AppId = ""
-            Target = ""; Args = ""
-            TaskbarLnk = ""; StartLnks = @("Word.lnk")
-        },
-        @{
-            Name = "Excel to Numbers"; Icon = "Excel.ico"; AppId = ""
-            Target = ""; Args = ""
-            TaskbarLnk = ""; StartLnks = @("Excel.lnk")
-        },
-        @{
-            Name = "PowerPoint to Keynote"; Icon = "PowerPoint.ico"; AppId = ""
-            Target = ""; Args = ""
-            TaskbarLnk = ""; StartLnks = @("PowerPoint.lnk")
+            TaskbarLnk = "Apple Music.lnk"; StartLnks = @("Apple Music.lnk")
+            Installed = $true
         }
     )
 
     foreach ($app in $appsConfig) {
         $icoPath = Join-Path $appsTarget $app.Icon
         if (Test-Path $icoPath) {
-            if ($app.TaskbarLnk) {
+            # Only pin to Taskbar if the app is actually installed!
+            if ($app.TaskbarLnk -and $app.Installed -and $app.Target) {
                 $tbLnkPath = Join-Path $taskbarDir $app.TaskbarLnk
                 [MacAppShortcutHelper]::CreateOrUpdateShortcut($tbLnkPath, $app.Target, $app.Args, $icoPath, $app.AppId)
             }
@@ -957,15 +943,11 @@ class Program {
                 $userSlPath = Join-Path $userStartDir $sl
                 $allSlPath = Join-Path $allStartDir $sl
 
-                $parent = Split-Path $userSlPath -Parent
-                if (-not (Test-Path $parent)) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }
-
+                # Only update Start Menu shortcut if it ALREADY EXISTS on the machine
+                # NEVER create fake duplicate .lnk files in user Start Menu!
                 if (Test-Path $userSlPath) {
                     [MacAppShortcutHelper]::CreateOrUpdateShortcut($userSlPath, $app.Target, $app.Args, $icoPath, $app.AppId)
-                } elseif ($app.Target -and -not (Test-Path $allSlPath)) {
-                    [MacAppShortcutHelper]::CreateOrUpdateShortcut($userSlPath, $app.Target, $app.Args, $icoPath, $app.AppId)
                 }
-
                 if (Test-Path $allSlPath) {
                     try {
                         [MacAppShortcutHelper]::CreateOrUpdateShortcut($allSlPath, $app.Target, $app.Args, $icoPath, $app.AppId)
@@ -1039,6 +1021,8 @@ function Set-MacIslandStorage {
         "HKLM:\SOFTWARE\Windhawk\Engine\ModsWritable\mac-island-dock\LocalStorage",
         "HKLM:\SOFTWARE\WOW6432Node\Windhawk\Engine\ModsWritable\mac-island-dock\LocalStorage"
     )
+    $targetOrder = '7dce-012346-f89gh:;<E-=>5o-?@ABCDFGJKLMNOPQRSTUVWXY\ajklmb]^_`Zn[HiI'
+
     foreach ($p in $storagePaths) {
         if (-not (Test-Path $p)) {
             New-Item -Path $p -Force | Out-Null
@@ -1049,6 +1033,44 @@ function Set-MacIslandStorage {
         Set-ItemProperty -Path $p -Name "islandBarAlign" -Value 3 -Type DWord -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $p -Name "placeX" -Value 1000 -Type DWord -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $p -Name "placeY" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "islandOrder" -Value $targetOrder -Type String -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "islandVisualizer" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "islandVizSensitivity" -Value 100 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "islandVisualizerColor" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "islandVisualizerSmooth" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "islandMicrophone" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "islandNotes" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "islandWeather" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "islandWeatherUnit" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "weatherMyLocation" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "islandClock" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "clockWeekday" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "clockSeconds" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "clockYear" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "islandMedia" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "islandMediaAlways" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "islandMediaPlayOnly" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "mediaButtons" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "mediaTitle" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "islandMediaButtonsSize" -Value 130 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "islandMediaTitleLimit" -Value 210 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "islandLiquidGlass" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "islandGlassBlur" -Value 70 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "islandGlassLight" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "islandIconSize" -Value 85 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "islandTextSize" -Value 100 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "islandPanelSize" -Value 100 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "islandPanelsFollow" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "islandIconPack" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "islandBattery" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "islandVolume" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "islandNetwork" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "islandPower" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "islandApps" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "islandUsbDrives" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "islandUsbNotify" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "islandNoticeCharger" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "islandNoticeLowBattery" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $p -Name "islandNotches" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $p -Name "islandPillNotches" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $p -Name "islandZoneAsPill" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
@@ -1061,25 +1083,9 @@ function Set-MacIslandStorage {
         Set-ItemProperty -Path $p -Name "islandHideClock" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $p -Name "islandOverFullscreen" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $p -Name "islandTheme" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandLiquidGlass" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandGlassBlur" -Value 70 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandGlassLight" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandClock" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "clockWeekday" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        # Media: Standalone music icon hidden, auto-shows Song Title & Playback Controls only when playing
-        Set-ItemProperty -Path $p -Name "islandMedia" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandMediaAlways" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "mediaButtons" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "mediaTitle" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandPower" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandApps" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandNetwork" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandVolume" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandWeather" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $p -Name "islandBell" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $p -Name "islandStatusNotices" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $p -Name "islandCapsLock" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "islandUsbNotify" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $p -Name "trayListIsland" -Value 12 -Type DWord -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $p -Name "animationsIsland" -Value 4002 -Type DWord -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $p -Name "islandOpacity" -Value 100 -Type DWord -Force -ErrorAction SilentlyContinue

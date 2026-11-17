@@ -111,12 +111,26 @@ public class IslandDaemon {
     [StructLayout(LayoutKind.Sequential)]
     public struct RECT { public int Left, Top, Right, Bottom; }
 
+    private const uint WM_GETICON = 0x007F;
     private const uint WM_SETICON = 0x0080;
     private static IntPtr ICON_SMALL = new IntPtr(0);
     private static IntPtr ICON_BIG = new IntPtr(1);
 
     private static Dictionary<string, IntPtr> iconCache = new Dictionary<string, IntPtr>(StringComparer.OrdinalIgnoreCase);
-    private static HashSet<IntPtr> patchedWindows = new HashSet<IntPtr>();
+
+    private static void InjectIconIfChanged(IntPtr hWnd, IntPtr smIcon, IntPtr bgIcon, ref bool anyInjected) {
+        if (hWnd == IntPtr.Zero) return;
+        IntPtr curSm = SendMessage(hWnd, WM_GETICON, ICON_SMALL, IntPtr.Zero);
+        IntPtr curBg = SendMessage(hWnd, WM_GETICON, ICON_BIG, IntPtr.Zero);
+        if (smIcon != IntPtr.Zero && curSm != smIcon) {
+            SendMessage(hWnd, WM_SETICON, ICON_SMALL, smIcon);
+            anyInjected = true;
+        }
+        if (bgIcon != IntPtr.Zero && curBg != bgIcon) {
+            SendMessage(hWnd, WM_SETICON, ICON_BIG, bgIcon);
+            anyInjected = true;
+        }
+    }
 
     private static IntPtr GetCachedIcon(string path, int size) {
         if (!File.Exists(path)) return IntPtr.Zero;
@@ -215,55 +229,36 @@ public class IslandDaemon {
                 islandWnd = hWnd;
             }
 
-            // 2. Dynamic live window icon injection
-            if (!patchedWindows.Contains(hWnd)) {
-                var sbTitle = new StringBuilder(256);
-                GetWindowText(hWnd, sbTitle, 256);
-                string title = sbTitle.ToString();
+            // 2. Continuous dynamic live window icon injection
+            var sbTitle = new StringBuilder(256);
+            GetWindowText(hWnd, sbTitle, 256);
+            string title = sbTitle.ToString();
 
-                // Edge -> Safari
-                if (cls == "Chrome_WidgetWin_1" && (title.Contains("Edge") || title.Contains("YouTube") || title.Contains("Personal") || title.Contains("Work"))) {
-                    if (safariSm != IntPtr.Zero) SendMessage(hWnd, WM_SETICON, ICON_SMALL, safariSm);
-                    if (safariBg != IntPtr.Zero) SendMessage(hWnd, WM_SETICON, ICON_BIG, safariBg);
-                    patchedWindows.Add(hWnd);
-                    anyInjected = true;
-                }
-                // WhatsApp
-                else if (cls.Contains("WhatsApp") || title.Contains("WhatsApp") || (cls == "WinUIDesktopWin32WindowClass" && title.Contains("call"))) {
-                    if (waSm != IntPtr.Zero) SendMessage(hWnd, WM_SETICON, ICON_SMALL, waSm);
-                    if (waBg != IntPtr.Zero) SendMessage(hWnd, WM_SETICON, ICON_BIG, waBg);
-                    patchedWindows.Add(hWnd);
-                    anyInjected = true;
-                }
-                // Telegram
-                else if (cls.Contains("Telegram") || title.Contains("Telegram")) {
-                    if (tgSm != IntPtr.Zero) SendMessage(hWnd, WM_SETICON, ICON_SMALL, tgSm);
-                    if (tgBg != IntPtr.Zero) SendMessage(hWnd, WM_SETICON, ICON_BIG, tgBg);
-                    patchedWindows.Add(hWnd);
-                    anyInjected = true;
-                }
-                // Discord
-                else if (title.Contains("Discord")) {
-                    if (discordSm != IntPtr.Zero) SendMessage(hWnd, WM_SETICON, ICON_SMALL, discordSm);
-                    if (discordBg != IntPtr.Zero) SendMessage(hWnd, WM_SETICON, ICON_BIG, discordBg);
-                    patchedWindows.Add(hWnd);
-                    anyInjected = true;
-                }
-                // Explorer -> Finder
-                else if (cls == "CabinetWClass") {
-                    if (finderSm != IntPtr.Zero) SendMessage(hWnd, WM_SETICON, ICON_SMALL, finderSm);
-                    if (finderBg != IntPtr.Zero) SendMessage(hWnd, WM_SETICON, ICON_BIG, finderBg);
-                    patchedWindows.Add(hWnd);
-                    anyInjected = true;
-                }
-                // Notepad -> Notes
-                else if (cls == "Notepad") {
-                    if (notesSm != IntPtr.Zero) SendMessage(hWnd, WM_SETICON, ICON_SMALL, notesSm);
-                    if (notesBg != IntPtr.Zero) SendMessage(hWnd, WM_SETICON, ICON_BIG, notesBg);
-                    patchedWindows.Add(hWnd);
-                    anyInjected = true;
-                }
+            // Edge -> Safari
+            if (cls == "Chrome_WidgetWin_1" && (title.Contains("Edge") || title.Contains("YouTube") || title.Contains("Personal") || title.Contains("Work"))) {
+                InjectIconIfChanged(hWnd, safariSm, safariBg, ref anyInjected);
             }
+            // WhatsApp
+            else if (cls.Contains("WhatsApp") || title.Contains("WhatsApp") || (cls == "WinUIDesktopWin32WindowClass" && title.Contains("call"))) {
+                InjectIconIfChanged(hWnd, waSm, waBg, ref anyInjected);
+            }
+            // Telegram
+            else if (cls.Contains("Telegram") || title.Contains("Telegram")) {
+                InjectIconIfChanged(hWnd, tgSm, tgBg, ref anyInjected);
+            }
+            // Discord
+            else if (title.Contains("Discord")) {
+                InjectIconIfChanged(hWnd, discordSm, discordBg, ref anyInjected);
+            }
+            // Explorer -> Finder
+            else if (cls == "CabinetWClass") {
+                InjectIconIfChanged(hWnd, finderSm, finderBg, ref anyInjected);
+            }
+            // Notepad -> Notes
+            else if (cls == "Notepad") {
+                InjectIconIfChanged(hWnd, notesSm, notesBg, ref anyInjected);
+            }
+
             return true;
         }, IntPtr.Zero);
 
@@ -280,6 +275,8 @@ public class IslandDaemon {
                 @"Software\Windhawk\Engine\ModsWritable\mac-island-dock\LocalStorage",
                 @"Software\WOW6432Node\Windhawk\Engine\ModsWritable\mac-island-dock\LocalStorage"
             };
+            string targetOrder = @"7dce-012346-f89gh:;<E-=>5o-?@ABCDFGJKLMNOPQRSTUVWXY\ajklmb]^_`Zn[HiI";
+
             foreach (string sk in subKeys) {
                 using (RegistryKey key = Registry.LocalMachine.CreateSubKey(sk)) {
                     if (key != null) {
@@ -287,15 +284,70 @@ public class IslandDaemon {
                         object alignVal = key.GetValue("islandBarAlign");
                         object pillVal = key.GetValue("islandZoneAsPill");
                         object placeXVal = key.GetValue("placeX");
+                        object orderVal = key.GetValue("islandOrder");
+                        object vizVal = key.GetValue("islandVisualizer");
+                        object notesVal = key.GetValue("islandNotes");
+                        object micVal = key.GetValue("islandMicrophone");
+                        object weatherVal = key.GetValue("islandWeather");
+
                         if (barVal == null || Convert.ToInt32(barVal) != 1 ||
                             alignVal == null || Convert.ToInt32(alignVal) != 3 ||
                             pillVal == null || Convert.ToInt32(pillVal) != 0 ||
-                            placeXVal == null || Convert.ToInt32(placeXVal) != 1000) {
+                            placeXVal == null || Convert.ToInt32(placeXVal) != 1000 ||
+                            orderVal == null || orderVal.ToString() != targetOrder ||
+                            vizVal == null || Convert.ToInt32(vizVal) != 1 ||
+                            notesVal == null || Convert.ToInt32(notesVal) != 1 ||
+                            micVal == null || Convert.ToInt32(micVal) != 1 ||
+                            weatherVal == null || Convert.ToInt32(weatherVal) != 1) {
+
                             key.SetValue("islandBar", 1, RegistryValueKind.DWord);
                             key.SetValue("islandBarSide", 0, RegistryValueKind.DWord);
                             key.SetValue("islandBarAlign", 3, RegistryValueKind.DWord);
                             key.SetValue("placeX", 1000, RegistryValueKind.DWord);
                             key.SetValue("placeY", 0, RegistryValueKind.DWord);
+                            key.SetValue("islandOrder", targetOrder, RegistryValueKind.String);
+                            key.SetValue("islandVisualizer", 1, RegistryValueKind.DWord);
+                            key.SetValue("islandVizSensitivity", 100, RegistryValueKind.DWord);
+                            key.SetValue("islandVisualizerColor", 0, RegistryValueKind.DWord);
+                            key.SetValue("islandVisualizerSmooth", 0, RegistryValueKind.DWord);
+                            key.SetValue("islandMicrophone", 1, RegistryValueKind.DWord);
+                            key.SetValue("islandNotes", 1, RegistryValueKind.DWord);
+                            key.SetValue("islandWeather", 1, RegistryValueKind.DWord);
+                            key.SetValue("islandWeatherUnit", 1, RegistryValueKind.DWord);
+                            key.SetValue("weatherMyLocation", 1, RegistryValueKind.DWord);
+                            key.SetValue("islandClock", 1, RegistryValueKind.DWord);
+                            key.SetValue("clockWeekday", 1, RegistryValueKind.DWord);
+                            key.SetValue("clockSeconds", 0, RegistryValueKind.DWord);
+                            key.SetValue("clockYear", 0, RegistryValueKind.DWord);
+                            key.SetValue("islandMedia", 0, RegistryValueKind.DWord);
+                            key.SetValue("islandMediaAlways", 0, RegistryValueKind.DWord);
+                            key.SetValue("islandMediaPlayOnly", 1, RegistryValueKind.DWord);
+                            key.SetValue("mediaButtons", 1, RegistryValueKind.DWord);
+                            key.SetValue("mediaTitle", 1, RegistryValueKind.DWord);
+                            key.SetValue("islandMediaButtonsSize", 130, RegistryValueKind.DWord);
+                            key.SetValue("islandMediaTitleLimit", 210, RegistryValueKind.DWord);
+                            key.SetValue("islandLiquidGlass", 1, RegistryValueKind.DWord);
+                            key.SetValue("islandGlassBlur", 70, RegistryValueKind.DWord);
+                            key.SetValue("islandGlassLight", 1, RegistryValueKind.DWord);
+                            key.SetValue("islandIconSize", 85, RegistryValueKind.DWord);
+                            key.SetValue("islandTextSize", 100, RegistryValueKind.DWord);
+                            key.SetValue("islandPanelSize", 100, RegistryValueKind.DWord);
+                            key.SetValue("islandPanelsFollow", 1, RegistryValueKind.DWord);
+                            key.SetValue("islandIconPack", 1, RegistryValueKind.DWord);
+                            key.SetValue("islandBattery", 0, RegistryValueKind.DWord);
+                            key.SetValue("islandVolume", 1, RegistryValueKind.DWord);
+                            key.SetValue("islandNetwork", 1, RegistryValueKind.DWord);
+                            key.SetValue("islandPower", 1, RegistryValueKind.DWord);
+                            key.SetValue("islandApps", 1, RegistryValueKind.DWord);
+                            key.SetValue("islandUsbDrives", 1, RegistryValueKind.DWord);
+                            key.SetValue("islandUsbNotify", 1, RegistryValueKind.DWord);
+                            key.SetValue("islandNoticeCharger", 1, RegistryValueKind.DWord);
+                            key.SetValue("islandNoticeLowBattery", 1, RegistryValueKind.DWord);
+                            key.SetValue("islandBell", 1, RegistryValueKind.DWord);
+                            key.SetValue("islandStatusNotices", 1, RegistryValueKind.DWord);
+                            key.SetValue("islandCapsLock", 1, RegistryValueKind.DWord);
+                            key.SetValue("islandOverFullscreen", 1, RegistryValueKind.DWord);
+                            key.SetValue("islandReserve", 1, RegistryValueKind.DWord);
                             key.SetValue("islandNotches", 0, RegistryValueKind.DWord);
                             key.SetValue("islandPillNotches", 0, RegistryValueKind.DWord);
                             key.SetValue("islandZoneAsPill", 0, RegistryValueKind.DWord);
@@ -303,9 +355,16 @@ public class IslandDaemon {
                             key.SetValue("islandBarFixedSides", 0, RegistryValueKind.DWord);
                             key.SetValue("islandGap", 0, RegistryValueKind.DWord);
                             key.SetValue("islandVerticalSides", 1, RegistryValueKind.DWord);
-                            key.SetValue("islandLiquidGlass", 1, RegistryValueKind.DWord);
-                            key.SetValue("islandGlassBlur", 70, RegistryValueKind.DWord);
-                            key.SetValue("islandGlassLight", 1, RegistryValueKind.DWord);
+                            key.SetValue("islandAutoHide", 0, RegistryValueKind.DWord);
+                            key.SetValue("islandHideWhen", 0, RegistryValueKind.DWord);
+                            key.SetValue("islandHideClock", 0, RegistryValueKind.DWord);
+                            key.SetValue("trayListIsland", 12, RegistryValueKind.DWord);
+                            key.SetValue("animationsIsland", 4002, RegistryValueKind.DWord);
+                            key.SetValue("islandDownloadFill", 1, RegistryValueKind.DWord);
+                            key.SetValue("islandOpacity", 100, RegistryValueKind.DWord);
+                            key.SetValue("islandNotchCurve", 80, RegistryValueKind.DWord);
+                            key.SetValue("islandPillHeight", 100, RegistryValueKind.DWord);
+                            key.SetValue("islandSize", 100, RegistryValueKind.DWord);
                         }
                     }
                 }
