@@ -76,7 +76,7 @@ worth knowing:
 - rightOffset: 16
   $name: Right anchor (px)
   $description: "Anchor the widget's right edge this many pixels from the taskbar's right edge; 0 uses Horizontal position percent instead."
-- verticalNudge: 8
+- verticalNudge: 14
   $name: Vertical nudge (px)
 - updateIntervalMs: 1000
   $name: Update interval (ms)
