@@ -344,7 +344,8 @@ try {
 # -------------------------------------------------------------------------
 # Step 4: macOS Capitaine Dark Cursors Installation
 # -------------------------------------------------------------------------
-Write-Host "`n[4/9] Deploying macOS Capitaine Dark Cursors with Beach-Ball..." -ForegroundColor Cyan
+Write-Host "
+[4/9] Deploying macOS Capitaine Dark Cursors with Beach-Ball..." -ForegroundColor Cyan
 try {
     $cursorsTarget = "$env:LOCALAPPDATA\RohitBhaiMacOS\Cursors"
     if (-not (Test-Path $cursorsTarget)) {
@@ -352,25 +353,38 @@ try {
     }
     
     $localCursors = if ($ScriptDir) { Join-Path $ScriptDir "assets\cursors" } else { $null }
+    $scratchCursors = "C:\Users\rohit\.gemini\antigravity\scratch\Rohit-Bhai-Mac-OS\assets\cursors"
+
     if ($localCursors -and (Test-Path $localCursors)) {
         Copy-Item "$localCursors\*" -Destination $cursorsTarget -Recurse -Force -ErrorAction SilentlyContinue
+    } elseif (Test-Path $scratchCursors) {
+        Copy-Item "$scratchCursors\*" -Destination $cursorsTarget -Recurse -Force -ErrorAction SilentlyContinue
     } else {
-        $curZipUrl = "https://github.com/$RepoOwner/$RepoName/releases/download/v2.0.0/capitaine_cursors.zip"
+        $curZipUrls = @(
+            "https://raw.githubusercontent.com/$RepoOwner/$RepoName/$Branch/assets/cursors.zip",
+            "https://raw.githubusercontent.com/$RepoOwner/rohit-bhai-mac-os/$Branch/assets/cursors.zip"
+        )
         $curZip = Join-Path $WorkDir "cursors.zip"
-        try {
-            Invoke-WebRequest -Uri $curZipUrl -OutFile $curZip -UseBasicParsing -ErrorAction SilentlyContinue
-            if (Test-Path $curZip) {
-                Expand-Archive -Path $curZip -DestinationPath $cursorsTarget -Force
-            }
-        } catch {}
+        foreach ($curZipUrl in $curZipUrls) {
+            try {
+                Invoke-WebRequest -Uri $curZipUrl -OutFile $curZip -UseBasicParsing -ErrorAction SilentlyContinue
+                if ((Test-Path $curZip) -and ((Get-Item $curZip).Length -gt 100000)) {
+                    $extractDark = Join-Path $cursorsTarget "Capitaine Dark W11 HiDPI"
+                    if (-not (Test-Path $extractDark)) { New-Item -ItemType Directory -Path $extractDark -Force | Out-Null }
+                    Expand-Archive -Path $curZip -DestinationPath $extractDark -Force
+                    break
+                }
+            } catch {}
+        }
     }
     
     $darkDir = Join-Path $cursorsTarget "Capitaine Dark W11 HiDPI"
     if (-not (Test-Path $darkDir)) { $darkDir = Join-Path $cursorsTarget "dist-dark" }
-    if (-not (Test-Path $darkDir)) { $darkDir = $cursorsTarget }
-    if (Test-Path $darkDir) {
+    if (-not (Test-Path "$darkDir\pointer.cur")) { $darkDir = $cursorsTarget }
+    if (Test-Path "$darkDir\pointer.cur") {
         $schemePath = "HKCU:\Control Panel\Cursors"
-        Set-ItemProperty -Path $schemePath -Name "(Default)" -Value "Capitaine Dark W11 HiDPI" -Force
+        $schemeName = "Capitaine Dark W11 HiDPI"
+        Set-ItemProperty -Path $schemePath -Name "(Default)" -Value $schemeName -Force
         Set-ItemProperty -Path $schemePath -Name "Scheme Source" -Value 1 -Type DWord -Force
         Set-ItemProperty -Path $schemePath -Name "Arrow" -Value "$darkDir\pointer.cur" -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $schemePath -Name "Help" -Value "$darkDir\help.cur" -Force -ErrorAction SilentlyContinue
@@ -385,24 +399,44 @@ try {
         Set-ItemProperty -Path $schemePath -Name "SizeNWSE" -Value "$darkDir\dgn1.cur" -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $schemePath -Name "SizeNESW" -Value "$darkDir\dgn2.cur" -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $schemePath -Name "SizeAll" -Value "$darkDir\move.cur" -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $schemePath -Name "UpArrow" -Value "$darkDir\alternate.cur" -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $schemePath -Name "Hand" -Value "$darkDir\link.cur" -Force -ErrorAction SilentlyContinue
-        
+        Set-ItemProperty -Path $schemePath -Name "Pin" -Value "$darkDir\pin.cur" -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $schemePath -Name "Person" -Value "$darkDir\person.cur" -Force -ErrorAction SilentlyContinue
+
+        $schemesReg = "HKCU:\Control Panel\Cursors\Schemes"
+        if (-not (Test-Path $schemesReg)) { New-Item -Path $schemesReg -Force | Out-Null }
+        $schemeVal = "$darkDir\pointer.cur,$darkDir\help.cur,$darkDir\working.ani,$darkDir\busy.ani,$darkDir\precision.cur,$darkDir\text.cur,$darkDir\handwriting.cur,$darkDir\unavailable.cur,$darkDir\vert.cur,$darkDir\horz.cur,$darkDir\dgn1.cur,$darkDir\dgn2.cur,$darkDir\move.cur,$darkDir\alternate.cur,$darkDir\link.cur,$darkDir\pin.cur,$darkDir\person.cur"
+        Set-ItemProperty -Path $schemesReg -Name $schemeName -Value $schemeVal -Force
+
         Add-Type @"
 using System;
 using System.Runtime.InteropServices;
 public class Win32Cursor {
     [DllImport("user32.dll", SetLastError = true)]
     public static extern bool SystemParametersInfo(uint uiAction, uint uiParam, IntPtr pvParam, uint fWinIni);
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern IntPtr LoadCursorFromFile(string lpFileName);
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern bool SetSystemCursor(IntPtr hcur, uint id);
 }
 "@ -ErrorAction SilentlyContinue
-        [Win32Cursor]::SystemParametersInfo(0x0057, 0, [IntPtr]::Zero, 3) | Out-Null
+        [Win32Cursor]::SystemParametersInfo(0x0057, 0, [IntPtr]::Zero, 0) | Out-Null
+        try {
+            $hCur = [Win32Cursor]::LoadCursorFromFile("$darkDir\pointer.cur")
+            if ($hCur -ne [IntPtr]::Zero) { [Win32Cursor]::SetSystemCursor($hCur, 32512) | Out-Null }
+            $hHand = [Win32Cursor]::LoadCursorFromFile("$darkDir\link.cur")
+            if ($hHand -ne [IntPtr]::Zero) { [Win32Cursor]::SetSystemCursor($hHand, 32649) | Out-Null }
+            $hBusy = [Win32Cursor]::LoadCursorFromFile("$darkDir\busy.ani")
+            if ($hBusy -ne [IntPtr]::Zero) { [Win32Cursor]::SetSystemCursor($hBusy, 32514) | Out-Null }
+            $hWork = [Win32Cursor]::LoadCursorFromFile("$darkDir\working.ani")
+            if ($hWork -ne [IntPtr]::Zero) { [Win32Cursor]::SetSystemCursor($hWork, 32650) | Out-Null }
+        } catch {}
         Write-Host "  [OK] macOS Capitaine Dark Cursors scheme registered & live applied!" -ForegroundColor Green
     }
 } catch {
     Write-Host "  [-] Cursors note: Skipped non-critical cursor install." -ForegroundColor DarkGray
 }
-
-# -------------------------------------------------------------------------
 # Step 5: Official Apple macOS System Sound Scheme
 # -------------------------------------------------------------------------
 Write-Host "`n[5/9] Configuring Authentic Apple macOS System Sound Scheme..." -ForegroundColor Cyan
@@ -982,7 +1016,8 @@ public static class MacAppShortcutHelper {
 # -------------------------------------------------------------------------
 # Step 8: Apply 4K macOS Wallpaper & Windows Dark Mode
 # -------------------------------------------------------------------------
-Write-Host "`n[8/9] Applying 4K macOS Wallpaper & Deep Dark Mode..." -ForegroundColor Cyan
+Write-Host "
+[8/9] Applying 4K macOS Wallpaper & Deep Dark Mode..." -ForegroundColor Cyan
 try {
     # 1. Dark Mode
     $themeReg = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
@@ -992,37 +1027,51 @@ try {
     }
     
     # 2. Wallpaper
-    $wallTarget = "$env:APPDATA\Microsoft\Windows\Themes\TranscodedWallpaper"
-    $wallLocal = Join-Path $WorkDir "wallpaper.jpg"
-    $wallUrl = "https://raw.githubusercontent.com/$RepoOwner/$RepoName/$Branch/assets/wallpaper.jpg"
-    
+    $appDir = "$env:LOCALAPPDATA\RohitBhaiMacOS"
+    if (-not (Test-Path $appDir)) { New-Item -ItemType Directory -Path $appDir -Force | Out-Null }
+    $wallTarget = Join-Path $appDir "macOS_Wallpaper.jpg"
+    $transcodedTarget = "$env:APPDATA\Microsoft\Windows\Themes\TranscodedWallpaper"
+
     $localWall = if ($ScriptDir) { Join-Path $ScriptDir "assets\wallpaper.jpg" } else { $null }
+    $scratchWall = "C:\Users\rohit\.gemini\antigravity\scratch\Rohit-Bhai-Mac-OS\assets\wallpaper.jpg"
+
     if ($localWall -and (Test-Path $localWall)) {
         Copy-Item $localWall -Destination $wallTarget -Force -ErrorAction SilentlyContinue
+    } elseif (Test-Path $scratchWall) {
+        Copy-Item $scratchWall -Destination $wallTarget -Force -ErrorAction SilentlyContinue
     } else {
-        Invoke-WebRequest -Uri $wallUrl -OutFile $wallLocal -UseBasicParsing -ErrorAction SilentlyContinue
-        if (Test-Path $wallLocal) {
-            Copy-Item $wallLocal -Destination $wallTarget -Force -ErrorAction SilentlyContinue
+        $wallUrls = @(
+            "https://raw.githubusercontent.com/$RepoOwner/$RepoName/$Branch/assets/wallpaper.jpg",
+            "https://raw.githubusercontent.com/$RepoOwner/rohit-bhai-mac-os/$Branch/assets/wallpaper.jpg"
+        )
+        foreach ($wUrl in $wallUrls) {
+            try {
+                Invoke-WebRequest -Uri $wUrl -OutFile $wallTarget -UseBasicParsing -ErrorAction SilentlyContinue
+                if ((Test-Path $wallTarget) -and ((Get-Item $wallTarget).Length -gt 1000000)) { break }
+            } catch {}
         }
     }
-    Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "Wallpaper" -Value $wallTarget -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "WallpaperStyle" -Value "10" -Force -ErrorAction SilentlyContinue
-    Add-Type @"
+
+    if (Test-Path $wallTarget) {
+        Copy-Item $wallTarget -Destination $transcodedTarget -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "Wallpaper" -Value $wallTarget -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "WallpaperStyle" -Value "10" -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "TileWallpaper" -Value "0" -Force -ErrorAction SilentlyContinue
+        Add-Type @"
 using System;
 using System.Runtime.InteropServices;
 public class Win32Wall {
-    [DllImport("user32.dll", SetLastError = true)]
-    public static extern bool SystemParametersInfo(uint uiAction, uint uiParam, string pvParam, uint fWinIni);
+    [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+    public static extern int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
 }
 "@ -ErrorAction SilentlyContinue
-    [Win32Wall]::SystemParametersInfo(0x0014, 0, $wallTarget, 3) | Out-Null
-    rundll32.exe user32.dll,UpdatePerUserSystemParameters 1, True
-    Write-Host "  [OK] 4K macOS Wallpaper & Dark Mode applied live!" -ForegroundColor Green
+        [Win32Wall]::SystemParametersInfo(0x0014, 0, $wallTarget, 3) | Out-Null
+        rundll32.exe user32.dll,UpdatePerUserSystemParameters 1, True
+        Write-Host "  [OK] 4K macOS Wallpaper & Dark Mode applied live!" -ForegroundColor Green
+    }
 } catch {
     Write-Host "  [-] Wallpaper note: Skipped non-critical wallpaper update." -ForegroundColor DarkGray
 }
-
-# -------------------------------------------------------------------------
 # Step 9: Import Windhawk Mods & Settings (Island Dock, Genie, Net Speed)
 # -------------------------------------------------------------------------
 Write-Host "`n[9/9] Activating all 8 Windhawk mods, exact ratios, colors, and animations..." -ForegroundColor Cyan
@@ -1043,7 +1092,7 @@ function Set-RegString($key, $name, $val) {
 }
 
 function Set-MacIslandStorage {
-    $targetOrder = '?<7dec]12356;48:=>09@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\^_`abfghijklmno'
+    $targetOrder = 'd12356;<8?0479:=>@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcefghijklm'
     $key = "HKLM\SOFTWARE\Windhawk\Engine\ModsWritable\mac-island-dock\LocalStorage"
     
     # Read user SID to ensure per-user storage also receives all values
@@ -1071,19 +1120,19 @@ function Set-MacIslandStorage {
         "clockDate" = 1
         "clockSeconds" = 0
         "clockYear" = 0
-        "islandMedia" = 1
-        "islandMediaAlways" = 1
+        "islandMedia" = 0
+        "islandMediaAlways" = 0
         "islandMediaPlayOnly" = 0
-        "mediaButtons" = 1
+        "mediaButtons" = 0
         "mediaTitle" = 1
         "islandMediaButtonsSize" = 130
         "islandMediaTitleLimit" = 210
         "islandMicrophone" = 1
-        "islandVisualizer" = 1
+        "islandVisualizer" = 0
         "islandVizSensitivity" = 100
         "islandVisualizerColor" = 0
         "islandVisualizerSmooth" = 0
-        "islandNetSpeed" = 1
+        "islandNetSpeed" = 0
         "islandVolume" = 1
         "islandNetwork" = 1
         "islandTray" = 1
@@ -1096,7 +1145,7 @@ function Set-MacIslandStorage {
         "islandIconPack" = 1
         "islandBattery" = 0
         "islandPower" = 1
-        "islandApps" = 1
+        "islandApps" = 0
         "islandUsbDrives" = 1
         "islandUsbNotify" = 1
         "islandNoticeCharger" = 1

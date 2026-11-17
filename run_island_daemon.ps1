@@ -275,7 +275,7 @@ public class IslandDaemon {
                 @"Software\Windhawk\Engine\ModsWritable\mac-island-dock\LocalStorage",
                 @"Software\WOW6432Node\Windhawk\Engine\ModsWritable\mac-island-dock\LocalStorage"
             };
-            string targetOrder = @"?<7dec]12356;48:=>09@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\^_`abfghijklmno";
+            string targetOrder = @"d12356;<8?0479:=>@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcefghijklm";
 
             foreach (string sk in subKeys) {
                 using (RegistryKey key = Registry.LocalMachine.CreateSubKey(sk)) {
@@ -306,7 +306,7 @@ public class IslandDaemon {
                             key.SetValue("placeX", 1000, RegistryValueKind.DWord);
                             key.SetValue("placeY", 0, RegistryValueKind.DWord);
                             key.SetValue("islandOrder", targetOrder, RegistryValueKind.String);
-                            key.SetValue("islandVisualizer", 1, RegistryValueKind.DWord);
+                            key.SetValue("islandVisualizer", 0, RegistryValueKind.DWord);
                             key.SetValue("islandVizSensitivity", 100, RegistryValueKind.DWord);
                             key.SetValue("islandVisualizerColor", 0, RegistryValueKind.DWord);
                             key.SetValue("islandVisualizerSmooth", 0, RegistryValueKind.DWord);
@@ -319,12 +319,15 @@ public class IslandDaemon {
                             key.SetValue("clockWeekday", 1, RegistryValueKind.DWord);
                             key.SetValue("clockSeconds", 0, RegistryValueKind.DWord);
                             key.SetValue("clockYear", 0, RegistryValueKind.DWord);
-                            key.SetValue("islandMedia", 1, RegistryValueKind.DWord);
-                            key.SetValue("islandMediaAlways", 1, RegistryValueKind.DWord);
+                            key.SetValue("islandMedia", 0, RegistryValueKind.DWord);
+                            key.SetValue("islandMediaAlways", 0, RegistryValueKind.DWord);
                             key.SetValue("islandMediaPlayOnly", 0, RegistryValueKind.DWord);
                             key.SetValue("islandTheme", 4, RegistryValueKind.DWord);
-                            key.SetValue("mediaButtons", 1, RegistryValueKind.DWord);
+                            key.SetValue("mediaButtons", 0, RegistryValueKind.DWord);
                             key.SetValue("mediaTitle", 1, RegistryValueKind.DWord);
+                            key.SetValue("islandApps", 0, RegistryValueKind.DWord);
+                            key.SetValue("islandNetSpeed", 0, RegistryValueKind.DWord);
+                            key.SetValue("islandVisualizer", 0, RegistryValueKind.DWord);
                             key.SetValue("islandMediaButtonsSize", 130, RegistryValueKind.DWord);
                             key.SetValue("islandMediaTitleLimit", 210, RegistryValueKind.DWord);
                             key.SetValue("islandLiquidGlass", 1, RegistryValueKind.DWord);
@@ -339,7 +342,7 @@ public class IslandDaemon {
                             key.SetValue("islandVolume", 1, RegistryValueKind.DWord);
                             key.SetValue("islandNetwork", 1, RegistryValueKind.DWord);
                             key.SetValue("islandPower", 1, RegistryValueKind.DWord);
-                            key.SetValue("islandApps", 1, RegistryValueKind.DWord);
+                            key.SetValue("islandApps", 0, RegistryValueKind.DWord);
                             key.SetValue("islandUsbDrives", 1, RegistryValueKind.DWord);
                             key.SetValue("islandUsbNotify", 1, RegistryValueKind.DWord);
                             key.SetValue("islandNoticeCharger", 1, RegistryValueKind.DWord);
