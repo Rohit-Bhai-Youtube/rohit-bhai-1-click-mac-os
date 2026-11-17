@@ -76,7 +76,7 @@ worth knowing:
 - rightOffset: 16
   $name: Right anchor (px)
   $description: "Anchor the widget's right edge this many pixels from the taskbar's right edge; 0 uses Horizontal position percent instead."
-- verticalNudge: 14
+- verticalNudge: 18
   $name: Vertical nudge (px)
 - updateIntervalMs: 1000
   $name: Update interval (ms)
@@ -254,16 +254,20 @@ void LoadSettings() {
 void RebuildGdiObjects(int fontSize, const std::wstring& theme, UINT dpi) {
     auto newGdi = std::make_unique<GdiObjects>();
 
-    Gdiplus::FontFamily fontFamily(L"Segoe UI Variable Display");
+    Gdiplus::FontFamily fontFamily(L"Segoe UI Variable Text");
+    if (fontFamily.GetLastStatus() != Ok) {
+        fontFamily = Gdiplus::FontFamily(L"Segoe UI");
+    }
     float scaledFontSize = (float)MulDiv(fontSize, dpi, 96);
 
     newGdi->font = std::make_unique<Gdiplus::Font>(&fontFamily, scaledFontSize, FontStyleBold, UnitPixel);
-    newGdi->largeFont = std::make_unique<Gdiplus::Font>(&fontFamily, scaledFontSize * 1.3f, FontStyleBold, UnitPixel);
-    newGdi->labelFont = std::make_unique<Gdiplus::Font>(&fontFamily, scaledFontSize * 0.92f, FontStyleBold, UnitPixel);
+    newGdi->largeFont = std::make_unique<Gdiplus::Font>(&fontFamily, scaledFontSize * 1.25f, FontStyleBold, UnitPixel);
+    newGdi->labelFont = std::make_unique<Gdiplus::Font>(&fontFamily, scaledFontSize * 0.95f, FontStyleRegular, UnitPixel);
 
-    Color bgColor = Color(175, 20, 22, 26);
-    Color downColor = Color(255, 64, 169, 255);
-    Color upColor = Color(255, 100, 230, 90);
+    Color bgColor = Color(0, 0, 0, 0);
+    // Vibrant Apple System Sky Blue & Apple System Mint Green
+    Color downColor = Color(255, 56, 189, 248);  // Vibrant Apple Sky Blue
+    Color upColor = Color(255, 52, 211, 153);    // Vibrant Apple Mint Green
 
     if (theme == L"Minimal") {
         bgColor = Color(0, 0, 0, 0);
@@ -275,12 +279,12 @@ void RebuildGdiObjects(int fontSize, const std::wstring& theme, UINT dpi) {
     newGdi->bgBrush = std::make_unique<Gdiplus::SolidBrush>(bgColor);
     newGdi->downBrush = std::make_unique<Gdiplus::SolidBrush>(downColor);
     newGdi->upBrush = std::make_unique<Gdiplus::SolidBrush>(upColor);
-    newGdi->shadowBrush = std::make_unique<Gdiplus::SolidBrush>(Color(200, 0, 0, 0));
+    newGdi->shadowBrush = std::make_unique<Gdiplus::SolidBrush>(Color(0, 0, 0, 0));
     newGdi->borderPen = std::make_unique<Gdiplus::Pen>(Color(85, 255, 255, 255), 1.0f * sc);
     newGdi->dividerPen = std::make_unique<Gdiplus::Pen>(Color(60, 255, 255, 255), 1.0f * sc);
-    newGdi->downChartPen = std::make_unique<Gdiplus::Pen>(downColor, 1.5f * sc);
-    newGdi->upChartPen = std::make_unique<Gdiplus::Pen>(upColor, 1.5f * sc);
-    newGdi->chartShadowPen = std::make_unique<Gdiplus::Pen>(Color(160, 0, 0, 0), 2.2f * sc);
+    newGdi->downChartPen = std::make_unique<Gdiplus::Pen>(downColor, 1.6f * sc);
+    newGdi->upChartPen = std::make_unique<Gdiplus::Pen>(upColor, 1.6f * sc);
+    newGdi->chartShadowPen = std::make_unique<Gdiplus::Pen>(Color(100, 0, 0, 0), 2.0f * sc);
 
     newGdi->downChartPen->SetLineJoin(LineJoinRound);
     newGdi->upChartPen->SetLineJoin(LineJoinRound);
@@ -558,23 +562,18 @@ void PaintWidgetContent(Graphics& graphics, int width, int height, const Setting
         format.SetLineAlignment(StringAlignmentCenter);
         float halfH = h / 2.0f;
         float chartW = w * 0.34f;
-        float textX = chartW + 14 * sc;
-        float shadow = 1 * sc;
+        float textX = chartW + 12 * sc;
 
-        float downLabelW = LabelWidth(kDownLabel, g_gdi->labelFont.get()) + 3 * sc;
-        float upLabelW = LabelWidth(kUpLabel, g_gdi->labelFont.get()) + 3 * sc;
+        float downLabelW = LabelWidth(kDownLabel, g_gdi->labelFont.get()) + 4 * sc;
+        float upLabelW = LabelWidth(kUpLabel, g_gdi->labelFont.get()) + 4 * sc;
 
         RectF chartDown(6.0f * sc, 3.0f * sc, chartW, halfH - 5.0f * sc);
         DrawSparkline(graphics, g_gdi->downChartPen.get(), g_gdi->chartShadowPen.get(), g_downHistory, g_historyIdx, chartDown, sc);
-        graphics.DrawString(kDownLabel, -1, g_gdi->labelFont.get(), RectF(textX + shadow, shadow, downLabelW, halfH), &format, g_gdi->shadowBrush.get());
-        graphics.DrawString(strDown.c_str(), -1, g_gdi->font.get(), RectF(textX + downLabelW + shadow, shadow, w - textX - downLabelW, halfH), &format, g_gdi->shadowBrush.get());
         graphics.DrawString(kDownLabel, -1, g_gdi->labelFont.get(), RectF(textX, 0, downLabelW, halfH), &format, g_gdi->downBrush.get());
         graphics.DrawString(strDown.c_str(), -1, g_gdi->font.get(), RectF(textX + downLabelW, 0, w - textX - downLabelW, halfH), &format, g_gdi->downBrush.get());
 
         RectF chartUp(6.0f * sc, halfH + 2.0f * sc, chartW, halfH - 5.0f * sc);
         DrawSparkline(graphics, g_gdi->upChartPen.get(), g_gdi->chartShadowPen.get(), g_upHistory, g_historyIdx, chartUp, sc);
-        graphics.DrawString(kUpLabel, -1, g_gdi->labelFont.get(), RectF(textX + shadow, halfH + shadow, upLabelW, halfH), &format, g_gdi->shadowBrush.get());
-        graphics.DrawString(strUp.c_str(), -1, g_gdi->font.get(), RectF(textX + upLabelW + shadow, halfH + shadow, w - textX - upLabelW, halfH), &format, g_gdi->shadowBrush.get());
         graphics.DrawString(kUpLabel, -1, g_gdi->labelFont.get(), RectF(textX, halfH, upLabelW, halfH), &format, g_gdi->upBrush.get());
         graphics.DrawString(strUp.c_str(), -1, g_gdi->font.get(), RectF(textX + upLabelW, halfH, w - textX - upLabelW, halfH), &format, g_gdi->upBrush.get());
 
@@ -624,8 +623,10 @@ void RenderWidget(HWND hWnd, int opacity) {
 
         {
             Graphics graphics(hdcMem);
-            graphics.SetSmoothingMode(SmoothingModeAntiAlias);
-            graphics.SetTextRenderingHint(TextRenderingHintAntiAlias);
+            graphics.SetSmoothingMode(SmoothingModeHighQuality);
+            graphics.SetTextRenderingHint(TextRenderingHintAntiAliasGridFit);
+            graphics.SetPixelOffsetMode(PixelOffsetModeHighQuality);
+            graphics.SetInterpolationMode(InterpolationModeHighQualityBicubic);
             graphics.Clear(Color(0, 0, 0, 0));
 
             if (g_gdi && g_gdi->IsValid()) {
