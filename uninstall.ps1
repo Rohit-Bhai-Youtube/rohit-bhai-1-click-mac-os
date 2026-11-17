@@ -668,10 +668,64 @@ public class Win32RestoreWall {
 # -------------------------------------------------------------------------
 Write-Host "`n[8/8] Rebuilding Windows Icon Cache & Refreshing Explorer & Start Menu..." -ForegroundColor Cyan
 
-# 1. Remove RohitBhaiMacOS data directory
+# 1. Remove RohitBhaiMacOS data directory safely
 $appDir = "$env:LOCALAPPDATA\RohitBhaiMacOS"
 if (Test-Path $appDir) {
-    Remove-Item -Path $appDir -Recurse -Force -ErrorAction SilentlyContinue
+    # Check if Shell Icons still points to RohitBhaiMacOS
+    $hklmStillHas = $false
+    try {
+        $regCheck = & reg.exe query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" 2>$null
+        if ($regCheck -and ($regCheck -match "RohitBhaiMacOS")) {
+            $hklmStillHas = $true
+        }
+    } catch {}
+
+    if ($hklmStillHas) {
+        # Fallback: populate with native Windows 11 yellow icons so folders are NEVER blank
+        $icoDir = Join-Path $appDir "Icons"
+        New-Item -ItemType Directory -Path $icoDir -Force | Out-Null
+        $imageres = Join-Path ([Environment]::GetFolderPath('System')) "imageres.dll"
+        try {
+            Add-Type -TypeDefinition @"
+using System;
+using System.Drawing;
+using System.IO;
+using System.Runtime.InteropServices;
+public class WinIconFallbackUn {
+    [DllImport("shell32.dll", CharSet = CharSet.Auto)]
+    public static extern int ExtractIconEx(string lpszFile, int nIconIndex, IntPtr[] phiconLarge, IntPtr[] phiconSmall, int nIcons);
+    [DllImport("user32.dll")]
+    public static extern bool DestroyIcon(IntPtr hIcon);
+    public static void Save(string dll, int idx, string outPath) {
+        IntPtr[] l = new IntPtr[1]; IntPtr[] s = new IntPtr[1];
+        ExtractIconEx(dll, idx, l, s, 1);
+        if (l[0] != IntPtr.Zero) {
+            using (Icon ico = Icon.FromHandle(l[0])) {
+                using (FileStream fs = new FileStream(outPath, FileMode.Create)) { ico.Save(fs); }
+            }
+            DestroyIcon(l[0]);
+            if (s[0] != IntPtr.Zero) DestroyIcon(s[0]);
+        }
+    }
+}
+"@ -ReferencedAssemblies System.Drawing -ErrorAction SilentlyContinue
+            [WinIconFallbackUn]::Save($imageres, 3, "$icoDir\macOS_Folder.ico")
+            [WinIconFallbackUn]::Save($imageres, 4, "$icoDir\macOS_Folder_Open.ico")
+            [WinIconFallbackUn]::Save($imageres, 27, "$icoDir\macOS_Drive.ico")
+            [WinIconFallbackUn]::Save($imageres, 26, "$icoDir\macOS_Drive_System.ico")
+            [WinIconFallbackUn]::Save($imageres, 54, "$icoDir\macOS_Trash_Empty.ico")
+            [WinIconFallbackUn]::Save($imageres, 55, "$icoDir\macOS_Trash_Full.ico")
+            [WinIconFallbackUn]::Save($imageres, 110, "$icoDir\macOS_Desktop.ico")
+            [WinIconFallbackUn]::Save($imageres, 109, "$icoDir\macOS_ThisPC.ico")
+            [WinIconFallbackUn]::Save($imageres, 112, "$icoDir\macOS_Documents.ico")
+            [WinIconFallbackUn]::Save($imageres, 184, "$icoDir\macOS_Downloads.ico")
+            [WinIconFallbackUn]::Save($imageres, 108, "$icoDir\macOS_Music.ico")
+            [WinIconFallbackUn]::Save($imageres, 113, "$icoDir\macOS_Pictures.ico")
+            [WinIconFallbackUn]::Save($imageres, 18, "$icoDir\macOS_Videos.ico")
+        } catch {}
+    } else {
+        Remove-Item -Path $appDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
 }
 
 # 2. Terminate explorer and shell host processes forcefully to release file locks

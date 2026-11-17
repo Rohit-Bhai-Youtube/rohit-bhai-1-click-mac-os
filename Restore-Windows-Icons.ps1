@@ -49,6 +49,49 @@ foreach ($k in $shellKeys) {
     & reg.exe delete "$k" /f 2>$null
 }
 
+# Fallback: Populate RohitBhaiMacOS\Icons with native Windows 11 icons as a permanent safety net
+try {
+    $icoDir = "$env:LOCALAPPDATA\RohitBhaiMacOS\Icons"
+    New-Item -ItemType Directory -Path $icoDir -Force | Out-Null
+    $imageres = Join-Path ([Environment]::GetFolderPath('System')) "imageres.dll"
+    Add-Type -TypeDefinition @"
+using System;
+using System.Drawing;
+using System.IO;
+using System.Runtime.InteropServices;
+public class WinIconFallbackRest {
+    [DllImport("shell32.dll", CharSet = CharSet.Auto)]
+    public static extern int ExtractIconEx(string lpszFile, int nIconIndex, IntPtr[] phiconLarge, IntPtr[] phiconSmall, int nIcons);
+    [DllImport("user32.dll")]
+    public static extern bool DestroyIcon(IntPtr hIcon);
+    public static void Save(string dll, int idx, string outPath) {
+        IntPtr[] l = new IntPtr[1]; IntPtr[] s = new IntPtr[1];
+        ExtractIconEx(dll, idx, l, s, 1);
+        if (l[0] != IntPtr.Zero) {
+            using (Icon ico = Icon.FromHandle(l[0])) {
+                using (FileStream fs = new FileStream(outPath, FileMode.Create)) { ico.Save(fs); }
+            }
+            DestroyIcon(l[0]);
+            if (s[0] != IntPtr.Zero) DestroyIcon(s[0]);
+        }
+    }
+}
+"@ -ReferencedAssemblies System.Drawing -ErrorAction SilentlyContinue
+    [WinIconFallbackRest]::Save($imageres, 3, "$icoDir\macOS_Folder.ico")
+    [WinIconFallbackRest]::Save($imageres, 4, "$icoDir\macOS_Folder_Open.ico")
+    [WinIconFallbackRest]::Save($imageres, 27, "$icoDir\macOS_Drive.ico")
+    [WinIconFallbackRest]::Save($imageres, 26, "$icoDir\macOS_Drive_System.ico")
+    [WinIconFallbackRest]::Save($imageres, 54, "$icoDir\macOS_Trash_Empty.ico")
+    [WinIconFallbackRest]::Save($imageres, 55, "$icoDir\macOS_Trash_Full.ico")
+    [WinIconFallbackRest]::Save($imageres, 110, "$icoDir\macOS_Desktop.ico")
+    [WinIconFallbackRest]::Save($imageres, 109, "$icoDir\macOS_ThisPC.ico")
+    [WinIconFallbackRest]::Save($imageres, 112, "$icoDir\macOS_Documents.ico")
+    [WinIconFallbackRest]::Save($imageres, 184, "$icoDir\macOS_Downloads.ico")
+    [WinIconFallbackRest]::Save($imageres, 108, "$icoDir\macOS_Music.ico")
+    [WinIconFallbackRest]::Save($imageres, 113, "$icoDir\macOS_Pictures.ico")
+    [WinIconFallbackRest]::Save($imageres, 18, "$icoDir\macOS_Videos.ico")
+} catch {}
+
 # 2. Remove custom Icon values from FolderDescriptions
 Write-Host "  [2/5] Restoring default Windows folder descriptions..." -ForegroundColor Yellow
 $folderGuids = @(
