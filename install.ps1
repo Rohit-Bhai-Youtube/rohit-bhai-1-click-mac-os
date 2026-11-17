@@ -1297,7 +1297,6 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
     & $WindhawkCli mod disable mac-island-dock --yes 2>$null
     Start-Sleep -Milliseconds 400
     & $WindhawkCli mod enable mac-island-dock --yes 2>$null
-    Stop-Process -Name windhawk-mod -Force -ErrorAction SilentlyContinue
 
 } elseif ($windhawkExe -and (Test-Path $windhawkExe)) {
     Write-Host "  [*] Activating all 8 mods directly via Registry injection..." -ForegroundColor Yellow

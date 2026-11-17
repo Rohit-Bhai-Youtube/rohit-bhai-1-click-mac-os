@@ -196,7 +196,7 @@ try {
 # -------------------------------------------------------------------------
 Write-Host "`n[4/8] Restoring Windows Default Folder & System Icons..." -ForegroundColor Cyan
 try {
-    # Remove Shell Icons overrides using .NET and native commands
+    # Remove Shell Icons overrides using .NET and native commands across 64-bit and 32-bit registry
     try {
         $expKey = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey("SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer", $true)
         if ($expKey) {
@@ -218,8 +218,11 @@ try {
 
     Remove-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item -Path "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" -Recurse -Force -ErrorAction SilentlyContinue
-    & reg.exe delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" /f 2>$null
-    & reg.exe delete "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" /f 2>$null
+    Remove-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" -Recurse -Force -ErrorAction SilentlyContinue
+    & reg.exe delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" /f /reg:64 2>$null
+    & reg.exe delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" /f /reg:32 2>$null
+    & reg.exe delete "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" /f /reg:64 2>$null
+    & reg.exe delete "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" /f /reg:32 2>$null
     & reg.exe delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" /f 2>$null
 
     # Remove custom CLSID overrides in HKCU Classes
@@ -235,49 +238,54 @@ try {
         & reg.exe delete "$cls" /f 2>$null
     }
 
-    # Delete custom Icon value from FolderDescriptions so Windows defaults kick in
-    $folderGuids = @(
-        "{374DE290-123F-4565-9164-39C4925E467B}",
-        "{7d83ee9b-2244-4e70-b1f5-5393042af1e4}",
-        "{FDD39AD0-238F-46AF-ADB4-6C85480369C7}",
-        "{f42ee2d3-909f-4907-8871-4c22fc0bf756}",
-        "{33E28130-4E1E-4676-835A-98395C3BC3BB}",
-        "{0ddd0157-5467-4334-96c9-78ec10e39588}",
-        "{0ddd015d-b06c-45d5-8c4c-f59713854639}",
-        "{4BD8D571-6D19-48D3-BE97-422220080E43}",
-        "{a0c69a99-21c8-4671-8703-7934162fbe1d}",
-        "{a0c69a99-21c8-4671-8703-7934162fef1d}",
-        "{18989B1D-99B5-455B-841C-AB7C74E4DDFC}",
-        "{35286161-5079-4140-9a09-7b505a4f2791}",
-        "{35286161-052a-4736-ac15-41e990f2430e}",
-        "{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}"
-    )
-    foreach ($g in $folderGuids) {
-        & reg.exe delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\$g" /v "Icon" /f 2>$null
+    # Delete custom Icon value from all FolderDescriptions so Windows defaults kick in
+    $fdPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions"
+    if (Test-Path $fdPath) {
+        Get-ChildItem -Path $fdPath -ErrorAction SilentlyContinue | ForEach-Object {
+            $subPath = $_.PSPath
+            if (Get-ItemProperty -Path $subPath -Name "Icon" -ErrorAction SilentlyContinue) {
+                Remove-ItemProperty -Path $subPath -Name "Icon" -Force -ErrorAction SilentlyContinue
+            }
+        }
     }
 
-    # Clean custom desktop.ini in user profile folders
+    # Clean custom desktop.ini across ALL user profile directories and root
     $userDirs = @(
+        $env:USERPROFILE,
+        [Environment]::GetFolderPath('Desktop'),
+        [Environment]::GetFolderPath('MyDocuments'),
+        [Environment]::GetFolderPath('MyPictures'),
+        [Environment]::GetFolderPath('MyMusic'),
+        [Environment]::GetFolderPath('MyVideos'),
         "$env:USERPROFILE\Downloads",
-        "$env:USERPROFILE\Documents",
-        "$env:USERPROFILE\Pictures",
-        "$env:USERPROFILE\Music",
-        "$env:USERPROFILE\Videos",
-        "$env:USERPROFILE\Desktop",
-        "$env:USERPROFILE\OneDrive\Downloads",
-        "$env:USERPROFILE\OneDrive\Documents",
-        "$env:USERPROFILE\OneDrive\Pictures",
-        "$env:USERPROFILE\OneDrive\Desktop"
+        "$env:USERPROFILE\OneDrive"
     )
+    if (Test-Path $env:USERPROFILE) {
+        $subDirs = Get-ChildItem -Path $env:USERPROFILE -Directory -Force -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName
+        if ($subDirs) { $userDirs += $subDirs }
+    }
+    if (Test-Path "$env:USERPROFILE\OneDrive") {
+        $odDirs = Get-ChildItem -Path "$env:USERPROFILE\OneDrive" -Directory -Force -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName
+        if ($odDirs) { $userDirs += $odDirs }
+    }
+    $userDirs = $userDirs | Select-Object -Unique
+
     foreach ($d in $userDirs) {
-        if (Test-Path $d) {
+        if ($d -and (Test-Path -LiteralPath $d)) {
             $ini = Join-Path $d "desktop.ini"
-            if (Test-Path $ini) {
-                attrib -h -s -r "$ini" 2>$null
-                $content = Get-Content -LiteralPath $ini -Raw -ErrorAction SilentlyContinue
-                if ($content -match "RohitBhaiMacOS|Finder|macOS|Sonoma") {
-                    Remove-Item -LiteralPath $ini -Force -ErrorAction SilentlyContinue
-                }
+            if (Test-Path -LiteralPath $ini) {
+                try {
+                    $item = Get-Item -LiteralPath $ini -Force -ErrorAction SilentlyContinue
+                    if ($item) {
+                        $item.Attributes = 'Normal'
+                        $content = Get-Content -LiteralPath $ini -Raw -ErrorAction SilentlyContinue
+                        if ($content -match "RohitBhaiMacOS|Finder|macOS|Sonoma|\.ico") {
+                            Remove-Item -LiteralPath $ini -Force -ErrorAction SilentlyContinue
+                        } else {
+                            $item.Attributes = 'Hidden, System'
+                        }
+                    }
+                } catch {}
             }
         }
     }
@@ -430,11 +438,24 @@ public static class MacAppShortcutHelper {
         "Activity Monitor.lnk"
     )
     foreach ($scName in $uwpShortcutsToRemove) {
-        foreach ($base in @($userStartDir, $allStartDir)) {
+        foreach ($base in @($taskbarDir, $userStartDir, $allStartDir)) {
             $p = Join-Path $base $scName
             if (Test-Path $p) {
                 Remove-Item -LiteralPath $p -Force -ErrorAction SilentlyContinue
             }
+        }
+    }
+
+    # Clean any orphaned taskbar shortcuts pointing to RohitBhaiMacOS
+    if (Test-Path $taskbarDir) {
+        $wsh = New-Object -ComObject WScript.Shell
+        Get-ChildItem -Path $taskbarDir -Filter "*.lnk" -ErrorAction SilentlyContinue | ForEach-Object {
+            try {
+                $sc = $wsh.CreateShortcut($_.FullName)
+                if ($sc.TargetPath -like "*RohitBhaiMacOS*" -or $sc.IconLocation -like "*RohitBhaiMacOS*") {
+                    Remove-Item -LiteralPath $_.FullName -Force -ErrorAction SilentlyContinue
+                }
+            } catch {}
         }
     }
 
@@ -644,6 +665,14 @@ try {
     if ($restoredWall) {
         $transcoded = "$env:APPDATA\Microsoft\Windows\Themes\TranscodedWallpaper"
         Copy-Item -Path $restoredWall -Destination $transcoded -Force -ErrorAction SilentlyContinue
+        Copy-Item -Path $restoredWall -Destination "$env:APPDATA\Microsoft\Windows\Themes\Transcoded_000" -Force -ErrorAction SilentlyContinue
+        if (Test-Path "$env:APPDATA\Microsoft\Windows\Themes\TranscodedWallpaperCache") {
+            Get-ChildItem -Path "$env:APPDATA\Microsoft\Windows\Themes\TranscodedWallpaperCache" -Filter "TranscodedWallpaper_*" -File -ErrorAction SilentlyContinue | ForEach-Object {
+                if (-not $_.Name.EndsWith(".meta")) {
+                    Copy-Item -Path $restoredWall -Destination $_.FullName -Force -ErrorAction SilentlyContinue
+                }
+            }
+        }
 
         Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name 'Wallpaper' -Value $restoredWall -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name 'WallpaperStyle' -Value '10' -Force -ErrorAction SilentlyContinue
@@ -664,125 +693,17 @@ public class Win32RestoreWall {
 }
 
 # -------------------------------------------------------------------------
-# Step 8: Clean AppData Directory & Nuclear Rebuild of Windows Icon Cache
+# Step 8: Clean AppData Directory & Rebuild Windows Icon Cache
 # -------------------------------------------------------------------------
 Write-Host "`n[8/8] Rebuilding Windows Icon Cache & Refreshing Explorer & Start Menu..." -ForegroundColor Cyan
 
-# 1. Remove RohitBhaiMacOS data directory safely
+# 1. Clean AppData directory
 $appDir = "$env:LOCALAPPDATA\RohitBhaiMacOS"
 if (Test-Path $appDir) {
-    # Check if Shell Icons still points to RohitBhaiMacOS
-    $hklmStillHas = $false
-    try {
-        $regCheck = & reg.exe query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" 2>$null
-        if ($regCheck -and ($regCheck -match "RohitBhaiMacOS")) {
-            $hklmStillHas = $true
-        }
-    } catch {}
-
-    if ($hklmStillHas) {
-        # Fallback: populate with 4K Ultra HD multi-resolution Windows 11 icons so folders are NEVER blank
-        $icoDir = Join-Path $appDir "Icons"
-        New-Item -ItemType Directory -Path $icoDir -Force | Out-Null
-        $imageres = Join-Path ([Environment]::GetFolderPath('System')) "imageres.dll"
-        try {
-            Add-Type -TypeDefinition @"
-using System;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.IO;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
-
-public class MultiResIcoUninstaller {
-    [DllImport("user32.dll", CharSet = CharSet.Auto)]
-    public static extern int PrivateExtractIcons(
-        string lpszFile, int nIconIndex, int cxIcon, int cyIcon,
-        IntPtr[] phicon, int[] piconid, int nIcons, int flags
-    );
-
-    [DllImport("user32.dll")]
-    public static extern bool DestroyIcon(IntPtr hIcon);
-
-    public static void Save(string dllPath, int iconIndex, string outIcoPath) {
-        int[] sizes = new int[] { 16, 24, 32, 48, 64, 128, 256 };
-        List<byte[]> pngBuffers = new List<byte[]>();
-        List<int> validSizes = new List<int>();
-
-        foreach (int sz in sizes) {
-            IntPtr[] ph = new IntPtr[1];
-            int[] pid = new int[1];
-            int c = PrivateExtractIcons(dllPath, iconIndex, sz, sz, ph, pid, 1, 0);
-            if (c > 0 && ph[0] != IntPtr.Zero) {
-                using (Icon ico = Icon.FromHandle(ph[0])) {
-                    using (Bitmap bmp = ico.ToBitmap()) {
-                        using (MemoryStream ms = new MemoryStream()) {
-                            bmp.Save(ms, ImageFormat.Png);
-                            pngBuffers.Add(ms.ToArray());
-                            validSizes.Add(sz);
-                        }
-                    }
-                }
-                DestroyIcon(ph[0]);
-            }
-        }
-
-        if (pngBuffers.Count == 0) return;
-
-        using (MemoryStream msOut = new MemoryStream()) {
-            using (BinaryWriter bw = new BinaryWriter(msOut)) {
-                bw.Write((short)0);
-                bw.Write((short)1);
-                bw.Write((short)pngBuffers.Count);
-
-                int offset = 6 + (16 * pngBuffers.Count);
-                for (int i = 0; i < pngBuffers.Count; i++) {
-                    int sz = validSizes[i];
-                    byte bSz = (byte)(sz == 256 ? 0 : sz);
-                    bw.Write(bSz);
-                    bw.Write(bSz);
-                    bw.Write((byte)0);
-                    bw.Write((byte)0);
-                    bw.Write((short)1);
-                    bw.Write((short)32);
-                    bw.Write((int)pngBuffers[i].Length);
-                    bw.Write((int)offset);
-                    offset += pngBuffers[i].Length;
-                }
-
-                for (int i = 0; i < pngBuffers.Count; i++) {
-                    bw.Write(pngBuffers[i]);
-                }
-            }
-            File.WriteAllBytes(outIcoPath, msOut.ToArray());
-        }
-    }
-}
-"@ -ReferencedAssemblies System.Drawing -ErrorAction SilentlyContinue
-            [MultiResIcoUninstaller]::Save($imageres, 3, "$icoDir\macOS_Folder.ico")
-            [MultiResIcoUninstaller]::Save($imageres, 4, "$icoDir\macOS_Folder_Open.ico")
-            [MultiResIcoUninstaller]::Save($imageres, 27, "$icoDir\macOS_Drive.ico")
-            [MultiResIcoUninstaller]::Save($imageres, 26, "$icoDir\macOS_Drive_System.ico")
-            [MultiResIcoUninstaller]::Save($imageres, 54, "$icoDir\macOS_Trash_Empty.ico")
-            [MultiResIcoUninstaller]::Save($imageres, 55, "$icoDir\macOS_Trash_Full.ico")
-            [MultiResIcoUninstaller]::Save($imageres, 110, "$icoDir\macOS_Desktop.ico")
-            [MultiResIcoUninstaller]::Save($imageres, 109, "$icoDir\macOS_ThisPC.ico")
-            [MultiResIcoUninstaller]::Save($imageres, 112, "$icoDir\macOS_Documents.ico")
-            [MultiResIcoUninstaller]::Save($imageres, 184, "$icoDir\macOS_Downloads.ico")
-            [MultiResIcoUninstaller]::Save($imageres, 108, "$icoDir\macOS_Music.ico")
-            [MultiResIcoUninstaller]::Save($imageres, 113, "$icoDir\macOS_Pictures.ico")
-            [MultiResIcoUninstaller]::Save($imageres, 18, "$icoDir\macOS_Videos.ico")
-        } catch {}
-    } else {
-        Remove-Item -Path $appDir -Recurse -Force -ErrorAction SilentlyContinue
-    }
+    Remove-Item -Path $appDir -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-# 2. Terminate explorer and shell host processes forcefully to release file locks
-taskkill.exe /F /IM explorer.exe /IM StartMenuExperienceHost.exe /IM SearchHost.exe /IM ShellExperienceHost.exe 2>$null
-Start-Sleep -Milliseconds 800
-
-# 3. Flush icon and thumbnail cache databases
+# 2. Reset icon and thumbnail cache databases
 $iconCache = "$env:LOCALAPPDATA\IconCache.db"
 if (Test-Path $iconCache) { Remove-Item $iconCache -Force -ErrorAction SilentlyContinue }
 
@@ -792,22 +713,13 @@ if (Test-Path $expCache) {
     Get-ChildItem -Path $expCache -Filter "*thumbcache*.db" -Force -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
 }
 
-# 4. Clear Start Menu & Search tile caches
-$startCacheDirs = @(
-    "$env:LOCALAPPDATA\Packages\Microsoft.Windows.StartMenuExperienceHost_cw5n1h2txyewy\LocalState",
-    "$env:LOCALAPPDATA\Packages\Microsoft.Windows.StartMenuExperienceHost_cw5n1h2txyewy\TempState",
-    "$env:LOCALAPPDATA\Packages\Microsoft.Windows.Search_cw5n1h2txyewy\LocalState",
-    "$env:LOCALAPPDATA\Packages\Microsoft.Windows.Search_cw5n1h2txyewy\TempState"
-)
-foreach ($scd in $startCacheDirs) {
-    if (Test-Path $scd) {
-        Get-ChildItem -Path $scd -Recurse -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
-    }
-}
-
-# 5. Relaunch Windows Explorer cleanly and rebuild system icon registry
+# 3. Cleanly restart Windows Explorer without breaking the Shell or XAML Islands
+Stop-Process -Name explorer -Force -ErrorAction SilentlyContinue
+Start-Sleep -Seconds 1
 Start-Process explorer.exe
 Start-Sleep -Seconds 2
+
+# 4. Notify Windows Shell of association and icon changes
 Add-Type -TypeDefinition @"
 using System;
 using System.Runtime.InteropServices;
@@ -817,6 +729,7 @@ public class Win32IconRefresh {
 }
 "@ -ErrorAction SilentlyContinue
 [Win32IconRefresh]::SHChangeNotify(0x08000000, 0x0000, [IntPtr]::Zero, [IntPtr]::Zero)
+& ie4uinit.exe -show 2>$null
 
 Write-Host ""
 Write-Host "========================================================================================" -ForegroundColor Green
