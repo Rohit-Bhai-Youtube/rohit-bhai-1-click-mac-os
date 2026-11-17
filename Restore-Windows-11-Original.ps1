@@ -27,23 +27,32 @@ Write-Host "       RESTORING ORIGINAL WINDOWS 11 FOLDERS, ICONS & TASKBAR (100% 
 Write-Host "========================================================================================" -ForegroundColor Cyan
 Write-Host ""
 
-# 1. Clean HKLM & HKCU Shell Icons via .NET (bypasses PowerShell argument-quoting quirks)
+# 1. Clean HKLM & HKCU Shell Icons via .NET & Native Reg
 Write-Host "  [1/5] Removing Shell Icons & Drive registry overrides..." -ForegroundColor Yellow
 try {
-    [Microsoft.Win32.Registry]::LocalMachine.DeleteSubKeyTree("SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons", $false)
-    [Microsoft.Win32.Registry]::LocalMachine.DeleteSubKeyTree("SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons", $false)
+    $expKey = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey("SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer", $true)
+    if ($expKey) {
+        try { $expKey.DeleteSubKeyTree("Shell Icons", $false) } catch {}
+        try { $expKey.DeleteSubKeyTree("DriveIcons", $false) } catch {}
+        $expKey.Close()
+    }
+    $wowKey = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey("SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer", $true)
+    if ($wowKey) {
+        try { $wowKey.DeleteSubKeyTree("Shell Icons", $false) } catch {}
+        $wowKey.Close()
+    }
     [Microsoft.Win32.Registry]::CurrentUser.DeleteSubKeyTree("Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons", $false)
-    [Microsoft.Win32.Registry]::LocalMachine.DeleteSubKeyTree("SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons", $false)
     [Microsoft.Win32.Registry]::CurrentUser.DeleteSubKeyTree("Software\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons", $false)
     [Microsoft.Win32.Registry]::CurrentUser.DeleteSubKeyTree("Software\Classes\Applications\Explorer.exe\Drives", $false)
     [Microsoft.Win32.Registry]::CurrentUser.DeleteSubKeyTree("Software\Classes\Folder\DefaultIcon", $false)
     [Microsoft.Win32.Registry]::CurrentUser.DeleteSubKeyTree("Software\Classes\Directory\DefaultIcon", $false)
 } catch {}
 
-# Also delete from cmd native reg just in case
-cmd.exe /c "reg delete `"HKLM\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons`" /f >nul 2>&1"
-cmd.exe /c "reg delete `"HKLM\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons`" /f >nul 2>&1"
-cmd.exe /c "reg delete `"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons`" /f >nul 2>&1"
+Remove-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -Path "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" -Recurse -Force -ErrorAction SilentlyContinue
+cmd.exe /c 'reg delete "HKLM\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" /f >nul 2>&1'
+cmd.exe /c 'reg delete "HKLM\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" /f >nul 2>&1'
+cmd.exe /c 'reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" /f >nul 2>&1'
 Write-Host "  [OK] Shell Icons overrides completely wiped!" -ForegroundColor Green
 
 # 2. Clean FolderDescriptions overrides via .NET

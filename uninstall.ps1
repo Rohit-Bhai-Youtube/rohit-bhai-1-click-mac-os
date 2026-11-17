@@ -196,24 +196,31 @@ try {
 # -------------------------------------------------------------------------
 Write-Host "`n[4/8] Restoring Windows Default Folder & System Icons..." -ForegroundColor Cyan
 try {
-    # Remove Shell Icons overrides using native reg.exe for guaranteed deletion
-    $shellIconsKeys = @(
-        "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons",
-        "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons",
-        "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons"
-    )
-    foreach ($k in $shellIconsKeys) {
-        & reg.exe delete "$k" /f 2>$null
-    }
+    # Remove Shell Icons overrides using .NET and native commands
+    try {
+        $expKey = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey("SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer", $true)
+        if ($expKey) {
+            try { $expKey.DeleteSubKeyTree("Shell Icons", $false) } catch {}
+            try { $expKey.DeleteSubKeyTree("DriveIcons", $false) } catch {}
+            $expKey.Close()
+        }
+        $wowKey = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey("SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer", $true)
+        if ($wowKey) {
+            try { $wowKey.DeleteSubKeyTree("Shell Icons", $false) } catch {}
+            $wowKey.Close()
+        }
+        [Microsoft.Win32.Registry]::CurrentUser.DeleteSubKeyTree("Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons", $false)
+        [Microsoft.Win32.Registry]::CurrentUser.DeleteSubKeyTree("Software\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons", $false)
+        [Microsoft.Win32.Registry]::CurrentUser.DeleteSubKeyTree("Software\Classes\Applications\Explorer.exe\Drives", $false)
+        [Microsoft.Win32.Registry]::CurrentUser.DeleteSubKeyTree("Software\Classes\Folder\DefaultIcon", $false)
+        [Microsoft.Win32.Registry]::CurrentUser.DeleteSubKeyTree("Software\Classes\Directory\DefaultIcon", $false)
+    } catch {}
 
-    # Remove HKCU Classes Folder overrides
-    & reg.exe delete "HKCU\Software\Classes\Folder\DefaultIcon" /f 2>$null
-    & reg.exe delete "HKCU\Software\Classes\Directory\DefaultIcon" /f 2>$null
-
-    # Remove DriveIcons overrides
-    & reg.exe delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons" /f 2>$null
-    & reg.exe delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons" /f 2>$null
-    & reg.exe delete "HKCU\Software\Classes\Applications\Explorer.exe\Drives" /f 2>$null
+    Remove-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -Path "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" -Recurse -Force -ErrorAction SilentlyContinue
+    cmd.exe /c 'reg delete "HKLM\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" /f >nul 2>&1'
+    cmd.exe /c 'reg delete "HKLM\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" /f >nul 2>&1'
+    cmd.exe /c 'reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" /f >nul 2>&1'
 
     # Remove custom CLSID overrides in HKCU Classes
     $customClsids = @(
