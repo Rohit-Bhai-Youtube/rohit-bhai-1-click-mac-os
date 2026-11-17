@@ -7706,7 +7706,53 @@ DWORD WINAPI BigIconThreadProc(LPVOID) {
                 }
                 return picture;
             };
-            HBITMAP bitmap = drawn(PinnedShortcutIconBitmap(appId, pixels));
+            HBITMAP bitmap = nullptr;
+
+            // Rohit Bhai Custom App Icon: ALWAYS use official Apple squircle icons for Explorer, Edge, Store, WhatsApp, etc.
+            WCHAR localAppData[MAX_PATH];
+            if (SUCCEEDED(SHGetFolderPathW(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, localAppData))) {
+                std::wstring customIconsDir = std::wstring(localAppData) + L"\\RohitBhaiMacOS\\Icons\\Apps\\";
+                std::wstring iconFile;
+                if (appId.find(L"WindowsStore") != std::wstring::npos || appId.find(L"AppStore") != std::wstring::npos) iconFile = L"AppStore.ico";
+                else if (appId.find(L"WhatsApp") != std::wstring::npos) iconFile = L"WhatsApp.ico";
+                else if (appId.find(L"MSEdge") != std::wstring::npos || appId.find(L"Edge") != std::wstring::npos) iconFile = L"Safari.ico";
+                else if (appId.find(L"Discord") != std::wstring::npos) iconFile = L"Discord.ico";
+                else if (appId.find(L"Telegram") != std::wstring::npos) iconFile = L"Telegram.ico";
+                else if (appId.find(L"Notepad") != std::wstring::npos) iconFile = L"Notes.ico";
+                else if (appId.find(L"Calculator") != std::wstring::npos) iconFile = L"Calculator.ico";
+                else if (appId.find(L"Photos") != std::wstring::npos) iconFile = L"Photos.ico";
+                else if (appId.find(L"ZuneMusic") != std::wstring::npos) iconFile = L"Music.ico";
+                else if (appId.find(L"Terminal") != std::wstring::npos) iconFile = L"Terminal.ico";
+                else if (appId.find(L"Explorer") != std::wstring::npos || appId.find(L"explorer") != std::wstring::npos) iconFile = L"Finder.ico";
+                
+                // Fallback check on window class / title if appId didn't match
+                if (iconFile.empty() && window) {
+                    WCHAR winText[256] = {0};
+                    GetWindowTextW(window, winText, ARRAYSIZE(winText));
+                    WCHAR className[256] = {0};
+                    GetClassNameW(window, className, ARRAYSIZE(className));
+                    std::wstring winTitle(winText);
+                    std::wstring cls(className);
+                    if (cls == L"CabinetWClass") iconFile = L"Finder.ico";
+                    else if (cls == L"Chrome_WidgetWin_1" && (winTitle.find(L"Edge") != std::wstring::npos || winTitle.find(L"Personal") != std::wstring::npos || winTitle.find(L"Work") != std::wstring::npos)) iconFile = L"Safari.ico";
+                    else if (cls == L"ApplicationFrameWindow" && (winTitle.find(L"Store") != std::wstring::npos)) iconFile = L"AppStore.ico";
+                    else if (cls.find(L"WhatsApp") != std::wstring::npos || winTitle.find(L"WhatsApp") != std::wstring::npos) iconFile = L"WhatsApp.ico";
+                    else if (cls == L"Notepad") iconFile = L"Notes.ico";
+                }
+
+                if (!iconFile.empty()) {
+                    std::wstring fullIco = customIconsDir + iconFile;
+                    HICON hIcon = nullptr;
+                    if (PrivateExtractIconsW(fullIco.c_str(), 0, pixels, pixels, &hIcon, nullptr, 1, 0) == 1 && hIcon) {
+                        bitmap = drawn(IconBitmap(hIcon));
+                        DestroyIcon(hIcon);
+                    }
+                }
+            }
+
+            if (!bitmap) {
+                bitmap = drawn(PinnedShortcutIconBitmap(appId, pixels));
+            }
             if (!bitmap) {
                 bitmap = drawn(LoadAppIconBitmap(nullptr, appId, pixels));
             }
@@ -7717,34 +7763,6 @@ DWORD WINAPI BigIconThreadProc(LPVOID) {
             // (None from the shell: its window's own, as the taskbar shows.)
             if (!bitmap) {
                 bitmap = drawn(AppWindowIconBitmap(appId, window, pixels));
-            }
-            // Rohit Bhai Custom App Icon Fallback: ensure official Apple squircle icons always show for AppStore, WhatsApp, Safari, etc.
-            if (!bitmap) {
-                WCHAR localAppData[MAX_PATH];
-                if (SUCCEEDED(SHGetFolderPathW(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, localAppData))) {
-                    std::wstring customIconsDir = std::wstring(localAppData) + L"\\RohitBhaiMacOS\\Icons\\Apps\\";
-                    std::wstring iconFile;
-                    if (appId.find(L"WindowsStore") != std::wstring::npos || appId.find(L"AppStore") != std::wstring::npos) iconFile = L"AppStore.ico";
-                    else if (appId.find(L"WhatsApp") != std::wstring::npos) iconFile = L"WhatsApp.ico";
-                    else if (appId.find(L"MSEdge") != std::wstring::npos || appId.find(L"Edge") != std::wstring::npos) iconFile = L"Safari.ico";
-                    else if (appId.find(L"Discord") != std::wstring::npos) iconFile = L"Discord.ico";
-                    else if (appId.find(L"Telegram") != std::wstring::npos) iconFile = L"Telegram.ico";
-                    else if (appId.find(L"Notepad") != std::wstring::npos) iconFile = L"Notes.ico";
-                    else if (appId.find(L"Calculator") != std::wstring::npos) iconFile = L"Calculator.ico";
-                    else if (appId.find(L"Photos") != std::wstring::npos) iconFile = L"Photos.ico";
-                    else if (appId.find(L"ZuneMusic") != std::wstring::npos) iconFile = L"Music.ico";
-                    else if (appId.find(L"Terminal") != std::wstring::npos) iconFile = L"Terminal.ico";
-                    else if (appId.find(L"Explorer") != std::wstring::npos) iconFile = L"Finder.ico";
-                    
-                    if (!iconFile.empty()) {
-                        std::wstring fullIco = customIconsDir + iconFile;
-                        HICON hIcon = nullptr;
-                        if (PrivateExtractIconsW(fullIco.c_str(), 0, pixels, pixels, &hIcon, nullptr, 1, 0) == 1 && hIcon) {
-                            bitmap = drawn(IconBitmap(hIcon));
-                            DestroyIcon(hIcon);
-                        }
-                    }
-                }
             }
             AcquireSRWLockExclusive(&g_bigIconJobsLock);
             auto it = std::find_if(
@@ -14043,6 +14061,36 @@ HBITMAP LoadAppIconBitmap(HWND hWnd, std::wstring appId, int size) {
 
     if (appId.empty()) {
         appId = GetWindowAppId(hWnd);
+    }
+
+    if (!appId.empty()) {
+        WCHAR localApp[MAX_PATH];
+        if (GetEnvironmentVariableW(L"LOCALAPPDATA", localApp, ARRAYSIZE(localApp))) {
+            std::wstring baseDir = std::wstring(localApp) + L"\\RohitBhaiMacOS\\Icons\\Apps\\";
+            std::wstring iconFile;
+            auto containsIgnoreCase = [](const std::wstring& str, const std::wstring& sub) {
+                if (sub.empty() || str.length() < sub.length()) return false;
+                auto it = std::search(str.begin(), str.end(), sub.begin(), sub.end(),
+                    [](wchar_t c1, wchar_t c2) { return towlower(c1) == towlower(c2); });
+                return it != str.end();
+            };
+
+            if (containsIgnoreCase(appId, L"WindowsStore") || containsIgnoreCase(appId, L"AppStore")) iconFile = baseDir + L"AppStore.png";
+            else if (containsIgnoreCase(appId, L"WhatsApp")) iconFile = baseDir + L"WhatsApp.png";
+            else if (containsIgnoreCase(appId, L"MSEdge") || containsIgnoreCase(appId, L"Edge")) iconFile = baseDir + L"Safari.png";
+            else if (containsIgnoreCase(appId, L"Discord")) iconFile = baseDir + L"Discord.png";
+            else if (containsIgnoreCase(appId, L"Telegram")) iconFile = baseDir + L"Telegram.png";
+            else if (containsIgnoreCase(appId, L"Notepad")) iconFile = baseDir + L"Notes.png";
+            else if (containsIgnoreCase(appId, L"Calculator")) iconFile = baseDir + L"Calculator.png";
+            else if (containsIgnoreCase(appId, L"Photos")) iconFile = baseDir + L"Photos.png";
+            else if (containsIgnoreCase(appId, L"ZuneMusic")) iconFile = baseDir + L"Music.png";
+            else if (containsIgnoreCase(appId, L"Terminal")) iconFile = baseDir + L"Terminal.png";
+            else if (containsIgnoreCase(appId, L"Explorer")) iconFile = baseDir + L"Finder.png";
+
+            if (!iconFile.empty() && (GetFileAttributesW(iconFile.c_str()) != INVALID_FILE_ATTRIBUTES)) {
+                return LoadPictureBitmap(iconFile.c_str(), size);
+            }
+        }
     }
     if (!appId.empty()) {
         SHCreateItemInKnownFolder(kFOLDERID_AppsFolder, 0, appId.c_str(),

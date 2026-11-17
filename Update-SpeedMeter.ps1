@@ -82,7 +82,7 @@ foreach ($p in $speedPaths) {
     Set-ItemProperty -Path $p -Name "showBox" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $p -Name "horizontalPosition" -Value 10 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $p -Name "rightOffset" -Value 16 -Type DWord -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $p -Name "verticalNudge" -Value 18 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $p -Name "verticalNudge" -Value 16 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $p -Name "updateIntervalMs" -Value 1000 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $p -Name "fontSize" -Value 15 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $p -Name "opacity" -Value 255 -Type DWord -Force -ErrorAction SilentlyContinue
@@ -97,7 +97,7 @@ if (Test-Path $WindhawkCli) {
     Write-Host "  $installOutput"
 
     # Enforce runtime settings
-    & $WindhawkCli mod settings set local@net-speed-taskbar-apple theme=Chart showBox=0 verticalNudge=18 rightOffset=16 fontSize=15 opacity=255 2>$null
+    & $WindhawkCli mod settings set local@net-speed-taskbar-apple theme=Chart showBox=0 verticalNudge=16 rightOffset=16 fontSize=15 opacity=255 2>$null
     
     # 4. Reload mod so new DLL is injected immediately
     Write-Host "  [4/4] Reloading speed meter live on taskbar..." -ForegroundColor Yellow

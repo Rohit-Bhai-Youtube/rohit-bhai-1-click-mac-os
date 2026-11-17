@@ -188,7 +188,7 @@
                                       "showBox":  0,
                                       "horizontalPosition":  10,
                                       "rightOffset":  16,
-                                      "verticalNudge":  18,
+                                      "verticalNudge":  16,
                                       "updateIntervalMs":  1000,
                                       "fontSize":  15,
                                       "opacity":  255

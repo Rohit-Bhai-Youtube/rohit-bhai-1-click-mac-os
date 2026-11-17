@@ -745,6 +745,10 @@ try {
 
         # Apply macOS Blue folder icon to non-system root directories on C:\
         if (Test-Path "C:\") {
+            try {
+                takeown.exe /f "C:\PerfLogs" /a 2>$null
+                icacls.exe "C:\PerfLogs" /grant Administrators:F /q 2>$null
+            } catch {}
             Get-ChildItem -Path "C:\" -Directory -Force -ErrorAction SilentlyContinue | ForEach-Object {
                 $n = $_.Name
                 if ($n -notin @("Windows", "Program Files", "Program Files (x86)", "Users", "System Volume Information", "`$Recycle.Bin", "`$WinREAgent", "Documents and Settings")) {
@@ -1312,7 +1316,7 @@ function Set-AppleNetSpeedStorage {
         Set-RegDword $key "showBox" 0
         Set-RegDword $key "horizontalPosition" 10
         Set-RegDword $key "rightOffset" 16
-        Set-RegDword $key "verticalNudge" 18
+        Set-RegDword $key "verticalNudge" 16
         Set-RegDword $key "updateIntervalMs" 1000
         Set-RegDword $key "fontSize" 15
         Set-RegDword $key "opacity" 255
@@ -1396,10 +1400,11 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
         & $WindhawkCli mod compile mac-island-dock 2>$null
     }
 
-    # Ensure Liquid Glass styling everywhere across Windhawk mods
+    # Ensure Liquid Glass styling everywhere across Windhawk mods & set net speed verticalNudge to 16
     & $WindhawkCli mod settings set windows-11-notification-center-styler theme=LiquidGlass 2>$null
     & $WindhawkCli mod settings set windows-11-start-menu-styler theme=LiquidGlass 2>$null
     & $WindhawkCli mod settings set mac-island-dock "dock.backgroundOpacity=35" "dock.cornerRadius=24" "dock.bottomGap=4" 2>$null
+    & $WindhawkCli mod settings set local@net-speed-taskbar-apple "verticalNudge=16" 2>$null
 
     # Re-apply LocalStorage & restart mac-island-dock so it immediately docks to top-right
     Set-MacIslandStorage
