@@ -729,7 +729,10 @@ public class Win32IconRefresh {
 }
 "@ -ErrorAction SilentlyContinue
 [Win32IconRefresh]::SHChangeNotify(0x08000000, 0x0000, [IntPtr]::Zero, [IntPtr]::Zero)
-& ie4uinit.exe -show 2>$null
+try {
+    $ie4 = Join-Path ([Environment]::GetFolderPath('System')) "ie4uinit.exe"
+    if (Test-Path $ie4) { & $ie4 -show 2>$null }
+} catch {}
 
 Write-Host ""
 Write-Host "========================================================================================" -ForegroundColor Green

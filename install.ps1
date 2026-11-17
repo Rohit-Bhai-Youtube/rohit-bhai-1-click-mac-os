@@ -720,7 +720,10 @@ try {
     $iconCache = "$env:LOCALAPPDATA\IconCache.db"
     if (Test-Path $iconCache) { Remove-Item $iconCache -Force -ErrorAction SilentlyContinue }
     Get-ChildItem -Path "$env:LOCALAPPDATA\Microsoft\Windows\Explorer" -Filter "*cache*.db" -Force -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
-    & ie4uinit.exe -show 2>$null
+    try {
+        $ie4 = Join-Path ([Environment]::GetFolderPath('System')) "ie4uinit.exe"
+        if (Test-Path $ie4) { & $ie4 -show 2>$null }
+    } catch {}
 
     Write-Host "  [OK] Apple macOS File Explorer & Folder Icons applied!" -ForegroundColor Green
 } catch {
