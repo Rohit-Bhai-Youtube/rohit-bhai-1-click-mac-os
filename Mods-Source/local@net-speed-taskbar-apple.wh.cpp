@@ -73,10 +73,10 @@ worth knowing:
   $description: "Enable to wrap the speed meter in a rounded square box with border; disable for a clean, direct floating look without any box."
 - horizontalPosition: 10
   $name: Horizontal position (%)
-- rightOffset: 12
+- rightOffset: 16
   $name: Right anchor (px)
   $description: "Anchor the widget's right edge this many pixels from the taskbar's right edge; 0 uses Horizontal position percent instead."
-- verticalNudge: 6
+- verticalNudge: 8
   $name: Vertical nudge (px)
 - updateIntervalMs: 1000
   $name: Update interval (ms)
@@ -297,7 +297,7 @@ void GetThemeDimensions(const std::wstring& theme, int fontSize, int& width, int
     if (theme == L"Top-Down") {
         width = 132; height = 36;
     } else if (theme == L"Chart") {
-        width = 220; height = 44;
+        width = 210; height = 38;
     } else if (theme == L"Minimal") {
         width = 235; height = 20;
     } else {
@@ -564,14 +564,14 @@ void PaintWidgetContent(Graphics& graphics, int width, int height, const Setting
         float downLabelW = LabelWidth(kDownLabel, g_gdi->labelFont.get()) + 3 * sc;
         float upLabelW = LabelWidth(kUpLabel, g_gdi->labelFont.get()) + 3 * sc;
 
-        RectF chartDown(8.0f * sc, 6.0f * sc, chartW, halfH - 8.0f * sc);
+        RectF chartDown(6.0f * sc, 3.0f * sc, chartW, halfH - 5.0f * sc);
         DrawSparkline(graphics, g_gdi->downChartPen.get(), g_gdi->chartShadowPen.get(), g_downHistory, g_historyIdx, chartDown, sc);
         graphics.DrawString(kDownLabel, -1, g_gdi->labelFont.get(), RectF(textX + shadow, shadow, downLabelW, halfH), &format, g_gdi->shadowBrush.get());
         graphics.DrawString(strDown.c_str(), -1, g_gdi->font.get(), RectF(textX + downLabelW + shadow, shadow, w - textX - downLabelW, halfH), &format, g_gdi->shadowBrush.get());
         graphics.DrawString(kDownLabel, -1, g_gdi->labelFont.get(), RectF(textX, 0, downLabelW, halfH), &format, g_gdi->downBrush.get());
         graphics.DrawString(strDown.c_str(), -1, g_gdi->font.get(), RectF(textX + downLabelW, 0, w - textX - downLabelW, halfH), &format, g_gdi->downBrush.get());
 
-        RectF chartUp(8.0f * sc, halfH + 2.0f * sc, chartW, halfH - 8.0f * sc);
+        RectF chartUp(6.0f * sc, halfH + 2.0f * sc, chartW, halfH - 5.0f * sc);
         DrawSparkline(graphics, g_gdi->upChartPen.get(), g_gdi->chartShadowPen.get(), g_upHistory, g_historyIdx, chartUp, sc);
         graphics.DrawString(kUpLabel, -1, g_gdi->labelFont.get(), RectF(textX + shadow, halfH + shadow, upLabelW, halfH), &format, g_gdi->shadowBrush.get());
         graphics.DrawString(strUp.c_str(), -1, g_gdi->font.get(), RectF(textX + upLabelW + shadow, halfH + shadow, w - textX - upLabelW, halfH), &format, g_gdi->shadowBrush.get());
@@ -694,6 +694,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                     PostMessageW(hWnd, WM_CLOSE, 0, 0);
                     return 0;
                 }
+                LoadSettings();
                 Settings s = GetSafeSettings();
                 RepositionWidget(hWnd, s);
                 RenderWidget(hWnd, s.opacity);
