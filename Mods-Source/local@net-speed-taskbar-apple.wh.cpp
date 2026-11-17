@@ -68,6 +68,9 @@ worth knowing:
     - Top-Down: Top-Down (Compact)
     - Chart: Chart (Sparklines)
     - Minimal: Minimal (Text Only)
+- showBox: false
+  $name: Show Box/Square Background
+  $description: "Enable to wrap the speed meter in a rounded square box with border; disable for a clean, direct floating look without any box."
 - horizontalPosition: 10
   $name: Horizontal position (%)
 - rightOffset: 0
@@ -152,6 +155,7 @@ typedef HWND(WINAPI* CreateWindowInBand_t)(
 
 struct Settings {
     std::wstring theme;
+    bool showBox;
     int horizontalPosition;
     int rightOffset;
     int verticalNudge;
@@ -237,6 +241,7 @@ Settings GetSafeSettings() {
 void LoadSettings() {
     std::lock_guard<std::mutex> lock(g_settingsMutex);
     g_settings.theme = WindhawkUtils::StringSetting::make(L"theme").get();
+    g_settings.showBox = Wh_GetIntSetting(L"showBox") != 0;
     g_settings.horizontalPosition = std::clamp((int)Wh_GetIntSetting(L"horizontalPosition"), 0, 100);
     g_settings.rightOffset = std::clamp((int)Wh_GetIntSetting(L"rightOffset"), 0, 10000);
     g_settings.verticalNudge = std::clamp((int)Wh_GetIntSetting(L"verticalNudge"), -1000, 1000);
@@ -485,7 +490,7 @@ void PaintWidgetContent(Graphics& graphics, int width, int height, const Setting
     RectF bounds(0.0f, 0.0f, (float)width - 1.0f, (float)height - 1.0f);
     float sc = dpi / 96.0f;
 
-    if (s.theme != L"Minimal") {
+    if (s.showBox && s.theme != L"Minimal") {
         GraphicsPath path;
         AddRoundRect(path, bounds, 8.0f * sc);
         graphics.FillPath(g_gdi->bgBrush.get(), &path);
@@ -512,7 +517,7 @@ void PaintWidgetContent(Graphics& graphics, int width, int height, const Setting
         format.SetAlignment(StringAlignmentCenter);
         format.SetLineAlignment(StringAlignmentCenter);
         float halfW = w / 2.0f;
-        if (g_gdi->dividerPen) graphics.DrawLine(g_gdi->dividerPen.get(), halfW, h * 0.2f, halfW, h * 0.8f);
+        if (s.showBox && g_gdi->dividerPen) graphics.DrawLine(g_gdi->dividerPen.get(), halfW, h * 0.2f, halfW, h * 0.8f);
 
         graphics.DrawString(kDownLabel, -1, g_gdi->labelFont.get(), RectF(0, 0, halfW, h / 2), &format, g_gdi->downBrush.get());
         graphics.DrawString(strDown.c_str(), -1, g_gdi->font.get(), RectF(0, h / 2, halfW, h / 2 - 2 * sc), &format, g_gdi->downBrush.get());
@@ -524,13 +529,18 @@ void PaintWidgetContent(Graphics& graphics, int width, int height, const Setting
         format.SetAlignment(StringAlignmentNear);
         format.SetLineAlignment(StringAlignmentCenter);
         float halfH = h / 2.0f;
+        float shadow = 1 * sc;
 
         float downLabelW = LabelWidth(kDownLabel, g_gdi->labelFont.get()) + 4 * sc;
         float upLabelW = LabelWidth(kUpLabel, g_gdi->labelFont.get()) + 4 * sc;
 
+        graphics.DrawString(kDownLabel, -1, g_gdi->labelFont.get(), RectF(6 * sc + shadow, shadow, downLabelW, halfH), &format, g_gdi->shadowBrush.get());
+        graphics.DrawString(strDown.c_str(), -1, g_gdi->font.get(), RectF(6 * sc + downLabelW + shadow, shadow, w - 6 * sc - downLabelW, halfH), &format, g_gdi->shadowBrush.get());
         graphics.DrawString(kDownLabel, -1, g_gdi->labelFont.get(), RectF(6 * sc, 0, downLabelW, halfH), &format, g_gdi->downBrush.get());
         graphics.DrawString(strDown.c_str(), -1, g_gdi->font.get(), RectF(6 * sc + downLabelW, 0, w - 6 * sc - downLabelW, halfH), &format, g_gdi->downBrush.get());
 
+        graphics.DrawString(kUpLabel, -1, g_gdi->labelFont.get(), RectF(6 * sc + shadow, halfH + shadow, upLabelW, halfH), &format, g_gdi->shadowBrush.get());
+        graphics.DrawString(strUp.c_str(), -1, g_gdi->font.get(), RectF(6 * sc + upLabelW + shadow, halfH + shadow, w - 6 * sc - upLabelW, halfH), &format, g_gdi->shadowBrush.get());
         graphics.DrawString(kUpLabel, -1, g_gdi->labelFont.get(), RectF(6 * sc, halfH, upLabelW, halfH), &format, g_gdi->upBrush.get());
         graphics.DrawString(strUp.c_str(), -1, g_gdi->font.get(), RectF(6 * sc + upLabelW, halfH, w - 6 * sc - upLabelW, halfH), &format, g_gdi->upBrush.get());
 
@@ -540,17 +550,22 @@ void PaintWidgetContent(Graphics& graphics, int width, int height, const Setting
         float halfH = h / 2.0f;
         float chartW = w * 0.34f;
         float textX = chartW + 14 * sc;
+        float shadow = 1 * sc;
 
         float downLabelW = LabelWidth(kDownLabel, g_gdi->labelFont.get()) + 3 * sc;
         float upLabelW = LabelWidth(kUpLabel, g_gdi->labelFont.get()) + 3 * sc;
 
         RectF chartDown(8.0f * sc, 6.0f * sc, chartW, halfH - 8.0f * sc);
         DrawSparkline(graphics, g_gdi->downChartPen.get(), g_downHistory, g_historyIdx, chartDown);
+        graphics.DrawString(kDownLabel, -1, g_gdi->labelFont.get(), RectF(textX + shadow, shadow, downLabelW, halfH), &format, g_gdi->shadowBrush.get());
+        graphics.DrawString(strDown.c_str(), -1, g_gdi->font.get(), RectF(textX + downLabelW + shadow, shadow, w - textX - downLabelW, halfH), &format, g_gdi->shadowBrush.get());
         graphics.DrawString(kDownLabel, -1, g_gdi->labelFont.get(), RectF(textX, 0, downLabelW, halfH), &format, g_gdi->downBrush.get());
         graphics.DrawString(strDown.c_str(), -1, g_gdi->font.get(), RectF(textX + downLabelW, 0, w - textX - downLabelW, halfH), &format, g_gdi->downBrush.get());
 
         RectF chartUp(8.0f * sc, halfH + 2.0f * sc, chartW, halfH - 8.0f * sc);
         DrawSparkline(graphics, g_gdi->upChartPen.get(), g_upHistory, g_historyIdx, chartUp);
+        graphics.DrawString(kUpLabel, -1, g_gdi->labelFont.get(), RectF(textX + shadow, halfH + shadow, upLabelW, halfH), &format, g_gdi->shadowBrush.get());
+        graphics.DrawString(strUp.c_str(), -1, g_gdi->font.get(), RectF(textX + upLabelW + shadow, halfH + shadow, w - textX - upLabelW, halfH), &format, g_gdi->shadowBrush.get());
         graphics.DrawString(kUpLabel, -1, g_gdi->labelFont.get(), RectF(textX, halfH, upLabelW, halfH), &format, g_gdi->upBrush.get());
         graphics.DrawString(strUp.c_str(), -1, g_gdi->font.get(), RectF(textX + upLabelW, halfH, w - textX - upLabelW, halfH), &format, g_gdi->upBrush.get());
 

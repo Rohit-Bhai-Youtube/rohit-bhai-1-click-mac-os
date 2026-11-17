@@ -1100,9 +1100,29 @@ function Set-MacIslandStorage {
     }
 }
 
-# 1. Pre-seed LocalStorage into Registry BEFORE starting Windhawk/importing mods
-# This ensures that whenever mac-island-dock initializes, it reads the top-right bar geometry directly!
+function Set-AppleNetSpeedStorage {
+    $speedPaths = @(
+        "HKLM:\SOFTWARE\Windhawk\Engine\Mods\local@net-speed-taskbar-apple\Settings",
+        "HKLM:\SOFTWARE\WOW6432Node\Windhawk\Engine\Mods\local@net-speed-taskbar-apple\Settings"
+    )
+    foreach ($p in $speedPaths) {
+        if (-not (Test-Path $p)) { New-Item -Path $p -Force | Out-Null }
+        # Frameless Apple Speed Meter: Direct floating text with zero bounding box/square
+        Set-ItemProperty -Path $p -Name "theme" -Value "Minimal" -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "showBox" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "horizontalPosition" -Value 10 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "rightOffset" -Value 6 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "verticalNudge" -Value 15 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "updateIntervalMs" -Value 1000 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "fontSize" -Value 14 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "opacity" -Value 255 -Type DWord -Force -ErrorAction SilentlyContinue
+    }
+}
+
+# 1. Pre-seed LocalStorage & NetSpeed into Registry BEFORE starting Windhawk/importing mods
+# This ensures that whenever mac-island-dock & net-speed initialize, they read the top-right bar geometry & frameless look directly!
 Set-MacIslandStorage
+Set-AppleNetSpeedStorage
 
 if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
     # Ensure Windhawk background service is running
@@ -1138,6 +1158,7 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
 
     # Re-apply LocalStorage & restart mac-island-dock so it immediately docks to top-right
     Set-MacIslandStorage
+    Set-AppleNetSpeedStorage
     & $WindhawkCli mod disable mac-island-dock --yes 2>$null
     Start-Sleep -Milliseconds 400
     & $WindhawkCli mod enable mac-island-dock --yes 2>$null
@@ -1150,6 +1171,7 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
         Write-Host "  [OK] All 8 mods injected into Windhawk Engine!" -ForegroundColor Green
     }
     Set-MacIslandStorage
+    Set-AppleNetSpeedStorage
 }
 
 if ($windhawkExe -or $WindhawkCli) {
