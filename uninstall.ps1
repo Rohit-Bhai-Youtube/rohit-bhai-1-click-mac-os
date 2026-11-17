@@ -196,70 +196,57 @@ try {
 # -------------------------------------------------------------------------
 Write-Host "`n[4/8] Restoring Windows Default Folder & System Icons..." -ForegroundColor Cyan
 try {
-    # Remove Shell Icons overrides
+    # Remove Shell Icons overrides using native reg.exe for guaranteed deletion
     $shellIconsKeys = @(
-        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons",
-        "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons",
-        "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons"
+        "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons",
+        "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons",
+        "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons"
     )
     foreach ($k in $shellIconsKeys) {
-        if (Test-Path $k) {
-            Remove-Item -Path $k -Recurse -Force -ErrorAction SilentlyContinue
-        }
+        & reg.exe delete "$k" /f 2>$null
     }
 
     # Remove HKCU Classes Folder overrides
-    foreach ($c in @("HKCU:\Software\Classes\Folder\DefaultIcon", "HKCU:\Software\Classes\Directory\DefaultIcon")) {
-        if (Test-Path $c) {
-            Remove-Item -Path $c -Recurse -Force -ErrorAction SilentlyContinue
-        }
-    }
+    & reg.exe delete "HKCU\Software\Classes\Folder\DefaultIcon" /f 2>$null
+    & reg.exe delete "HKCU\Software\Classes\Directory\DefaultIcon" /f 2>$null
+
+    # Remove DriveIcons overrides
+    & reg.exe delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons" /f 2>$null
+    & reg.exe delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons" /f 2>$null
+    & reg.exe delete "HKCU\Software\Classes\Applications\Explorer.exe\Drives" /f 2>$null
 
     # Remove custom CLSID overrides in HKCU Classes
     $customClsids = @(
-        "HKCU:\Software\Classes\CLSID\{645FF040-5081-101B-9F08-00AA002F954E}",
-        "HKCU:\Software\Classes\CLSID\{20D04FE0-3AEA-1069-A2D8-08002B30309D}",
-        "HKCU:\Software\Classes\CLSID\{59031A47-3F72-44A7-89C5-5595FE6B30EE}",
-        "HKCU:\Software\Classes\CLSID\{F02C1A0D-BE21-4350-88B0-7367FC96EF3C}"
+        "HKCU\Software\Classes\CLSID\{645FF040-5081-101B-9F08-00AA002F954E}",
+        "HKCU\Software\Classes\CLSID\{20D04FE0-3AEA-1069-A2D8-08002B30309D}",
+        "HKCU\Software\Classes\CLSID\{59031A47-3F72-44A7-89C5-5595FE6B30EE}",
+        "HKCU\Software\Classes\CLSID\{F02C1A0D-BE21-4350-88B0-7367FC96EF3C}",
+        "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\CLSID\{645FF040-5081-101B-9F08-00AA002F954E}",
+        "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\CLSID\{20D04FE0-3AEA-1069-A2D8-08002B30309D}"
     )
     foreach ($cls in $customClsids) {
-        if (Test-Path $cls) {
-            Remove-Item -Path $cls -Recurse -Force -ErrorAction SilentlyContinue
-        }
+        & reg.exe delete "$cls" /f 2>$null
     }
 
-    # Reset Recycle Bin & This PC in Explorer CLSID to official Windows imageres.dll defaults
-    $binKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\DefaultIcon"
-    if (Test-Path $binKey) {
-        Set-ItemProperty -Path $binKey -Name "(Default)" -Value "C:\WINDOWS\System32\imageres.dll,-54" -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $binKey -Name "empty" -Value "C:\WINDOWS\System32\imageres.dll,-55" -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $binKey -Name "full" -Value "C:\WINDOWS\System32\imageres.dll,-54" -Force -ErrorAction SilentlyContinue
-    }
-
-    $pcKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\CLSID\{20D04FE0-3AEA-1069-A2D8-08002B30309D}\DefaultIcon"
-    if (Test-Path $pcKey) {
-        Set-ItemProperty -Path $pcKey -Name "(Default)" -Value "C:\WINDOWS\System32\imageres.dll,-109" -Force -ErrorAction SilentlyContinue
-    }
-
-    # Reset FolderDescriptions to official Windows imageres.dll defaults
-    $folderDefaults = @{
-        "{374DE290-123F-4565-9164-39C4925E467B}" = "C:\WINDOWS\system32\imageres.dll,-184" # Downloads
-        "{7d83ee9b-2244-4e70-b1f5-5393042af1e4}" = "C:\WINDOWS\system32\imageres.dll,-184" # Downloads 2
-        "{FDD39AD0-238F-46AF-ADB4-6C85480369C7}" = "C:\WINDOWS\system32\imageres.dll,-112" # Personal (Documents)
-        "{f42ee2d3-909f-4907-8871-4c22fc0bf756}" = "C:\WINDOWS\system32\imageres.dll,-112" # Documents
-        "{33E28130-4E1E-4676-835A-98395C3BC3BB}" = "C:\WINDOWS\system32\imageres.dll,-113" # Pictures
-        "{0ddd015d-b06c-45d5-8c4c-f59713854639}" = "C:\WINDOWS\system32\imageres.dll,-113" # Pictures 2
-        "{4BD8D571-6D19-48D3-BE97-422220080E43}" = "C:\WINDOWS\system32\imageres.dll,-108" # Music
-        "{a0c69a99-21c8-4671-8703-7934162fef1d}" = "C:\WINDOWS\system32\imageres.dll,-108" # Music 2
-        "{18989B1D-99B5-455B-841C-AB7C74E4DDFC}" = "C:\WINDOWS\system32\imageres.dll,-189" # Video
-        "{35286161-052a-4736-ac15-41e990f2430e}" = "C:\WINDOWS\system32\imageres.dll,-189" # Video 2
-        "{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}" = "C:\WINDOWS\system32\imageres.dll,-183" # Desktop
-    }
-    foreach ($g in $folderDefaults.Keys) {
-        $p = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\$g"
-        if (Test-Path $p) {
-            Set-ItemProperty -Path $p -Name "Icon" -Value $folderDefaults[$g] -Force -ErrorAction SilentlyContinue
-        }
+    # Delete custom Icon value from FolderDescriptions so Windows defaults kick in
+    $folderGuids = @(
+        "{374DE290-123F-4565-9164-39C4925E467B}",
+        "{7d83ee9b-2244-4e70-b1f5-5393042af1e4}",
+        "{FDD39AD0-238F-46AF-ADB4-6C85480369C7}",
+        "{f42ee2d3-909f-4907-8871-4c22fc0bf756}",
+        "{33E28130-4E1E-4676-835A-98395C3BC3BB}",
+        "{0ddd0157-5467-4334-96c9-78ec10e39588}",
+        "{0ddd015d-b06c-45d5-8c4c-f59713854639}",
+        "{4BD8D571-6D19-48D3-BE97-422220080E43}",
+        "{a0c69a99-21c8-4671-8703-7934162fbe1d}",
+        "{a0c69a99-21c8-4671-8703-7934162fef1d}",
+        "{18989B1D-99B5-455B-841C-AB7C74E4DDFC}",
+        "{35286161-5079-4140-9a09-7b505a4f2791}",
+        "{35286161-052a-4736-ac15-41e990f2430e}",
+        "{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}"
+    )
+    foreach ($g in $folderGuids) {
+        & reg.exe delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FolderDescriptions\$g" /v "Icon" /f 2>$null
     }
 
     # Clean custom desktop.ini in user profile folders
@@ -373,7 +360,19 @@ public static class MacAppShortcutHelper {
 
         if (!string.IsNullOrEmpty(targetPath)) shellLink.SetPath(targetPath);
         if (!string.IsNullOrEmpty(arguments)) shellLink.SetArguments(arguments);
-        if (!string.IsNullOrEmpty(iconPath)) shellLink.SetIconLocation(iconPath, 0);
+        
+        if (!string.IsNullOrEmpty(iconPath)) {
+            string filePart = iconPath;
+            int iconIndex = 0;
+            if (iconPath.Contains(",")) {
+                string[] parts = iconPath.Split(',');
+                filePart = parts[0].Trim();
+                int.TryParse(parts[1].Trim(), out iconIndex);
+            }
+            shellLink.SetIconLocation(filePart, iconIndex);
+        } else if (!string.IsNullOrEmpty(targetPath)) {
+            shellLink.SetIconLocation(targetPath, 0);
+        }
 
         if (!string.IsNullOrEmpty(appUserModelId)) {
             IPropertyStore store = (IPropertyStore)link;
@@ -698,8 +697,15 @@ foreach ($scd in $startCacheDirs) {
 # 5. Relaunch Windows Explorer cleanly and rebuild system icon registry
 Start-Process explorer.exe
 Start-Sleep -Seconds 2
-& ie4uinit.exe -ClearIconCache 2>$null
-& ie4uinit.exe -show 2>$null
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+public class Win32IconRefresh {
+    [DllImport("shell32.dll")]
+    public static extern void SHChangeNotify(int wEventId, int uFlags, IntPtr dwItem1, IntPtr dwItem2);
+}
+"@ -ErrorAction SilentlyContinue
+[Win32IconRefresh]::SHChangeNotify(0x08000000, 0x0000, [IntPtr]::Zero, [IntPtr]::Zero)
 
 Write-Host ""
 Write-Host "========================================================================================" -ForegroundColor Green

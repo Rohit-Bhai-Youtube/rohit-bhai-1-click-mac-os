@@ -779,7 +779,19 @@ public static class MacAppShortcutHelper {
 
         if (!string.IsNullOrEmpty(targetPath)) shellLink.SetPath(targetPath);
         if (!string.IsNullOrEmpty(arguments)) shellLink.SetArguments(arguments);
-        if (!string.IsNullOrEmpty(iconPath)) shellLink.SetIconLocation(iconPath, 0);
+        
+        if (!string.IsNullOrEmpty(iconPath)) {
+            string filePart = iconPath;
+            int iconIndex = 0;
+            if (iconPath.Contains(",")) {
+                string[] parts = iconPath.Split(',');
+                filePart = parts[0].Trim();
+                int.TryParse(parts[1].Trim(), out iconIndex);
+            }
+            shellLink.SetIconLocation(filePart, iconIndex);
+        } else if (!string.IsNullOrEmpty(targetPath)) {
+            shellLink.SetIconLocation(targetPath, 0);
+        }
 
         if (!string.IsNullOrEmpty(appUserModelId)) {
             IPropertyStore store = (IPropertyStore)link;
