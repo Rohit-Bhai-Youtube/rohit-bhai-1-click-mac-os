@@ -269,6 +269,35 @@ if ($WindhawkCli -or $WindhawkExe) {
     } catch {}
     $enginePath = if ($WindhawkCli) { $WindhawkCli } else { $WindhawkExe }
     Write-Host "  [OK] Windhawk engine found: $enginePath" -ForegroundColor Green
+
+    # Ensure Windhawk Clang/MinGW Compiler toolchain is installed (required for mods)
+    $compilerClang = "C:\Program Files\Windhawk\Compiler\bin\clang++.exe"
+    if (-not (Test-Path $compilerClang)) {
+        Write-Host "  [*] Installing Windhawk Clang/MinGW Compiler toolchain (required for mods)..." -ForegroundColor Yellow
+        $compilerZip = Join-Path $WorkDir "windhawk-compiler-1.6.7z"
+        $compilerUrl = "https://github.com/ramensoftware/windhawk-dependencies/releases/download/v1.6/windhawk-compiler-1.6.7z"
+        try {
+            if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
+                & curl.exe -sSL "$compilerUrl" -o "$compilerZip"
+            }
+            if (-not (Test-Path $compilerZip) -or ((Get-Item $compilerZip).Length -lt 10000000)) {
+                $wc = New-Object System.Net.WebClient
+                $wc.DownloadFile($compilerUrl, $compilerZip)
+            }
+            if (Test-Path $compilerZip) {
+                $compTarget = "C:\Program Files\Windhawk\Compiler"
+                if (-not (Test-Path $compTarget)) { New-Item -ItemType Directory -Path $compTarget -Force | Out-Null }
+                & tar.exe -xf "$compilerZip" -C "$compTarget"
+                if (Test-Path $compilerClang) {
+                    Write-Host "  [OK] Windhawk Compiler toolchain installed successfully!" -ForegroundColor Green
+                }
+            }
+        } catch {
+            Write-Host "  [!] Compiler setup note: $_" -ForegroundColor DarkGray
+        }
+    } else {
+        Write-Host "  [OK] Windhawk development compiler verified!" -ForegroundColor Green
+    }
 } else {
     Write-Host "  [!] Warning: Windhawk engine not detected. Proceeding with System Icons, Sounds & Cursors..." -ForegroundColor Yellow
 }
@@ -277,11 +306,22 @@ if ($WindhawkCli -or $WindhawkExe) {
 # Step 2: Download or Locate Rohit Bhai Mac OS Settings & Registry Preset
 # -------------------------------------------------------------------------
 Write-Host "`n[2/9] Locating Rohit Bhai Mac OS Preset..." -ForegroundColor Cyan
-$WhDataLocal = Join-Path $WorkDir "Rohit-Bhai-Mac-OS-Settings.json"
-$WhRegLocal  = Join-Path $WorkDir "Rohit-Bhai-Mac-OS-Settings.reg"
+$WhDataLocal   = Join-Path $WorkDir "Rohit-Bhai-Mac-OS-Settings.json"
+$WhDataArchive = Join-Path $WorkDir "Rohit-Bhai-Mac-OS.whdata"
+$WhRegLocal    = Join-Path $WorkDir "Rohit-Bhai-Mac-OS-Settings.reg"
 
-$localPreset = if ($ScriptDir) { Join-Path $ScriptDir "Rohit-Bhai-Mac-OS-Settings.json" } else { $null }
-$localReg    = if ($ScriptDir) { Join-Path $ScriptDir "Rohit-Bhai-Mac-OS-Settings.reg" } else { $null }
+$localPreset   = if ($ScriptDir) { Join-Path $ScriptDir "Rohit-Bhai-Mac-OS-Settings.json" } else { $null }
+$localArchive  = if ($ScriptDir) { Join-Path $ScriptDir "Rohit-Bhai-Mac-OS.whdata" } else { $null }
+$localReg      = if ($ScriptDir) { Join-Path $ScriptDir "Rohit-Bhai-Mac-OS-Settings.reg" } else { $null }
+
+if ($localArchive -and (Test-Path $localArchive)) {
+    Copy-Item $localArchive -Destination $WhDataArchive -Force
+} else {
+    $archiveUrl = "https://raw.githubusercontent.com/$RepoOwner/$RepoName/$Branch/Rohit-Bhai-Mac-OS.whdata"
+    try {
+        Invoke-WebRequest -Uri $archiveUrl -OutFile $WhDataArchive -UseBasicParsing -ErrorAction SilentlyContinue
+    } catch {}
+}
 
 if ($localPreset -and (Test-Path $localPreset)) {
     Copy-Item $localPreset -Destination $WhDataLocal -Force
@@ -560,15 +600,28 @@ try {
         } catch {}
     }
 
+    # Universal ProgramData icon store accessible by all system processes & users
+    $progDataIcons = "C:\ProgramData\RohitBhaiMacOS\Icons"
+    if (-not (Test-Path $progDataIcons)) { New-Item -ItemType Directory -Path $progDataIcons -Force | Out-Null }
+    Copy-Item "$iconsTarget\*.ico" -Destination $progDataIcons -Force -ErrorAction SilentlyContinue
+
     # 1. Shell Icons (HKLM 64-bit, 32-bit & HKCU)
-    $folderIco      = Join-Path $iconsTarget "macOS_Folder.ico"
-    $folderOpenIco  = Join-Path $iconsTarget "macOS_Folder_Open.ico"
-    $driveIco       = Join-Path $iconsTarget "macOS_Drive.ico"
-    $driveSystemIco = Join-Path $iconsTarget "macOS_Drive_System.ico"
-    $thisPcIco      = Join-Path $iconsTarget "macOS_ThisPC.ico"
-    $trashEmptyIco  = Join-Path $iconsTarget "macOS_Trash_Empty.ico"
-    $trashFullIco   = Join-Path $iconsTarget "macOS_Trash_Full.ico"
-    $desktopIco     = Join-Path $iconsTarget "macOS_Desktop.ico"
+    $folderIco      = Join-Path $progDataIcons "macOS_Folder.ico"
+    $folderOpenIco  = Join-Path $progDataIcons "macOS_Folder_Open.ico"
+    $driveIco       = Join-Path $progDataIcons "macOS_Drive.ico"
+    $driveSystemIco = Join-Path $progDataIcons "macOS_Drive_System.ico"
+    $thisPcIco      = Join-Path $progDataIcons "macOS_ThisPC.ico"
+    $trashEmptyIco  = Join-Path $progDataIcons "macOS_Trash_Empty.ico"
+    $trashFullIco   = Join-Path $progDataIcons "macOS_Trash_Full.ico"
+    $desktopIco     = Join-Path $progDataIcons "macOS_Desktop.ico"
+    if (-not (Test-Path $folderIco)) { $folderIco = Join-Path $iconsTarget "macOS_Folder.ico" }
+    if (-not (Test-Path $folderOpenIco)) { $folderOpenIco = Join-Path $iconsTarget "macOS_Folder_Open.ico" }
+    if (-not (Test-Path $driveIco)) { $driveIco = Join-Path $iconsTarget "macOS_Drive.ico" }
+    if (-not (Test-Path $driveSystemIco)) { $driveSystemIco = Join-Path $iconsTarget "macOS_Drive_System.ico" }
+    if (-not (Test-Path $thisPcIco)) { $thisPcIco = Join-Path $iconsTarget "macOS_ThisPC.ico" }
+    if (-not (Test-Path $trashEmptyIco)) { $trashEmptyIco = Join-Path $iconsTarget "macOS_Trash_Empty.ico" }
+    if (-not (Test-Path $trashFullIco)) { $trashFullIco = Join-Path $iconsTarget "macOS_Trash_Full.ico" }
+    if (-not (Test-Path $desktopIco)) { $desktopIco = Join-Path $iconsTarget "macOS_Desktop.ico" }
     
     $shellIconsKeys = @(
         "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons",
@@ -636,6 +689,20 @@ try {
             }
         }
     }
+
+    # Direct reg.exe injection for Drive C (Macintosh HD) across 64-bit and 32-bit
+    & reg.exe add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons\C\DefaultIcon" /ve /t REG_SZ /d "$driveSystemIco,0" /f /reg:64 2>$null
+    & reg.exe add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons\C\DefaultIcon" /ve /t REG_SZ /d "$driveSystemIco,0" /f /reg:32 2>$null
+    & reg.exe add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons\C\DefaultLabel" /ve /t REG_SZ /d "Macintosh HD" /f /reg:64 2>$null
+    & reg.exe add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons\C\DefaultLabel" /ve /t REG_SZ /d "Macintosh HD" /f /reg:32 2>$null
+    & reg.exe add "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons\C\DefaultIcon" /ve /t REG_SZ /d "$driveSystemIco,0" /f /reg:64 2>$null
+    & reg.exe add "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons\C\DefaultIcon" /ve /t REG_SZ /d "$driveSystemIco,0" /f /reg:32 2>$null
+    & reg.exe add "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons\C\DefaultLabel" /ve /t REG_SZ /d "Macintosh HD" /f /reg:64 2>$null
+    & reg.exe add "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons\C\DefaultLabel" /ve /t REG_SZ /d "Macintosh HD" /f /reg:32 2>$null
+    & reg.exe add "HKCU\Software\Classes\Applications\Explorer.exe\Drives\C\DefaultIcon" /ve /t REG_SZ /d "$driveSystemIco,0" /f 2>$null
+    & reg.exe add "HKCU\Software\Classes\Applications\Explorer.exe\Drives\C\DefaultLabel" /ve /t REG_SZ /d "Macintosh HD" /f 2>$null
+    & reg.exe add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons\C\DefaultIcon" /ve /t REG_SZ /d "$driveSystemIco,0" /f 2>$null
+    & reg.exe add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons\C\DefaultLabel" /ve /t REG_SZ /d "Macintosh HD" /f 2>$null
 
     # Modern Explorer Drive override in HKCU Classes
     $appDrivesKey = "HKCU:\Software\Classes\Applications\Explorer.exe\Drives\C"
@@ -766,7 +833,7 @@ try {
             }
         }
 
-        # Apply macOS Blue folder icon to non-system root directories on C:\
+        # Apply macOS Blue folder icon to root directories on C:\
         if (Test-Path "C:\") {
             try {
                 takeown.exe /f "C:\PerfLogs" /a 2>$null
@@ -774,7 +841,7 @@ try {
             } catch {}
             Get-ChildItem -Path "C:\" -Directory -Force -ErrorAction SilentlyContinue | ForEach-Object {
                 $n = $_.Name
-                if ($n -notin @("Windows", "Program Files", "Program Files (x86)", "Users", "System Volume Information", "`$Recycle.Bin", "`$WinREAgent", "Documents and Settings")) {
+                if ($n -notin @("Windows", "System Volume Information", "`$Recycle.Bin", "`$WinREAgent", "Documents and Settings")) {
                     $p = $_.FullName
                     $ini = Join-Path $p "desktop.ini"
                     try {
@@ -1187,7 +1254,7 @@ try {
         foreach ($wUrl in $wallUrls) {
             try {
                 Invoke-WebRequest -Uri $wUrl -OutFile $wallTarget -UseBasicParsing -ErrorAction SilentlyContinue
-                if ((Test-Path $wallTarget) -and ((Get-Item $wallTarget).Length -gt 1000000)) { break }
+                if ((Test-Path $wallTarget) -and ((Get-Item $wallTarget).Length -gt 50000)) { break }
             } catch {}
         }
     }
@@ -1205,6 +1272,9 @@ try {
         Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "Wallpaper" -Value $wallTarget -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "WallpaperStyle" -Value "10" -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "TileWallpaper" -Value "0" -Force -ErrorAction SilentlyContinue
+        $wpKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Wallpapers"
+        if (-not (Test-Path $wpKey)) { New-Item -Path $wpKey -Force | Out-Null }
+        Set-ItemProperty -Path $wpKey -Name "BackgroundHistoryPath0" -Value $wallTarget -Force -ErrorAction SilentlyContinue
         Add-Type @"
 using System;
 using System.Runtime.InteropServices;
@@ -1240,7 +1310,7 @@ function Set-RegString($key, $name, $val) {
 }
 
 function Set-MacIslandStorage {
-    $targetOrder = 'de12635;<8?0479:=>@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcfghijklm'
+    $targetOrder = 'de12635;<8?479:=>@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcfghijklm'
     $key = "HKLM\SOFTWARE\Windhawk\Engine\ModsWritable\mac-island-dock\LocalStorage"
     
     # Read user SID to ensure per-user storage also receives all values
@@ -1256,9 +1326,11 @@ function Set-MacIslandStorage {
         "placeX" = 1000
         "placeY" = 0
         "islandZoneAsPill" = 0
+        "islandFrosted" = 1
         "islandLiquidGlass" = 1
-        "islandGlassBlur" = 70
-        "islandGlassLight" = 1
+        "islandGlassBlur" = 85
+        "islandGlassLight" = 0
+        "islandBarClear" = 0
         "islandWeather" = 1
         "islandWeatherUnit" = 1
         "weatherMyLocation" = 1
@@ -1268,7 +1340,7 @@ function Set-MacIslandStorage {
         "clockDate" = 1
         "clockSeconds" = 0
         "clockYear" = 0
-        "islandMedia" = 0
+        "islandMedia" = 1
         "islandMediaAlways" = 0
         "islandMediaPlayOnly" = 1
         "mediaButtons" = 1
@@ -1313,7 +1385,7 @@ function Set-MacIslandStorage {
         "islandCapsLock" = 1
         "trayListIsland" = 12
         "animationsIsland" = 4002
-        "islandOpacity" = 80
+        "islandOpacity" = 90
         "islandNotchCurve" = 80
         "islandPillHeight" = 100
         "islandSize" = 100
@@ -1372,22 +1444,11 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
     Remove-Item -Path "HKLM:\SOFTWARE\Windhawk\Engine\Mods\local@caption-buttons-customizer" -Recurse -Force -ErrorAction SilentlyContinue
     Stop-Process -Name dwm -Force -ErrorAction SilentlyContinue
 
-    # Import clean 8-mod preset
-    & $WindhawkCli data import $WhDataLocal --yes --on-conflict overwrite --confirm-app-restart
-    $importCode = $LASTEXITCODE
+    # Ensure ModsSource directory exists before copying any mod source
+    $progModsSourceDir = "C:\ProgramData\Windhawk\ModsSource"
+    if (-not (Test-Path $progModsSourceDir)) { New-Item -ItemType Directory -Path $progModsSourceDir -Force | Out-Null }
 
-    if ($importCode -eq 0) {
-        Write-Host "  [OK] All 8 mods and custom settings activated successfully via Windhawk CLI!" -ForegroundColor Green
-    } else {
-        Write-Host "  [*] Retrying with local compilation mode..." -ForegroundColor Yellow
-        & $WindhawkCli data import $WhDataLocal --yes --offline --on-conflict overwrite --confirm-app-restart
-        Write-Host "  [OK] Import completed!" -ForegroundColor Green
-    }
-
-    # Ensure Maximize Window Guard (Top Bar Fixed Top-Right & Bottom Dock Always Visible with Zero Overlap)
-    & $WindhawkCli mod settings set mac-island-dock hiding.autoHide=0 2>$null
-
-    # Install updated Frameless Apple Net Speed mod (Live Sparklines & Top/Down speeds with zero bounding box)
+    # Prepare local mod sources
     $speedModSource = if ($PSScriptRoot) {
         Join-Path $PSScriptRoot "Mods-Source\local@net-speed-taskbar-apple.wh.cpp"
     } else {
@@ -1400,12 +1461,9 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
         } catch {}
     }
     if (Test-Path $speedModSource) {
-        & $WindhawkCli mod install --file "$speedModSource" --yes 2>$null
-        $progDataSource = "C:\ProgramData\Windhawk\ModsSource\local@net-speed-taskbar-apple.wh.cpp"
-        Copy-Item -Path $speedModSource -Destination $progDataSource -Force -ErrorAction SilentlyContinue
+        Copy-Item -Path $speedModSource -Destination "$progModsSourceDir\local@net-speed-taskbar-apple.wh.cpp" -Force -ErrorAction SilentlyContinue
     }
 
-    # Install updated mac-island-dock mod with native AppStore & WhatsApp squircle fallback
     $islandModSource = if ($PSScriptRoot) {
         Join-Path $PSScriptRoot "Mods-Source\mac-island-dock.wh.cpp"
     } else {
@@ -1418,8 +1476,34 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
         } catch {}
     }
     if (Test-Path $islandModSource) {
-        $progDataIsland = "C:\ProgramData\Windhawk\ModsSource\mac-island-dock.wh.cpp"
-        Copy-Item -Path $islandModSource -Destination $progDataIsland -Force -ErrorAction SilentlyContinue
+        Copy-Item -Path $islandModSource -Destination "$progModsSourceDir\mac-island-dock.wh.cpp" -Force -ErrorAction SilentlyContinue
+    }
+
+    # Import clean 8-mod preset
+    $importTarget = if (Test-Path $WhDataArchive) { $WhDataArchive } else { $WhDataLocal }
+    & $WindhawkCli data import "$importTarget" --yes --on-conflict overwrite --confirm-app-restart
+    $importCode = $LASTEXITCODE
+
+    if ($importCode -eq 0) {
+        Write-Host "  [OK] All 8 mods and custom settings activated successfully via Windhawk CLI!" -ForegroundColor Green
+    } else {
+        Write-Host "  [*] Retrying with local compilation mode..." -ForegroundColor Yellow
+        & $WindhawkCli data import "$importTarget" --yes --offline --on-conflict overwrite --confirm-app-restart
+        Write-Host "  [OK] Import completed!" -ForegroundColor Green
+    }
+
+    # Ensure Maximize Window Guard (Top Bar Fixed Top-Right & Bottom Dock Always Visible with Zero Overlap)
+    & $WindhawkCli mod settings set mac-island-dock hiding.autoHide=0 2>$null
+
+    # Install and compile updated Frameless Apple Net Speed mod
+    if (Test-Path $speedModSource) {
+        & $WindhawkCli mod install --file "$speedModSource" --yes 2>$null
+        & $WindhawkCli mod compile local@net-speed-taskbar-apple 2>$null
+    }
+
+    # Install and compile updated mac-island-dock mod with frosted glass & squircle fallback
+    if (Test-Path $islandModSource) {
+        & $WindhawkCli mod install --file "$islandModSource" --yes 2>$null
         & $WindhawkCli mod compile mac-island-dock 2>$null
     }
 

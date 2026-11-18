@@ -110507,8 +110507,7 @@ void Island::CheckBarClearWindow() {
 // full-screen app): it fades with the bar, or as the pill closes into its
 // dot, going away and coming back.
 void Island::UpdateGlass() {
-    const bool wanted = g_settings.islandFrosted &&
-                        !g_settings.islandLiquidGlass &&
+    const bool wanted = (g_settings.islandFrosted || g_settings.islandLiquidGlass) &&
                         g_transparencyEffects && !m_away && m_notch < 0;
     // (Not while the Bar closes into its small pill with the time.)
     m_barBlurred = wanted && m_bar && m_hiddenClock <= 0.001;

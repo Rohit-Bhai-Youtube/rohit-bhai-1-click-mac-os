@@ -1,4 +1,4 @@
-# ==============================================================================
+﻿# ==============================================================================
 # Rohit Bhai 1 Click Mac OS - Complete 1-Click Uninstaller & Windows Restore Suite
 # Target: Windows 11 / Windows 10
 # Reverts 100% of Windhawk mods, cursor schemes, sound schemes, folder & drive icons,
@@ -267,6 +267,10 @@ try {
     if (Test-Path "$env:USERPROFILE\OneDrive") {
         $odDirs = Get-ChildItem -Path "$env:USERPROFILE\OneDrive" -Directory -Force -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName
         if ($odDirs) { $userDirs += $odDirs }
+    }
+    if (Test-Path "C:\") {
+        $cDirs = Get-ChildItem -Path "C:\" -Directory -Force -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName
+        if ($cDirs) { $userDirs += $cDirs }
     }
     $userDirs = $userDirs | Select-Object -Unique
 
