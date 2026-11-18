@@ -513,19 +513,23 @@ try {
     }
 
     Set-MacSound -App "Explorer" -Event "EmptyRecycleBin" -WavName "macOS_Trash_Empty.wav"
-    # Windows 11 Explorer Navigation Sound Enable (Only plays click inside File Explorer navigation)
-    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ShowExplorerAudio" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
 
     $clickWav = if (Test-Path (Join-Path $soundsTarget "macOS_Click.wav")) { "macOS_Click.wav" } else { "macOS_Pop.wav" }
 
-    # Only play navigating sound inside File Explorer, NEVER on generic mouse clicks or menu popups (prevents double-click stutter glitch)
-    Set-MacSound -App "Explorer" -Event "Navigating" -WavName $clickWav
+    # 1. App Launch sound: Authentic macOS click/pop when any application is opened
+    Set-MacSound -App ".Default" -Event "Open" -WavName $clickWav
 
-    # Silence all generic OS-wide click, menu, popup, and select events to eliminate false clicks and audio glitching
-    foreach ($silentEv in @("CCSelect", "MenuCommand", "MenuPopup", "ShowFPane", ".Default", "SystemQuestion", "Navigating")) {
+    # 2. Folder Open / Navigation sound: Authentic macOS click inside File Explorer navigation
+    Set-MacSound -App "Explorer" -Event "Navigating" -WavName $clickWav
+    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ShowExplorerAudio" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+
+    # 3. Silence all generic OS-wide click, menu, popup, select, and navigation events to eliminate false clicks everywhere
+    foreach ($silentEv in @("CCSelect", "MenuCommand", "MenuPopup", "ShowFPane", ".Default", "SystemQuestion", "Navigating", "Select", "ChangeTheme")) {
         foreach ($sub in @(".Current", $schemeName)) {
             $sk = "HKCU:\AppEvents\Schemes\Apps\.Default\$silentEv\$sub"
             if (Test-Path $sk) { Set-ItemProperty -Path $sk -Name "(Default)" -Value "" -Force -ErrorAction SilentlyContinue }
+            $expSk = "HKCU:\AppEvents\Schemes\Apps\Explorer\$silentEv\$sub"
+            if (Test-Path $expSk) { Set-ItemProperty -Path $expSk -Name "(Default)" -Value "" -Force -ErrorAction SilentlyContinue }
         }
     }
 
@@ -1401,6 +1405,9 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
 }
 
 if ($windhawkExe -or $WindhawkCli) {
+    # Stop any legacy daemon process to release old hooks immediately
+    Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like "*run_island_daemon*" } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+
     # Register permanent silent startup for Mac Island Top Bar
     $appDir = "$env:LOCALAPPDATA\RohitBhaiMacOS"
     if (-not (Test-Path $appDir)) { New-Item -ItemType Directory -Path $appDir -Force | Out-Null }
