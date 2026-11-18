@@ -813,23 +813,37 @@ try {
 
         # Apply macOS Blue folder icon to root directories on C:\
         if (Test-Path "C:\") {
-            try {
-                takeown.exe /f "C:\PerfLogs" /a 2>$null
-                icacls.exe "C:\PerfLogs" /grant Administrators:F /q 2>$null
-            } catch {}
+            $cRootFolders = @(
+                "C:\Program Files",
+                "C:\Program Files (x86)",
+                "C:\Users",
+                "C:\PerfLogs",
+                "C:\inetpub"
+            )
             Get-ChildItem -Path "C:\" -Directory -Force -ErrorAction SilentlyContinue | ForEach-Object {
                 $n = $_.Name
                 if ($n -notin @("Windows", "System Volume Information", "`$Recycle.Bin", "`$WinREAgent", "Documents and Settings")) {
-                    $p = $_.FullName
-                    $ini = Join-Path $p "desktop.ini"
+                    if ($cRootFolders -notcontains $_.FullName) {
+                        $cRootFolders += $_.FullName
+                    }
+                }
+            }
+
+            foreach ($p in $cRootFolders) {
+                if (Test-Path $p) {
                     try {
+                        takeown.exe /f "$p" /a 2>$null
+                        icacls.exe "$p" /grant Administrators:F /q 2>$null
+                        $ini = Join-Path $p "desktop.ini"
                         if (Test-Path -LiteralPath $ini) {
-                            (Get-Item -LiteralPath $ini -Force).Attributes = 'Normal'
+                            takeown.exe /f "$ini" /a 2>$null
+                            icacls.exe "$ini" /grant Administrators:F /q 2>$null
+                            attrib.exe -h -s -r "$ini" 2>$null
                         }
                         $iniContent = "[.ShellClassInfo]`r`nIconResource=$folderIco,0`r`n[ViewState]`r`nMode=`r`nVid=`r`nFolderType=Generic`r`n"
                         [System.IO.File]::WriteAllText($ini, $iniContent, [System.Text.Encoding]::ASCII)
-                        (Get-Item -LiteralPath $ini -Force).Attributes = 'Hidden, System'
-                        (Get-Item -LiteralPath $p -Force).Attributes = ((Get-Item -LiteralPath $p -Force).Attributes -bor [System.IO.FileAttributes]::ReadOnly)
+                        attrib.exe +h +s "$ini" 2>$null
+                        attrib.exe +r "$p" 2>$null
                     } catch {}
                 }
             }
@@ -867,8 +881,12 @@ public class ShellIconFlusher {
 Write-Host "`n[7/9] Deploying Official Apple macOS Squircle App Icons (Dock & Start Menu)..." -ForegroundColor Cyan
 try {
     $appsTarget = "$env:LOCALAPPDATA\RohitBhaiMacOS\Icons\Apps"
+    $progAppsTarget = "C:\ProgramData\RohitBhaiMacOS\Icons\Apps"
     if (-not (Test-Path $appsTarget)) {
         New-Item -ItemType Directory -Path $appsTarget -Force | Out-Null
+    }
+    if (-not (Test-Path $progAppsTarget)) {
+        New-Item -ItemType Directory -Path $progAppsTarget -Force | Out-Null
     }
 
     $localAppIcons = if ($ScriptDir) { Join-Path $ScriptDir "assets\icons\apps" } else { $null }
@@ -885,6 +903,10 @@ try {
             }
         } catch {}
     }
+
+    # Ensure system-wide access for Windhawk engine & background daemons
+    Copy-Item "$appsTarget\*.ico" -Destination $progAppsTarget -Force -ErrorAction SilentlyContinue
+    Copy-Item "$appsTarget\*.png" -Destination $progAppsTarget -Force -ErrorAction SilentlyContinue
 
     Add-Type @'
 using System;
@@ -1504,10 +1526,6 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
             & $WindhawkCli mod install --file "$speedModSource" --yes 2>$null
             & $WindhawkCli mod compile local@net-speed-taskbar-apple 2>$null
         }
-        if (Test-Path $islandModSource) {
-            & $WindhawkCli mod install --file "$islandModSource" --yes 2>$null
-            & $WindhawkCli mod compile mac-island-dock 2>$null
-        }
     }
 
     Write-Host "  [OK] All 8 mods and custom settings activated successfully via Windhawk CLI!" -ForegroundColor Green
@@ -1575,8 +1593,10 @@ if ($windhawkExe -or $WindhawkCli) {
     # Start the daemon process immediately so top-right status bar watchdog runs live
     Start-Process wscript.exe -ArgumentList "`"$vbsPath`"" -ErrorAction SilentlyContinue
 
-    if (Test-Path $windhawkExe) {
-        & $windhawkExe -restart -tray-only 2>$null
+    # Ensure Windhawk tray is running quietly without killing or restarting existing mods
+    $whProc = Get-Process windhawk -ErrorAction SilentlyContinue
+    if (-not $whProc -and (Test-Path $windhawkExe)) {
+        Start-Process $windhawkExe -ArgumentList "-tray-only" -ErrorAction SilentlyContinue
     }
     Write-Host "  [OK] Maximized window guard active: Top Bar fixed at top-right & Bottom Dock stay ALWAYS visible with zero overlap!" -ForegroundColor Green
 } else {

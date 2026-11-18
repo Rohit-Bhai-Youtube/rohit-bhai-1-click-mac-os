@@ -385,7 +385,13 @@ public class IslandDaemon {
     public static void Run() {
         string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         string iconsDir = Path.Combine(localAppData, "RohitBhaiMacOS", "Icons", "Apps");
+        if (!Directory.Exists(iconsDir)) {
+            iconsDir = @"C:\ProgramData\RohitBhaiMacOS\Icons\Apps";
+        }
         string clickSound = Path.Combine(localAppData, "RohitBhaiMacOS", "Sounds", "macOS_Click.wav");
+        if (!File.Exists(clickSound)) {
+            clickSound = @"C:\ProgramData\RohitBhaiMacOS\Sounds\macOS_Click.wav";
+        }
         if (!File.Exists(clickSound)) {
             clickSound = Path.Combine(localAppData, "RohitBhaiMacOS", "Sounds", "macOS_Pop.wav");
         }

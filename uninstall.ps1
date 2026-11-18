@@ -251,8 +251,14 @@ try {
         }
     }
 
-    # Clean custom desktop.ini across ALL user profile directories and root
-    $userDirs = @(
+    # Clean custom desktop.ini across ALL C: root directories, system directories, and user profile directories
+    $allDirsToClean = @(
+        "C:\adb",
+        "C:\inetpub",
+        "C:\PerfLogs",
+        "C:\Program Files",
+        "C:\Program Files (x86)",
+        "C:\Users",
         $env:USERPROFILE,
         [Environment]::GetFolderPath('Desktop'),
         [Environment]::GetFolderPath('MyDocuments'),
@@ -264,32 +270,50 @@ try {
     )
     if (Test-Path $env:USERPROFILE) {
         $subDirs = Get-ChildItem -Path $env:USERPROFILE -Directory -Force -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName
-        if ($subDirs) { $userDirs += $subDirs }
+        if ($subDirs) { $allDirsToClean += $subDirs }
     }
     if (Test-Path "$env:USERPROFILE\OneDrive") {
         $odDirs = Get-ChildItem -Path "$env:USERPROFILE\OneDrive" -Directory -Force -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName
-        if ($odDirs) { $userDirs += $odDirs }
+        if ($odDirs) { $allDirsToClean += $odDirs }
     }
     if (Test-Path "C:\") {
         $cDirs = Get-ChildItem -Path "C:\" -Directory -Force -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName
-        if ($cDirs) { $userDirs += $cDirs }
+        if ($cDirs) { $allDirsToClean += $cDirs }
     }
-    $userDirs = $userDirs | Select-Object -Unique
+    $allDirsToClean = $allDirsToClean | Select-Object -Unique
 
-    foreach ($d in $userDirs) {
+    foreach ($d in $allDirsToClean) {
         if ($d -and (Test-Path -LiteralPath $d)) {
             $ini = Join-Path $d "desktop.ini"
             if (Test-Path -LiteralPath $ini) {
                 try {
-                    $item = Get-Item -LiteralPath $ini -Force -ErrorAction SilentlyContinue
-                    if ($item) {
-                        $item.Attributes = 'Normal'
-                        $content = Get-Content -LiteralPath $ini -Raw -ErrorAction SilentlyContinue
-                        if ($content -match "RohitBhaiMacOS|Finder|macOS|Sonoma|\.ico") {
-                            Remove-Item -LiteralPath $ini -Force -ErrorAction SilentlyContinue
+                    takeown.exe /f "$ini" /a 2>$null
+                    icacls.exe "$ini" /grant Administrators:F /q 2>$null
+                    attrib.exe -h -s -r "$ini" 2>$null
+
+                    $content = Get-Content -LiteralPath $ini -Raw -ErrorAction SilentlyContinue
+                    if ($content -match "RohitBhaiMacOS|Finder|macOS|Sonoma") {
+                        if ($d -eq "C:\Users") {
+                            $userIni = "[.ShellClassInfo]`r`nLocalizedResourceName=@%SystemRoot%\system32\shell32.dll,-21813`r`nIconResource=%SystemRoot%\system32\imageres.dll,-123`r`n"
+                            [System.IO.File]::WriteAllText($ini, $userIni, [System.Text.Encoding]::ASCII)
+                            attrib.exe +h +s "$ini" 2>$null
+                            attrib.exe +r "$d" 2>$null
+                        } elseif ($d -eq "C:\Program Files") {
+                            $pfIni = "[.ShellClassInfo]`r`nLocalizedResourceName=@%SystemRoot%\system32\shell32.dll,-21781`r`n"
+                            [System.IO.File]::WriteAllText($ini, $pfIni, [System.Text.Encoding]::ASCII)
+                            attrib.exe +h +s "$ini" 2>$null
+                            attrib.exe +r "$d" 2>$null
+                        } elseif ($d -eq "C:\Program Files (x86)") {
+                            $pf86Ini = "[.ShellClassInfo]`r`nLocalizedResourceName=@%SystemRoot%\system32\shell32.dll,-21817`r`n"
+                            [System.IO.File]::WriteAllText($ini, $pf86Ini, [System.Text.Encoding]::ASCII)
+                            attrib.exe +h +s "$ini" 2>$null
+                            attrib.exe +r "$d" 2>$null
                         } else {
-                            $item.Attributes = 'Hidden, System'
+                            Remove-Item -LiteralPath $ini -Force -ErrorAction SilentlyContinue
+                            attrib.exe -r "$d" 2>$null
                         }
+                    } else {
+                        attrib.exe +h +s "$ini" 2>$null
                     }
                 } catch {}
             }
@@ -768,6 +792,14 @@ try {
     $ie4 = Join-Path ([Environment]::GetFolderPath('System')) "ie4uinit.exe"
     if (Test-Path $ie4) { & $ie4 -show 2>$null }
 } catch {}
+
+# 5. Cleanly restart Windows Explorer live so Taskbar, Desktop & Wallpaper are 100% restored immediately
+Write-Host "  [*] Restarting Windows Explorer to restore original Taskbar & Desktop live..." -ForegroundColor Yellow
+Stop-Process -Name "explorer" -Force -ErrorAction SilentlyContinue
+Start-Sleep -Seconds 1
+Start-Process "explorer.exe"
+Start-Sleep -Seconds 1
+[Win32IconRefresh]::SHChangeNotify(0x08000000, 0x1000, [IntPtr]::Zero, [IntPtr]::Zero)
 
 Write-Host ""
 Write-Host "========================================================================================" -ForegroundColor Green
