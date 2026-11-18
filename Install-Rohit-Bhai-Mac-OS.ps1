@@ -1224,21 +1224,15 @@ function Set-AppleNetSpeedStorage {
 }
 
 function Set-FrostedLiquidGlassStorage {
-    # 1. Windows 11 File Explorer Styler: Frosted Liquid Glass (matching Start Menu)
-    $feKey = "HKLM\SOFTWARE\Windhawk\Engine\Mods\windows-11-file-explorer-styler\Settings"
-    Set-RegString $feKey "theme" "Translucent Explorer11"
-    Set-RegString $feKey "backgroundTranslucentEffect" "acrylic"
-    Set-RegString $feKey "backgroundTranslucentEffectRegion" "explorerFrame"
-    Set-RegString $feKey "controlStyles[0].target" "Grid#NavigationBarControlGrid"
-    Set-RegString $feKey "controlStyles[0].styles[0]" "Background:=<WindhawkBlur BlurAmount=`"12`" TintColor=`"#141414`" TintOpacity=`"0.25`"/>"
-    Set-RegString $feKey "controlStyles[0].styles[1]" "BorderThickness=0,0,0,0"
-    Set-RegString $feKey "controlStyles[0].styles[2]" "BorderBrush=#30FFFFFF"
-    Set-RegString $feKey "controlStyles[1].target" "Grid#DetailsViewControlRootGrid"
-    Set-RegString $feKey "controlStyles[1].styles[0]" "Background:=<WindhawkBlur BlurAmount=`"12`" TintColor=`"#141414`" TintOpacity=`"0.25`"/>"
-    Set-RegString $feKey "controlStyles[1].styles[1]" "BorderThickness=0,0,1,1"
-    Set-RegString $feKey "controlStyles[1].styles[2]" "BorderBrush=#25FFFFFF"
+    # Ensure windows-11-file-explorer-styler is completely disabled and removed if previously installed
+    if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
+        & $WindhawkCli mod disable windows-11-file-explorer-styler --yes 2>$null
+        & $WindhawkCli mod remove windows-11-file-explorer-styler --yes 2>$null
+    }
+    Remove-Item -Path "HKLM:\SOFTWARE\Windhawk\Engine\Mods\windows-11-file-explorer-styler" -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -Path "HKLM:\SOFTWARE\WOW6432Node\Windhawk\Engine\Mods\windows-11-file-explorer-styler" -Recurse -Force -ErrorAction SilentlyContinue
 
-    # 2. Translucent Windows: Frosted Acrylic Blur across CMD, PowerShell, Consoles, Dialogs
+    # Translucent Windows: Frosted Acrylic Blur across CMD, PowerShell, Consoles, Dialogs
     $twKey = "HKLM\SOFTWARE\Windhawk\Engine\Mods\translucent-windows\Settings"
     Set-RegDword $twKey "RenderingMod.ThemeBackground" 1
     Set-RegDword $twKey "RenderingMod.SysColors" 0
@@ -1346,7 +1340,6 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
         "net-speed-taskbar",
         "windows-11-start-menu-styler",
         "windows-11-notification-center-styler",
-        "windows-11-file-explorer-styler",
         "translucent-windows",
         "invisible-borders"
     )
@@ -1376,10 +1369,11 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
     # Ensure Mac Island Top Bar & Bottom Floating Dock are explicitly enabled & styled with large icons, magnification & liquid glass shelf, onlyApps=1
     & $WindhawkCli mod settings set mac-island-dock "taskbarMode=dock" "showIsland=1" "hiding.autoHide=0" "dock.iconSize=52" "dock.iconGap=12" "dock.bottomGap=6" "dock.cornerRadius=22" "dock.background=1" "dock.backgroundOpacity=65" "icons.magnification=180" "icons.magnificationRange=160" "animations.enabled=1" "animations.speed=120" "dock.dotIndicator=1" "icons.onlyApps=1" "dock.hideTray=1" "windowsHideTray=1" 2>$null
 
-    # Ensure Liquid Glass styling everywhere across Windhawk mods (File Explorer, Start Menu, Notification Center, Windows)
+    # Ensure Liquid Glass styling everywhere across Windhawk mods (Start Menu, Notification Center, Windows)
     & $WindhawkCli mod settings set windows-11-notification-center-styler theme=LiquidGlass 2>$null
     & $WindhawkCli mod settings set windows-11-start-menu-styler theme=LiquidGlass 2>$null
-    & $WindhawkCli mod settings set windows-11-file-explorer-styler "theme=Translucent Explorer11" "backgroundTranslucentEffect=acrylic" "backgroundTranslucentEffectRegion=explorerFrame" "controlStyles[0].target=Grid#NavigationBarControlGrid" "controlStyles[0].styles[0]=Background:=<WindhawkBlur BlurAmount=`"12`" TintColor=`"#141414`" TintOpacity=`"0.25`"/>" "controlStyles[1].target=Grid#DetailsViewControlRootGrid" "controlStyles[1].styles[0]=Background:=<WindhawkBlur BlurAmount=`"12`" TintColor=`"#141414`" TintOpacity=`"0.25`"/>" 2>$null
+    & $WindhawkCli mod disable windows-11-file-explorer-styler --yes 2>$null
+    & $WindhawkCli mod remove windows-11-file-explorer-styler --yes 2>$null
     & $WindhawkCli mod settings set translucent-windows "RenderingMod.ThemeBackground=1" "RenderingMod.SysColors=0" "RenderingMod.AccentColorControls=1" "BackgroundEffects.type=acrylicblur" "BackgroundEffects.AccentBlurBehind=45141414" "FlyoutsEffects=1" "RuledPrograms[0].target=cmd.exe" "RuledPrograms[0].RenderingMod.ThemeBackground=1" "RuledPrograms[0].BackgroundEffects.type=acrylicblur" "RuledPrograms[0].BackgroundEffects.AccentBlurBehind=45141414" "RuledPrograms[1].target=powershell.exe" "RuledPrograms[1].RenderingMod.ThemeBackground=1" "RuledPrograms[1].BackgroundEffects.type=acrylicblur" "RuledPrograms[1].BackgroundEffects.AccentBlurBehind=45141414" "RuledPrograms[2].target=WindowsTerminal.exe" "RuledPrograms[2].RenderingMod.ThemeBackground=1" "RuledPrograms[2].BackgroundEffects.type=acrylicblur" "RuledPrograms[2].BackgroundEffects.AccentBlurBehind=45141414" 2>$null
 
     # Ensure Net Speed is adaptively anchored to the bottom right corner with rounded box chart (horizontalPosition=98, showBox=1, verticalNudge=12)

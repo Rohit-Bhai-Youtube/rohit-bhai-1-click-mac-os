@@ -122,36 +122,6 @@
                                   }
                  },
                  {
-                     "modId":  "windows-11-file-explorer-styler",
-                     "version":  "1.7.2",
-                     "name":  "Windows 11 File Explorer Styler",
-                     "settings":  {
-                                      "theme":  "Translucent Explorer11",
-                                      "backgroundTranslucentEffect":  "acrylic",
-                                      "backgroundTranslucentEffectRegion":  "explorerFrame",
-                                      "styleConstants[0]":  "",
-                                      "controlStyles[0].target":  "Grid#NavigationBarControlGrid",
-                                      "controlStyles[0].styles[1]":  "BorderThickness=0,0,0,0",
-                                      "controlStyles[0].styles[2]":  "BorderBrush=#30FFFFFF",
-                                      "controlStyles[1].target":  "Grid#DetailsViewControlRootGrid",
-                                      "controlStyles[1].styles[1]":  "BorderThickness=0,0,1,1",
-                                      "controlStyles[1].styles[2]":  "BorderBrush=#25FFFFFF",
-                                      "controlStyles[2].target":  "StackPanel#DetailsViewThumbnail",
-                                      "controlStyles[2].styles[0]":  "Background=WindhawkBlur",
-                                      "controlStyles[2].styles[1]":  "BorderThickness=0,0,0,1",
-                                      "controlStyles[2].styles[2]":  "BorderBrush=#40FFFFFF",
-                                      "controlStyles[3].target":  "Grid#CommandBarControlRootGrid",
-                                      "controlStyles[3].styles[0]":  "BorderThickness=1",
-                                      "controlStyles[3].styles[1]":  "BorderBrush=#40FFFFFF",
-                                      "controlStyles[3].styles[2]":  "CornerRadius=2",
-                                      "themeResourceVariables[0]":  "",
-                                      "explorerFrameContainerHeight":  0,
-                                      "xamlDiagnosticsHandling":  "alert",
-                                      "controlStyles[0].styles[0]":  "Background:=\u003cWindhawkBlur BlurAmount=\"12\" TintColor=\"#141414\" TintOpacity=\"0.25\"/\u003e",
-                                      "controlStyles[1].styles[0]":  "Background:=\u003cWindhawkBlur BlurAmount=\"12\" TintColor=\"#141414\" TintOpacity=\"0.25\"/\u003e"
-                                  }
-                 },
-                 {
                      "modId":  "net-speed-taskbar",
                      "version":  "1.6.4",
                      "name":  "Taskbar Network Speed Indicator",
