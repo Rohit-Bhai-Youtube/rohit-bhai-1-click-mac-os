@@ -1502,29 +1502,55 @@ function Set-AppleNetSpeedStorage {
         $key = "HKLM\SOFTWARE\Windhawk\Engine\Mods\$mId\Settings"
         Set-RegString $key "theme" "Chart"
         Set-RegDword $key "showBox" 0
-        Set-RegDword $key "horizontalPosition" 99
-        Set-RegDword $key "rightOffset" 20
-        Set-RegDword $key "verticalNudge" 0
+        Set-RegDword $key "horizontalPosition" 95
+        Set-RegDword $key "rightOffset" 0
+        Set-RegDword $key "verticalNudge" 14
         Set-RegDword $key "updateIntervalMs" 1000
         Set-RegDword $key "fontSize" 14
         Set-RegDword $key "opacity" 255
     }
 }
 
-function Remove-ExcessiveTransparencyMods {
-    # Ensure File Explorer stays crisp, authentic solid dark Mica (no extreme see-through transparency bleed)
-    foreach ($mId in @("windows-11-file-explorer-styler", "translucent-windows")) {
-        if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
-            & $WindhawkCli mod disable $mId --yes 2>$null
-            & $WindhawkCli mod remove $mId --yes 2>$null
+function Set-FrostedLiquidGlassStorage {
+    # 1. Windows 11 File Explorer Styler: Deep Frosted Liquid Glass (Blur 20, Dark Tint 0.72)
+    $feKey = "HKLM\SOFTWARE\Windhawk\Engine\Mods\windows-11-file-explorer-styler\Settings"
+    Set-RegString $feKey "theme" "Translucent Explorer11"
+    Set-RegString $feKey "backgroundTranslucentEffect" "acrylic"
+    Set-RegString $feKey "backgroundTranslucentEffectRegion" "explorerFrame"
+
+    # 2. Translucent Windows: Frosted Acrylic Blur across CMD, PowerShell, Consoles, Dialogs
+    $twKey = "HKLM\SOFTWARE\Windhawk\Engine\Mods\translucent-windows\Settings"
+    Set-RegDword $twKey "RenderingMod.ThemeBackground" 1
+    Set-RegDword $twKey "RenderingMod.SysColors" 0
+    Set-RegDword $twKey "RenderingMod.AccentColorControls" 1
+    Set-RegString $twKey "BackgroundEffects.type" "acrylicblur"
+    Set-RegString $twKey "BackgroundEffects.AccentBlurBehind" "C01A1A1A"
+    Set-RegDword $twKey "FlyoutsEffects" 1
+
+    # 3. Windows Terminal: Native Acrylic frosted blur
+    try {
+        $wtSettingsDir = "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState"
+        $wtSettingsFile = Join-Path $wtSettingsDir "settings.json"
+        if (Test-Path $wtSettingsFile) {
+            $wtContent = Get-Content $wtSettingsFile -Raw -ErrorAction SilentlyContinue
+            if ($wtContent) {
+                $wtJson = $wtContent | ConvertFrom-Json -ErrorAction SilentlyContinue
+                if ($wtJson) {
+                    if (-not $wtJson.profiles.defaults) {
+                        $wtJson.profiles | Add-Member -MemberType NoteProperty -Name "defaults" -Value ([PSCustomObject]@{}) -Force
+                    }
+                    $wtJson.profiles.defaults | Add-Member -MemberType NoteProperty -Name "useAcrylic" -Value $true -Force
+                    $wtJson.profiles.defaults | Add-Member -MemberType NoteProperty -Name "acrylicOpacity" -Value 0.75 -Force
+                    $wtJson | ConvertTo-Json -Depth 32 | Set-Content $wtSettingsFile -Encoding UTF8 -Force
+                }
+            }
         }
-        Remove-Item -Path "HKLM:\SOFTWARE\Windhawk\Engine\Mods\$mId" -Recurse -Force -ErrorAction SilentlyContinue
-    }
+    } catch {}
 }
 
 Set-MacIslandStorage
 Set-AppleNetSpeedStorage
-Remove-ExcessiveTransparencyMods
+Set-FrostedLiquidGlassStorage
 
 if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
     # Ensure Windhawk background service is running
@@ -1586,14 +1612,14 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
         "net-speed-taskbar",
         "windows-11-start-menu-styler",
         "windows-11-notification-center-styler",
+        "windows-11-file-explorer-styler",
+        "translucent-windows",
         "invisible-borders"
     )
     foreach ($mod in $repoMods) {
         & $WindhawkCli mod install $mod --yes 2>$null
+        & $WindhawkCli mod enable $mod --yes 2>$null
     }
-
-    # Remove any transparency mods that cause File Explorer to be excessively transparent
-    Remove-ExcessiveTransparencyMods
 
     # 2. Apply custom preset settings archive
     $importTarget = if (Test-Path $WhDataArchive) { $WhDataArchive } else { $WhDataLocal }
@@ -1607,26 +1633,35 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
         if (Test-Path $speedModSource) {
             & $WindhawkCli mod install --file "$speedModSource" --yes 2>$null
             & $WindhawkCli mod compile local@net-speed-taskbar-apple 2>$null
-            & $WindhawkCli mod disable net-speed-taskbar --yes 2>$null
-            & $WindhawkCli mod remove net-speed-taskbar --yes 2>$null
+            & $WindhawkCli mod enable local@net-speed-taskbar-apple --yes 2>$null
+        }
+        if (Test-Path $islandModSource) {
+            & $WindhawkCli mod install --file "$islandModSource" --yes 2>$null
+            & $WindhawkCli mod compile mac-island-dock 2>$null
+            & $WindhawkCli mod enable mac-island-dock --yes 2>$null
         }
     }
 
     Write-Host "  [OK] Official macOS mods and custom settings activated successfully via Windhawk CLI!" -ForegroundColor Green
 
-    # Ensure Mac Island Top Bar & Bottom Floating Dock are explicitly enabled & styled with large icons, magnification & liquid glass shelf, onlyApps=1 hides weather button
+    # Ensure Mac Island Top Bar & Bottom Floating Dock are explicitly enabled & styled with large icons, magnification & liquid glass shelf, onlyApps=1
     & $WindhawkCli mod settings set mac-island-dock "taskbarMode=dock" "showIsland=1" "hiding.autoHide=0" "dock.iconSize=52" "dock.iconGap=12" "dock.bottomGap=6" "dock.cornerRadius=22" "dock.background=1" "dock.backgroundOpacity=65" "icons.magnification=180" "icons.magnificationRange=160" "animations.enabled=1" "animations.speed=120" "dock.dotIndicator=1" "icons.onlyApps=1" 2>$null
 
-    # Ensure Liquid Glass styling everywhere across Windhawk mods & set net speed to bottom right corner
+    # Ensure Liquid Glass styling everywhere across Windhawk mods (File Explorer, Start Menu, Notification Center, Windows)
     & $WindhawkCli mod settings set windows-11-notification-center-styler theme=LiquidGlass 2>$null
     & $WindhawkCli mod settings set windows-11-start-menu-styler theme=LiquidGlass 2>$null
-    & $WindhawkCli mod settings set local@net-speed-taskbar-apple "horizontalPosition=99" "rightOffset=20" "verticalNudge=0" "theme=Chart" "fontSize=14" 2>$null
-    & $WindhawkCli mod settings set net-speed-taskbar "horizontalPosition=99" "rightOffset=20" "verticalNudge=0" "theme=Chart" "fontSize=14" 2>$null
+    & $WindhawkCli mod settings set windows-11-file-explorer-styler "theme=Translucent Explorer11" "backgroundTranslucentEffect=acrylic" "backgroundTranslucentEffectRegion=explorerFrame" 2>$null
+    & $WindhawkCli mod settings set translucent-windows "BackgroundEffects.type=acrylicblur" "BackgroundEffects.AccentBlurBehind=C01A1A1A" "RenderingMod.ThemeBackground=1" 2>$null
+
+    # Ensure Net Speed is adaptively anchored to the bottom right corner (horizontalPosition=95, rightOffset=0, verticalNudge=14)
+    & $WindhawkCli mod settings set local@net-speed-taskbar-apple "horizontalPosition=95" "rightOffset=0" "verticalNudge=14" "theme=Chart" "fontSize=14" 2>$null
+    & $WindhawkCli mod settings set net-speed-taskbar "horizontalPosition=95" "verticalNudge=14" "theme=Chart" "fontSize=14" 2>$null
+    & $WindhawkCli mod enable net-speed-taskbar --yes 2>$null
 
     # Re-apply LocalStorage & restart mac-island-dock so it immediately docks to top-right
     Set-MacIslandStorage
     Set-AppleNetSpeedStorage
-    Remove-ExcessiveTransparencyMods
+    Set-FrostedLiquidGlassStorage
     & $WindhawkCli mod disable mac-island-dock --yes 2>$null
     Start-Sleep -Milliseconds 400
     & $WindhawkCli mod enable mac-island-dock --yes 2>$null
@@ -1640,7 +1675,7 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
     }
     Set-MacIslandStorage
     Set-AppleNetSpeedStorage
-    Remove-ExcessiveTransparencyMods
+    Set-FrostedLiquidGlassStorage
 }
 
 if ($windhawkExe -or $WindhawkCli) {
@@ -1695,7 +1730,7 @@ try {
     if (-not (Test-Path $searchKey)) { New-Item -Path $searchKey -Force | Out-Null }
     Set-ItemProperty -Path $searchKey -Name "SearchboxTaskbarMode" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
 
-    # 2. Hide Task View, Weather/Widgets & Chat/Copilot buttons for authentic clean macOS Dock look
+    # 2. Hide Task View, Weather/Widgets & Chat/Copilot buttons machine-wide and user-wide for pure macOS Dock
     $advKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
     if (-not (Test-Path $advKey)) { New-Item -Path $advKey -Force | Out-Null }
     Set-ItemProperty -Path $advKey -Name "ShowTaskViewButton" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
@@ -1706,6 +1741,19 @@ try {
     $feedsKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Feeds"
     if (-not (Test-Path $feedsKey)) { New-Item -Path $feedsKey -Force | Out-Null }
     Set-ItemProperty -Path $feedsKey -Name "ShellFeedsTaskbarViewMode" -Value 2 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $feedsKey -Name "HeadlinesOnTaskbar" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+
+    # Apply to all mounted user profiles in HKEY_USERS
+    Get-ChildItem Registry::HKEY_USERS | Where-Object { $_.Name -match 'S-1-5-21-' -and $_.Name -notmatch '_Classes' } | ForEach-Object {
+        $uAdv = "Registry::$($_.Name)\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        if (Test-Path $uAdv) {
+            Set-ItemProperty -Path $uAdv -Name "TaskbarDa" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+            Set-ItemProperty -Path $uAdv -Name "TaskbarMn" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+        }
+        $uFeeds = "Registry::$($_.Name)\Software\Microsoft\Windows\CurrentVersion\Feeds"
+        if (-not (Test-Path $uFeeds)) { New-Item -Path $uFeeds -Force | Out-Null }
+        Set-ItemProperty -Path $uFeeds -Name "ShellFeedsTaskbarViewMode" -Value 2 -Type DWord -Force -ErrorAction SilentlyContinue
+    }
 
     $dshHkcu = "HKCU:\SOFTWARE\Policies\Microsoft\Dsh"
     if (-not (Test-Path $dshHkcu)) { New-Item -Path $dshHkcu -Force | Out-Null }
@@ -1714,6 +1762,10 @@ try {
     $dshHklm = "HKLM:\SOFTWARE\Policies\Microsoft\Dsh"
     if (-not (Test-Path $dshHklm)) { New-Item -Path $dshHklm -Force | Out-Null }
     Set-ItemProperty -Path $dshHklm -Name "AllowNewsAndInterests" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+
+    $wHklm = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Widgets"
+    if (-not (Test-Path $wHklm)) { New-Item -Path $wHklm -Force | Out-Null }
+    Set-ItemProperty -Path $wHklm -Name "AllowWidgets" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
 
     # Terminate any running widget processes
     Get-Process -Name "*widget*" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue

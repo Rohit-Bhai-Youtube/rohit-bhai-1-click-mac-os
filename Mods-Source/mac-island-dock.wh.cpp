@@ -6367,6 +6367,11 @@ void RescanDockIcons() {
     const bool opening = g_dockItemCount >= 0 && NowSeconds() - g_dockSince > 1;
     bool added = false;
     for (const auto& button : buttons) {
+        if (winrt::get_class_name(button) == L"Taskbar.AugmentedEntryPointButton") {
+            SetStyled(button, UIElement::VisibilityProperty(),
+                      winrt::box_value(Visibility::Collapsed));
+            continue;
+        }
         if (FindDockIcon(button)) {
             continue;
         }
@@ -8428,6 +8433,15 @@ bool ApplyStyleUnscoped(XamlRoot xamlRoot, HWND hWnd, bool mainTaskbar) {
     SetStyled(frame, FrameworkElement::WidthProperty(),
               winrt::box_value(std::numeric_limits<double>::quiet_NaN()));
     WatchFrameWidth(frame);
+
+    // Hide any weather / widgets buttons from the dock area completely
+    std::vector<FrameworkElement> dockWidgets;
+    FindAllByClassName(rootGrid, {L"Taskbar.AugmentedEntryPointButton"}, dockWidgets);
+    FindAllByClassName(frame, {L"Taskbar.AugmentedEntryPointButton"}, dockWidgets);
+    for (const auto& widget : dockWidgets) {
+        SetStyled(widget, UIElement::VisibilityProperty(),
+                  winrt::box_value(Visibility::Collapsed));
+    }
 
     // The dock has its own height, at the bottom of the taskbar. Whatever the
     // taskbar has above it stays transparent: room for the magnified icons,

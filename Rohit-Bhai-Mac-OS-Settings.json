@@ -93,6 +93,78 @@
                                   }
                  },
                  {
+                     "modId":  "translucent-windows",
+                     "version":  "1.8.2",
+                     "name":  "Translucent Windows",
+                     "settings":  {
+                                      "RenderingMod.ThemeBackground":  1,
+                                      "RenderingMod.SysColors":  0,
+                                      "RenderingMod.AccentColorControls":  1,
+                                      "BackgroundEffects.type":  "acrylicblur",
+                                      "BackgroundEffects.AccentBlurBehind":  "C01A1A1A",
+                                      "FlyoutsEffects":  1,
+                                      "RuledPrograms[0].target":  "cmd.exe",
+                                      "RuledPrograms[0].RenderingMod.ThemeBackground":  1,
+                                      "RuledPrograms[0].RenderingMod.AccentColorControls":  1,
+                                      "RuledPrograms[0].BackgroundEffects.type":  "acrylicblur",
+                                      "RuledPrograms[0].BackgroundEffects.AccentBlurBehind":  "C01A1A1A",
+                                      "RuledPrograms[1].target":  "powershell.exe",
+                                      "RuledPrograms[1].RenderingMod.ThemeBackground":  1,
+                                      "RuledPrograms[1].RenderingMod.AccentColorControls":  1,
+                                      "RuledPrograms[1].BackgroundEffects.type":  "acrylicblur",
+                                      "RuledPrograms[1].BackgroundEffects.AccentBlurBehind":  "C01A1A1A",
+                                      "RuledPrograms[2].target":  "WindowsTerminal.exe",
+                                      "RuledPrograms[2].RenderingMod.ThemeBackground":  1,
+                                      "RuledPrograms[2].RenderingMod.AccentColorControls":  1,
+                                      "RuledPrograms[2].BackgroundEffects.type":  "acrylicblur",
+                                      "RuledPrograms[2].BackgroundEffects.AccentBlurBehind":  "C01A1A1A"
+                                  }
+                 },
+                 {
+                     "modId":  "windows-11-file-explorer-styler",
+                     "version":  "1.7.2",
+                     "name":  "Windows 11 File Explorer Styler",
+                     "settings":  {
+                                      "theme":  "Translucent Explorer11",
+                                      "backgroundTranslucentEffect":  "acrylic",
+                                      "backgroundTranslucentEffectRegion":  "explorerFrame",
+                                      "styleConstants[0]":  "",
+                                      "controlStyles[0].target":  "Grid#NavigationBarControlGrid",
+                                      "controlStyles[0].styles[0]":  "Background:=<WindhawkBlur BlurAmount=\"20\" TintColor=\"#1A1A1A\" TintOpacity=\"0.72\"/>",
+                                      "controlStyles[0].styles[1]":  "BorderThickness=0,0,0,0",
+                                      "controlStyles[0].styles[2]":  "BorderBrush=#30FFFFFF",
+                                      "controlStyles[1].target":  "Grid#DetailsViewControlRootGrid",
+                                      "controlStyles[1].styles[0]":  "Background:=<WindhawkBlur BlurAmount=\"20\" TintColor=\"#1A1A1A\" TintOpacity=\"0.72\"/>",
+                                      "controlStyles[1].styles[1]":  "BorderThickness=0,0,1,1",
+                                      "controlStyles[1].styles[2]":  "BorderBrush=#25FFFFFF",
+                                      "controlStyles[2].target":  "StackPanel#DetailsViewThumbnail",
+                                      "controlStyles[2].styles[0]":  "Background=WindhawkBlur",
+                                      "controlStyles[2].styles[1]":  "BorderThickness=0,0,0,1",
+                                      "controlStyles[2].styles[2]":  "BorderBrush=#40FFFFFF",
+                                      "controlStyles[3].target":  "Grid#CommandBarControlRootGrid",
+                                      "controlStyles[3].styles[0]":  "BorderThickness=1",
+                                      "controlStyles[3].styles[1]":  "BorderBrush=#40FFFFFF",
+                                      "controlStyles[3].styles[2]":  "CornerRadius=2",
+                                      "themeResourceVariables[0]":  "",
+                                      "explorerFrameContainerHeight":  0,
+                                      "xamlDiagnosticsHandling":  "alert"
+                                  }
+                 },
+                 {
+                     "modId":  "net-speed-taskbar",
+                     "version":  "1.6.4",
+                     "name":  "Taskbar Network Speed Indicator",
+                     "settings":  {
+                                      "theme":  "Chart",
+                                      "showBox":  0,
+                                      "horizontalPosition":  95,
+                                      "verticalNudge":  14,
+                                      "updateIntervalMs":  1000,
+                                      "fontSize":  14,
+                                      "opacity":  255
+                                  }
+                 },
+                 {
                      "modId":  "windows-11-notification-center-styler",
                      "version":  "1.8",
                      "name":  "Windows 11 Notification Center Styler",
@@ -133,11 +205,11 @@
                      "settings":  {
                                       "theme":  "Chart",
                                       "showBox":  0,
-                                      "horizontalPosition":  99,
-                                      "rightOffset":  20,
-                                      "verticalNudge":  0,
+                                      "horizontalPosition":  95,
+                                      "rightOffset":  0,
+                                      "verticalNudge":  14,
                                       "updateIntervalMs":  1000,
-                                      "fontSize":  15,
+                                      "fontSize":  14,
                                       "opacity":  255
                                   }
                  }

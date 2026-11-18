@@ -71,16 +71,16 @@ worth knowing:
 - showBox: 0
   $name: Show Box/Square Background
   $description: "Enable to wrap the speed meter in a rounded square box with border; disable for a clean, direct floating look without any box."
-- horizontalPosition: 99
+- horizontalPosition: 95
   $name: Horizontal position (%)
-- rightOffset: 20
+- rightOffset: 0
   $name: Right anchor (px)
   $description: "Anchor the widget's right edge this many pixels from the taskbar's right edge; 0 uses Horizontal position percent instead."
-- verticalNudge: 0
+- verticalNudge: 14
   $name: Vertical nudge (px)
 - updateIntervalMs: 1000
   $name: Update interval (ms)
-- fontSize: 15
+- fontSize: 14
   $name: Font size
 - opacity: 255
   $name: Opacity (0-255)
