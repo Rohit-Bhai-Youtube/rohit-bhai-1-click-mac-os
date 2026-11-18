@@ -1403,7 +1403,7 @@ function Set-RegString($key, $name, $val) {
 }
 
 function Set-MacIslandStorage {
-    $targetOrder = 'de12635;<8?479:=>@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcfghijklm'
+    $targetOrder = 'de12635;<8479:=>@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcfghijklm'
     $key = "HKLM\SOFTWARE\Windhawk\Engine\ModsWritable\mac-island-dock\LocalStorage"
     
     # Read user SID to ensure per-user storage also receives all values
@@ -1424,7 +1424,7 @@ function Set-MacIslandStorage {
         "islandGlassBlur" = 85
         "islandGlassLight" = 0
         "islandBarClear" = 0
-        "islandWeather" = 1
+        "islandWeather" = 0
         "islandWeatherUnit" = 1
         "weatherMyLocation" = 1
         "islandNotes" = 1
@@ -1797,6 +1797,9 @@ try {
     reg.exe add "HKU\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarDa /t REG_DWORD /d 0 /f 2>$null
     reg.exe add "HKU\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarMn /t REG_DWORD /d 0 /f 2>$null
     reg.exe add "HKU\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Feeds" /v ShellFeedsTaskbarViewMode /t REG_DWORD /d 2 /f 2>$null
+
+    # Disable / Remove Windows WebExperience Widgets package live (toggles Widgets OFF in Taskbar Settings & removes icon from Dock)
+    Get-AppxPackage *WebExperience* | Remove-AppxPackage -ErrorAction SilentlyContinue
 
     # Kill running widget processes
     taskkill.exe /f /im WindowsWidgets.exe 2>$null

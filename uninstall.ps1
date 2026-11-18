@@ -738,6 +738,11 @@ public static class MacAppShortcutHelper {
         }
     }
 
+    # Re-register and restore Windows WebExperience (Widgets) package (toggles Widgets ON in Taskbar Settings)
+    Get-AppxPackage -AllUsers *WebExperience* | ForEach-Object {
+        Add-AppxPackage -DisableDevelopmentMode -Register "$($_.InstallLocation)\AppXManifest.xml" -ErrorAction SilentlyContinue
+    }
+
     Write-Host "  [OK] Original Microsoft Edge, File Explorer, Start Menu, and app icons restored!" -ForegroundColor Green
 } catch {
     Write-Host "  [-] Skipped taskbar shortcut restoration: $($_.Exception.Message)" -ForegroundColor DarkGray
