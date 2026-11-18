@@ -125,6 +125,8 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
     $mods = @(
         "mac-island-dock",
         "macos-minimize-animation",
+        "net-speed-taskbar",
+        "net-speed-taskbar-apple",
         "local@net-speed-taskbar-apple",
         "windows-11-start-menu-styler",
         "windows-11-notification-center-styler",
