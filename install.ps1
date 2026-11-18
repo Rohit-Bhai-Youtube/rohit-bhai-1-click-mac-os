@@ -1048,6 +1048,23 @@ public static class MacAppShortcutHelper {
     New-Item -ItemType Directory -Path $taskbarDir -Force | Out-Null
     New-Item -ItemType Directory -Path $userStartDir -Force | Out-Null
 
+    # Backup original shortcuts if not already backed up
+    $backupDir = "$env:LOCALAPPDATA\RohitBhaiMacOS\ShortcutsBackup"
+    if (-not (Test-Path $backupDir)) {
+        New-Item -ItemType Directory -Path "$backupDir\TaskBar" -Force | Out-Null
+        New-Item -ItemType Directory -Path "$backupDir\UserStart" -Force | Out-Null
+        New-Item -ItemType Directory -Path "$backupDir\CommonStart" -Force | Out-Null
+        if (Test-Path $taskbarDir) {
+            Copy-Item -Path "$taskbarDir\*.lnk" -Destination "$backupDir\TaskBar" -Force -ErrorAction SilentlyContinue
+        }
+        if (Test-Path $userStartDir) {
+            Copy-Item -Path "$userStartDir\*.lnk" -Destination "$backupDir\UserStart" -Force -ErrorAction SilentlyContinue
+        }
+        if (Test-Path $allStartDir) {
+            Copy-Item -Path "$allStartDir\*.lnk" -Destination "$backupDir\CommonStart" -Force -ErrorAction SilentlyContinue
+        }
+    }
+
     # 1. Native application target resolution (No fake temporary binaries that trigger Defender!)
     # Edge
     $edgeExe = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
@@ -1106,19 +1123,19 @@ public static class MacAppShortcutHelper {
         @{
             Name = "Explorer to Finder"; Icon = "Finder.ico"; AppId = "Microsoft.Windows.Explorer"
             Target = $explorerExe; Args = ""
-            TaskbarLnk = "File Explorer.lnk"; StartLnks = @("File Explorer.lnk")
+            TaskbarLnk = "File Explorer.lnk"; StartLnks = @()
             Installed = $true
         },
         @{
             Name = "Microsoft Store to App Store"; Icon = "AppStore.ico"; AppId = $storeAumid
             Target = $storeTarget; Args = $storeArgs
-            TaskbarLnk = "Microsoft Store.lnk"; StartLnks = @("Microsoft Store.lnk")
+            TaskbarLnk = "Microsoft Store.lnk"; StartLnks = @()
             Installed = $true
         },
         @{
             Name = "Settings to macOS Settings"; Icon = "Settings.ico"; AppId = $settingsAumid
             Target = $settingsTarget; Args = $settingsArgs
-            TaskbarLnk = "Settings.lnk"; StartLnks = @("Settings.lnk")
+            TaskbarLnk = "Settings.lnk"; StartLnks = @()
             Installed = $true
         },
         @{
@@ -1148,31 +1165,31 @@ public static class MacAppShortcutHelper {
         @{
             Name = "Terminal"; Icon = "Terminal.ico"; AppId = "Microsoft.WindowsTerminal_8wekyb3d8bbwe!App"
             Target = "shell:AppsFolder\Microsoft.WindowsTerminal_8wekyb3d8bbwe!App"; Args = ""
-            TaskbarLnk = "Windows Terminal.lnk"; StartLnks = @("Windows Terminal.lnk")
+            TaskbarLnk = "Windows Terminal.lnk"; StartLnks = @()
             Installed = $true
         },
         @{
             Name = "Notepad to Notes"; Icon = "Notes.ico"; AppId = "Microsoft.WindowsNotepad_8wekyb3d8bbwe!App"
             Target = "shell:AppsFolder\Microsoft.WindowsNotepad_8wekyb3d8bbwe!App"; Args = ""
-            TaskbarLnk = "Notepad.lnk"; StartLnks = @("Notepad.lnk")
+            TaskbarLnk = "Notepad.lnk"; StartLnks = @()
             Installed = $true
         },
         @{
             Name = "Calculator"; Icon = "Calculator.ico"; AppId = "Microsoft.WindowsCalculator_8wekyb3d8bbwe!App"
             Target = "shell:AppsFolder\Microsoft.WindowsCalculator_8wekyb3d8bbwe!App"; Args = ""
-            TaskbarLnk = "Calculator.lnk"; StartLnks = @("Calculator.lnk")
+            TaskbarLnk = "Calculator.lnk"; StartLnks = @()
             Installed = $true
         },
         @{
             Name = "Photos"; Icon = "Photos.ico"; AppId = "Microsoft.Windows.Photos_8wekyb3d8bbwe!App"
-            Target = "shell:AppsFolder\Microsoft.Windows.Photos_8wekyb3d8bbwe!App"; Args = ""
-            TaskbarLnk = "Photos.lnk"; StartLnks = @("Photos.lnk")
+            Target = "shell:AppsFolder\Microsoft.WindowsPhotos_8wekyb3d8bbwe!App"; Args = ""
+            TaskbarLnk = "Photos.lnk"; StartLnks = @()
             Installed = $true
         },
         @{
             Name = "Apple Music"; Icon = "Music.ico"; AppId = "Microsoft.ZuneMusic_8wekyb3d8bbwe!Microsoft.ZuneMusic"
             Target = "shell:AppsFolder\Microsoft.ZuneMusic_8wekyb3d8bbwe!Microsoft.ZuneMusic"; Args = ""
-            TaskbarLnk = "Apple Music.lnk"; StartLnks = @("Apple Music.lnk")
+            TaskbarLnk = "Apple Music.lnk"; StartLnks = @()
             Installed = $true
         }
     )
@@ -1190,14 +1207,15 @@ public static class MacAppShortcutHelper {
                 $userSlPath = Join-Path $userStartDir $sl
                 $allSlPath = Join-Path $allStartDir $sl
 
-                # Deploy custom squircle icon shortcut to Start Menu for installed apps
-                if ($app.Installed -and $app.Target) {
-                    [MacAppShortcutHelper]::CreateOrUpdateShortcut($userSlPath, $app.Target, $app.Args, $icoPath, $app.AppId)
-                    try {
-                        $allParent = Split-Path $allSlPath -Parent
-                        if (-not (Test-Path $allParent)) { New-Item -ItemType Directory -Path $allParent -Force | Out-Null }
+                # Only customize Start Menu shortcut if it is an actual Desktop Win32 app (Edge, WhatsApp, Discord, Steam)
+                # NEVER inject fake .lnk for UWP/system apps into Programs folder to prevent polluting "Recently added"
+                if ($app.Installed -and $app.Target -and ($app.Target -notlike "shell:AppsFolder*") -and ($app.Target -notlike "*explorer.exe")) {
+                    if (Test-Path $userSlPath) {
+                        [MacAppShortcutHelper]::CreateOrUpdateShortcut($userSlPath, $app.Target, $app.Args, $icoPath, $app.AppId)
+                    }
+                    if (Test-Path $allSlPath) {
                         [MacAppShortcutHelper]::CreateOrUpdateShortcut($allSlPath, $app.Target, $app.Args, $icoPath, $app.AppId)
-                    } catch {}
+                    }
                 }
             }
         }

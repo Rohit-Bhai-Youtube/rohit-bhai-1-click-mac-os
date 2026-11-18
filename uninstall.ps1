@@ -416,6 +416,20 @@ public static class MacAppShortcutHelper {
     $allStartDir   = [Environment]::GetFolderPath('CommonPrograms')
     $userDesktop   = [Environment]::GetFolderPath('Desktop')
     $commonDesktop = [Environment]::GetFolderPath('CommonDesktop')
+    $backupDir     = "$env:LOCALAPPDATA\RohitBhaiMacOS\ShortcutsBackup"
+
+    # 0. Restore from ShortcutsBackup if available
+    if (Test-Path $backupDir) {
+        if (Test-Path "$backupDir\TaskBar") {
+            Copy-Item -Path "$backupDir\TaskBar\*.lnk" -Destination $taskbarDir -Force -ErrorAction SilentlyContinue
+        }
+        if (Test-Path "$backupDir\UserStart") {
+            Copy-Item -Path "$backupDir\UserStart\*.lnk" -Destination $userStartDir -Force -ErrorAction SilentlyContinue
+        }
+        if (Test-Path "$backupDir\CommonStart") {
+            Copy-Item -Path "$backupDir\CommonStart\*.lnk" -Destination $allStartDir -Force -ErrorAction SilentlyContinue
+        }
+    }
 
     # 1. Clean duplicate *(2).lnk, *(3).lnk in taskbar
     if (Test-Path $taskbarDir) {
@@ -442,7 +456,7 @@ public static class MacAppShortcutHelper {
         "Activity Monitor.lnk"
     )
     foreach ($scName in $uwpShortcutsToRemove) {
-        foreach ($base in @($taskbarDir, $userStartDir, $allStartDir)) {
+        foreach ($base in @($userStartDir, $allStartDir)) {
             $p = Join-Path $base $scName
             if (Test-Path $p) {
                 Remove-Item -LiteralPath $p -Force -ErrorAction SilentlyContinue
@@ -450,38 +464,31 @@ public static class MacAppShortcutHelper {
         }
     }
 
-    # Clean any orphaned taskbar shortcuts pointing to RohitBhaiMacOS
-    if (Test-Path $taskbarDir) {
-        $wsh = New-Object -ComObject WScript.Shell
-        Get-ChildItem -Path $taskbarDir -Filter "*.lnk" -ErrorAction SilentlyContinue | ForEach-Object {
-            try {
-                $sc = $wsh.CreateShortcut($_.FullName)
-                if ($sc.TargetPath -like "*RohitBhaiMacOS*" -or $sc.IconLocation -like "*RohitBhaiMacOS*") {
-                    Remove-Item -LiteralPath $_.FullName -Force -ErrorAction SilentlyContinue
-                }
-            } catch {}
-        }
-    }
-
     # 3. Restore 100% Native Microsoft Edge Shortcut with official AUMID (MSEdge)
-    $edgeExe = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
-    if (-not (Test-Path $edgeExe)) { $edgeExe = "C:\Program Files\Microsoft\Edge\Application\msedge.exe" }
-    if (Test-Path $edgeExe) {
-        $edgeLocations = @(
-            (Join-Path $taskbarDir "Microsoft Edge.lnk"),
-            (Join-Path $allStartDir "Microsoft Edge.lnk"),
-            (Join-Path $userStartDir "Microsoft Edge.lnk"),
-            (Join-Path $userDesktop "Microsoft Edge.lnk"),
-            (Join-Path $commonDesktop "Microsoft Edge.lnk")
-        )
-        foreach ($edgeLnk in $edgeLocations) {
-            [MacAppShortcutHelper]::CreateOrUpdateShortcut($edgeLnk, $edgeExe, "", "$edgeExe,0", "MSEdge")
-        }
+    $edgeExes = @(
+        "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+        "C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+        "$env:LOCALAPPDATA\Microsoft\Edge\Application\msedge.exe"
+    )
+    $edgeExe = $edgeExes | Where-Object { Test-Path $_ } | Select-Object -First 1
+    if ($edgeExe) {
+        # Restore Taskbar shortcut
+        [MacAppShortcutHelper]::CreateOrUpdateShortcut((Join-Path $taskbarDir "Microsoft Edge.lnk"), $edgeExe, "", "$edgeExe,0", "MSEdge")
+        # Restore Common Start Menu shortcut
+        [MacAppShortcutHelper]::CreateOrUpdateShortcut((Join-Path $allStartDir "Microsoft Edge.lnk"), $edgeExe, "", "$edgeExe,0", "MSEdge")
+        # Remove duplicate from User Start Menu if present
+        $userEdge = Join-Path $userStartDir "Microsoft Edge.lnk"
+        if (Test-Path $userEdge) { Remove-Item -LiteralPath $userEdge -Force -ErrorAction SilentlyContinue }
     }
 
-    # 4. Restore 100% Native File Explorer Shortcut with official AUMID (Microsoft.Windows.Explorer)
+    # 4. Restore 100% Native File Explorer Shortcut on Taskbar with official AUMID (Microsoft.Windows.Explorer)
     $explorerLnk = Join-Path $taskbarDir "File Explorer.lnk"
     [MacAppShortcutHelper]::CreateOrUpdateShortcut($explorerLnk, "$env:WINDIR\explorer.exe", "", "$env:WINDIR\explorer.exe,0", "Microsoft.Windows.Explorer")
+    # Clean any File Explorer shortcut from Start Menu (not standard in Windows 11)
+    foreach ($base in @($userStartDir, $allStartDir)) {
+        $p = Join-Path $base "File Explorer.lnk"
+        if (Test-Path $p) { Remove-Item -LiteralPath $p -Force -ErrorAction SilentlyContinue }
+    }
 
     # 5. Restore Microsoft Store Taskbar Shortcut with official AUMID
     $storeLnk = Join-Path $taskbarDir "Microsoft Store.lnk"
@@ -577,7 +584,13 @@ public static class MacAppShortcutHelper {
                 if ($target -like "*RohitBhaiMacOS*") {
                     Remove-Item -LiteralPath $_.FullName -Force -ErrorAction SilentlyContinue
                 } elseif ($icon -like "*RohitBhaiMacOS*") {
-                    if ($target -and (Test-Path $target) -and ($target -match "\.exe$") -and ($target -notlike "*explorer.exe")) {
+                    if ($target -like "*explorer.exe*") {
+                        $lnk.IconLocation = "$env:WINDIR\explorer.exe,0"
+                        $lnk.Save()
+                    } elseif ($target -like "*msedge.exe*") {
+                        $lnk.IconLocation = "$target,0"
+                        $lnk.Save()
+                    } elseif ($target -and (Test-Path $target) -and ($target -match "\.exe$")) {
                         $lnk.IconLocation = "$target,0"
                         $lnk.Save()
                     } else {
@@ -588,7 +601,25 @@ public static class MacAppShortcutHelper {
         }
     }
 
-    # 10. Restore Windows Search Bar & Taskbar Buttons
+    # 10. Purge Start Menu "Recently added" / MRU ghost shortcuts
+    $recentDir = [Environment]::GetFolderPath('Recent')
+    if (Test-Path $recentDir) {
+        Get-ChildItem -Path $recentDir -Filter "*.lnk" -Force -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+        $autoDest = Join-Path $recentDir "AutomaticDestinations"
+        if (Test-Path $autoDest) {
+            Get-ChildItem -Path $autoDest -Force -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+        }
+        $customDest = Join-Path $recentDir "CustomDestinations"
+        if (Test-Path $customDest) {
+            Get-ChildItem -Path $customDest -Force -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    # 11. Restart StartMenuExperienceHost and SearchHost to instantly flush ghosts
+    Stop-Process -Name "StartMenuExperienceHost" -Force -ErrorAction SilentlyContinue
+    Stop-Process -Name "SearchHost" -Force -ErrorAction SilentlyContinue
+
+    # 12. Restore Windows Search Bar & Taskbar Buttons
     Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Search" -Name "SearchboxTaskbarMode" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ShowTaskViewButton" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarDa" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
@@ -701,7 +732,7 @@ public class Win32RestoreWall {
 # -------------------------------------------------------------------------
 Write-Host "`n[8/8] Rebuilding Windows Icon Cache & Refreshing Explorer & Start Menu..." -ForegroundColor Cyan
 
-# 1. Clean AppData directory
+# 1. Clean AppData directory (after all shortcuts are guaranteed restored)
 $appDir = "$env:LOCALAPPDATA\RohitBhaiMacOS"
 if (Test-Path $appDir) {
     Remove-Item -Path $appDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -717,8 +748,11 @@ if (Test-Path $expCache) {
     Get-ChildItem -Path $expCache -Filter "*thumbcache*.db" -Force -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
 }
 
+# 3. Terminate StartMenuExperienceHost and SearchHost to force fresh Start Menu load
+Stop-Process -Name "StartMenuExperienceHost" -Force -ErrorAction SilentlyContinue
+Stop-Process -Name "SearchHost" -Force -ErrorAction SilentlyContinue
 
-# 4. Notify Windows Shell of association and icon changes
+# 4. Notify Windows Shell of association and icon changes with SHCNF_FLUSH
 Add-Type -TypeDefinition @"
 using System;
 using System.Runtime.InteropServices;
@@ -727,7 +761,7 @@ public class Win32IconRefresh {
     public static extern void SHChangeNotify(int wEventId, int uFlags, IntPtr dwItem1, IntPtr dwItem2);
 }
 "@ -ErrorAction SilentlyContinue
-[Win32IconRefresh]::SHChangeNotify(0x08000000, 0x0000, [IntPtr]::Zero, [IntPtr]::Zero)
+[Win32IconRefresh]::SHChangeNotify(0x08000000, 0x1000, [IntPtr]::Zero, [IntPtr]::Zero)
 try {
     $ie4 = Join-Path ([Environment]::GetFolderPath('System')) "ie4uinit.exe"
     if (Test-Path $ie4) { & $ie4 -show 2>$null }
