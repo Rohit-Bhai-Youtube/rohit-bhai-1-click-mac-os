@@ -170,16 +170,28 @@ public class IslandDaemon {
     }
 
     public static void Run() {
-        Console.WriteLine("IslandDaemon: Active background monitor running (Top-Right Mac Island enforced).");
-        while (true) {
-            try {
-                EnforceTopRightBar();
-                CleanArtifacts();
-            } catch {}
-            Thread.Sleep(3000);
+        bool createdNew;
+        using (var mutex = new System.Threading.Mutex(true, "RohitBhai_MacIsland_Daemon_Mutex", out createdNew)) {
+            if (!createdNew) {
+                return; // Another instance is already running
+            }
+            Console.WriteLine("IslandDaemon: Active background monitor running (Top-Right Mac Island enforced).");
+            while (true) {
+                try {
+                    EnforceTopRightBar();
+                    CleanArtifacts();
+                } catch {}
+                Thread.Sleep(3000);
+            }
         }
     }
 }
 '@
+
+try {
+    $pidDir = "$env:LOCALAPPDATA\RohitBhaiMacOS"
+    if (-not (Test-Path $pidDir)) { New-Item -ItemType Directory -Path $pidDir -Force | Out-Null }
+    [System.IO.File]::WriteAllText((Join-Path $pidDir "daemon.pid"), "$PID")
+} catch {}
 
 [IslandDaemon]::Run()

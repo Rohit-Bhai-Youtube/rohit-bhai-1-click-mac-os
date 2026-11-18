@@ -128,23 +128,11 @@
                      "settings":  {
                                       "theme":  "Chart",
                                       "showBox":  1,
-                                      "horizontalPosition":  98,
+                                      "horizontalPosition":  99,
                                       "verticalNudge":  12,
                                       "updateIntervalMs":  1000,
                                       "fontSize":  14,
                                       "opacity":  255
-                                  }
-                 },
-                 {
-                     "modId":  "windows-11-notification-center-styler",
-                     "version":  "1.8",
-                     "name":  "Windows 11 Notification Center Styler",
-                     "settings":  {
-                                      "theme":  "LiquidGlass",
-                                      "styleConstants[0]":  "",
-                                      "controlStyles[0].target":  "",
-                                      "controlStyles[0].styles[0]":  "",
-                                      "themeResourceVariables[0]":  ""
                                   }
                  },
                  {

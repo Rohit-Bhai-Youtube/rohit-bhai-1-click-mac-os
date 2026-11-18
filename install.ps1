@@ -1220,7 +1220,7 @@ function Set-AppleNetSpeedStorage {
     $key = "HKLM\SOFTWARE\Windhawk\Engine\Mods\net-speed-taskbar\Settings"
     Set-RegString $key "theme" "Chart"
     Set-RegDword  $key "showBox" 1
-    Set-RegDword  $key "horizontalPosition" 98
+    Set-RegDword  $key "horizontalPosition" 99
     Set-RegDword  $key "verticalNudge" 12
     Set-RegDword  $key "updateIntervalMs" 1000
     Set-RegDword  $key "fontSize" 14
@@ -1228,13 +1228,17 @@ function Set-AppleNetSpeedStorage {
 }
 
 function Set-FrostedLiquidGlassStorage {
-    # Ensure windows-11-file-explorer-styler is completely disabled and removed if previously installed
+    # Ensure windows-11-file-explorer-styler & windows-11-notification-center-styler are completely disabled and removed
     if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
         & $WindhawkCli mod disable windows-11-file-explorer-styler --yes 2>$null
         & $WindhawkCli mod remove windows-11-file-explorer-styler --yes 2>$null
+        & $WindhawkCli mod disable windows-11-notification-center-styler --yes 2>$null
+        & $WindhawkCli mod remove windows-11-notification-center-styler --yes 2>$null
     }
     Remove-Item -Path "HKLM:\SOFTWARE\Windhawk\Engine\Mods\windows-11-file-explorer-styler" -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item -Path "HKLM:\SOFTWARE\WOW6432Node\Windhawk\Engine\Mods\windows-11-file-explorer-styler" -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -Path "HKLM:\SOFTWARE\Windhawk\Engine\Mods\windows-11-notification-center-styler" -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -Path "HKLM:\SOFTWARE\WOW6432Node\Windhawk\Engine\Mods\windows-11-notification-center-styler" -Recurse -Force -ErrorAction SilentlyContinue
 
     # Translucent Windows: Frosted Acrylic Blur across CMD, PowerShell, Consoles, Dialogs
     $twKey = "HKLM\SOFTWARE\Windhawk\Engine\Mods\translucent-windows\Settings"
@@ -1337,18 +1341,18 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
     }
 
     # 1. Deploy official macOS mods into Windhawk (Instant download, 0 compilation, zero compiler errors!)
-    Write-Host "  [*] Deploying official macOS mods into Windhawk..." -ForegroundColor Yellow
+    Write-Host "  [*] Deploying and updating official macOS mods in Windhawk..." -ForegroundColor Yellow
     $repoMods = @(
         "mac-island-dock",
         "macos-minimize-animation",
         "net-speed-taskbar",
         "windows-11-start-menu-styler",
-        "windows-11-notification-center-styler",
         "translucent-windows",
         "invisible-borders"
     )
     foreach ($mod in $repoMods) {
         & $WindhawkCli mod install $mod --yes 2>$null
+        & $WindhawkCli mod update $mod --yes 2>$null
         & $WindhawkCli mod enable $mod --yes 2>$null
     }
 
@@ -1373,15 +1377,16 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
     # Ensure Mac Island Top Bar & Bottom Floating Dock are explicitly enabled & styled with large icons, magnification & liquid glass shelf, onlyApps=1
     & $WindhawkCli mod settings set mac-island-dock "taskbarMode=dock" "showIsland=1" "hiding.autoHide=0" "dock.iconSize=52" "dock.iconGap=12" "dock.bottomGap=6" "dock.cornerRadius=22" "dock.background=1" "dock.backgroundOpacity=65" "icons.magnification=180" "icons.magnificationRange=160" "animations.enabled=1" "animations.speed=120" "dock.dotIndicator=1" "icons.onlyApps=1" "dock.hideTray=1" "windowsHideTray=1" 2>$null
 
-    # Ensure Liquid Glass styling everywhere across Windhawk mods (Start Menu, Notification Center, Windows)
-    & $WindhawkCli mod settings set windows-11-notification-center-styler theme=LiquidGlass 2>$null
+    # Ensure Liquid Glass styling on Start Menu and Translucent Windows; remove redundant Notification Center and Explorer stylers
+    & $WindhawkCli mod disable windows-11-notification-center-styler --yes 2>$null
+    & $WindhawkCli mod remove windows-11-notification-center-styler --yes 2>$null
     & $WindhawkCli mod settings set windows-11-start-menu-styler theme=LiquidGlass 2>$null
     & $WindhawkCli mod disable windows-11-file-explorer-styler --yes 2>$null
     & $WindhawkCli mod remove windows-11-file-explorer-styler --yes 2>$null
     & $WindhawkCli mod settings set translucent-windows "RenderingMod.ThemeBackground=1" "RenderingMod.SysColors=0" "RenderingMod.AccentColorControls=1" "BackgroundEffects.type=acrylicblur" "BackgroundEffects.AccentBlurBehind=45141414" "FlyoutsEffects=1" "RuledPrograms[0].target=cmd.exe" "RuledPrograms[0].RenderingMod.ThemeBackground=1" "RuledPrograms[0].BackgroundEffects.type=acrylicblur" "RuledPrograms[0].BackgroundEffects.AccentBlurBehind=45141414" "RuledPrograms[1].target=powershell.exe" "RuledPrograms[1].RenderingMod.ThemeBackground=1" "RuledPrograms[1].BackgroundEffects.type=acrylicblur" "RuledPrograms[1].BackgroundEffects.AccentBlurBehind=45141414" "RuledPrograms[2].target=WindowsTerminal.exe" "RuledPrograms[2].RenderingMod.ThemeBackground=1" "RuledPrograms[2].BackgroundEffects.type=acrylicblur" "RuledPrograms[2].BackgroundEffects.AccentBlurBehind=45141414" 2>$null
 
-    # Ensure Net Speed is adaptively anchored to the bottom right corner with rounded box chart (horizontalPosition=98, showBox=1, verticalNudge=12)
-    & $WindhawkCli mod settings set net-speed-taskbar "horizontalPosition=98" "verticalNudge=12" "showBox=1" "theme=Chart" "fontSize=14" "opacity=255" 2>$null
+    # Ensure Net Speed is adaptively anchored to the bottom right corner with rounded box chart (horizontalPosition=99, showBox=1, verticalNudge=12)
+    & $WindhawkCli mod settings set net-speed-taskbar "horizontalPosition=99" "verticalNudge=12" "showBox=1" "theme=Chart" "fontSize=14" "opacity=255" 2>$null
     & $WindhawkCli mod enable net-speed-taskbar --yes 2>$null
 
     # Re-apply LocalStorage & restart mac-island-dock so it immediately docks to top-right
@@ -1406,7 +1411,19 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
 
 if ($windhawkExe -or $WindhawkCli) {
     # Stop any legacy daemon process to release old hooks immediately
-    Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like "*run_island_daemon*" } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+    Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object { 
+        $_.Name -eq "powershell.exe" -and $_.ProcessId -ne $PID -and (
+            $_.CommandLine -like "*run_island_daemon*" -or 
+            $_.CommandLine -like "*RohitBhai_Mac_Island*"
+        )
+    } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+    $pidFile = "$env:LOCALAPPDATA\RohitBhaiMacOS\daemon.pid"
+    if (Test-Path $pidFile) {
+        $oldPid = Get-Content $pidFile -ErrorAction SilentlyContinue
+        if ($oldPid -and ($oldPid -as [int])) {
+            Stop-Process -Id ([int]$oldPid) -Force -ErrorAction SilentlyContinue
+        }
+    }
 
     # Register permanent silent startup for Mac Island Top Bar
     $appDir = "$env:LOCALAPPDATA\RohitBhaiMacOS"
