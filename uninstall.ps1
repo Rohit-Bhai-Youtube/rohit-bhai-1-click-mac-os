@@ -561,13 +561,20 @@ public static class MacAppShortcutHelper {
         }
     }
 
-    # 7. Restore WhatsApp & Telegram on Taskbar: remove if not installed, restore native if installed
+    # 7. Restore WhatsApp, Telegram & ChatGPT on Taskbar: restore native if installed, remove broken
+    $wsh = New-Object -ComObject WScript.Shell
     $waApp = Get-AppxPackage -Name "*WhatsApp*" -ErrorAction SilentlyContinue | Select-Object -First 1
     $waExe = "$env:LOCALAPPDATA\WhatsApp\WhatsApp.exe"
     $waInstalled = ($waApp -ne $null) -or (Test-Path $waExe)
     $waTb = Join-Path $taskbarDir "WhatsApp.lnk"
     if (-not $waInstalled -and (Test-Path $waTb)) {
         Remove-Item -LiteralPath $waTb -Force -ErrorAction SilentlyContinue
+    } elseif ($waInstalled -and (Test-Path $waTb)) {
+        try {
+            $wLnk = $wsh.CreateShortcut($waTb)
+            if (Test-Path $waExe) { $wLnk.IconLocation = "$waExe,0" } else { $wLnk.IconLocation = "" }
+            $wLnk.Save()
+        } catch {}
     }
 
     $tgApp = Get-AppxPackage -Name "*Telegram*" -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -577,6 +584,21 @@ public static class MacAppShortcutHelper {
     $tgTb = Join-Path $taskbarDir "Telegram.lnk"
     if (-not $tgInstalled -and (Test-Path $tgTb)) {
         Remove-Item -LiteralPath $tgTb -Force -ErrorAction SilentlyContinue
+    } elseif ($tgInstalled -and (Test-Path $tgTb)) {
+        try {
+            $tLnk = $wsh.CreateShortcut($tgTb)
+            if (Test-Path $tgExe) { $tLnk.IconLocation = "$tgExe,0" } else { $tLnk.IconLocation = "" }
+            $tLnk.Save()
+        } catch {}
+    }
+
+    $cgTb = Join-Path $taskbarDir "ChatGPT.lnk"
+    if (Test-Path $cgTb) {
+        try {
+            $cLnk = $wsh.CreateShortcut($cgTb)
+            $cLnk.IconLocation = ""
+            $cLnk.Save()
+        } catch {}
     }
 
     # 8. Remove Mac Dock-specific injected shortcuts from Taskbar (Settings, Music, Terminal, Photos, Calc, Notepad)
@@ -622,9 +644,16 @@ public static class MacAppShortcutHelper {
     }
 
     # 9. Comprehensive Deep Scan for any remaining shortcuts pointing to RohitBhaiMacOS or broken icon paths
-    $allShortcutDirs = @($taskbarDir, $userStartDir, $allStartDir, $userDesktop, $commonDesktop)
+    $allShortcutDirs = @(
+        $taskbarDir,
+        $userStartDir,
+        $allStartDir,
+        $userDesktop,
+        "$env:USERPROFILE\OneDrive\Desktop",
+        $commonDesktop
+    ) | Where-Object { $_ -and (Test-Path $_) }
+
     foreach ($dir in $allShortcutDirs) {
-        if (-not (Test-Path $dir)) { continue }
         Get-ChildItem -Path $dir -Filter "*.lnk" -Recurse -ErrorAction SilentlyContinue | ForEach-Object {
             try {
                 $lnk = $wsh.CreateShortcut($_.FullName)
@@ -651,6 +680,22 @@ public static class MacAppShortcutHelper {
                     }
                 }
             } catch {}
+        }
+    }
+
+    # Clean custom desktop.ini from all Desktop and OneDrive Desktop folders
+    foreach ($d in @($userDesktop, "$env:USERPROFILE\OneDrive\Desktop", $commonDesktop)) {
+        if ($d -and (Test-Path $d)) {
+            Get-ChildItem -Path $d -Directory -Force -ErrorAction SilentlyContinue | ForEach-Object {
+                $ini = Join-Path $_.FullName "desktop.ini"
+                if (Test-Path -LiteralPath $ini) {
+                    try {
+                        attrib.exe -h -s -r "$ini" 2>$null
+                        Remove-Item -LiteralPath $ini -Force -ErrorAction SilentlyContinue
+                        attrib.exe -r "$($_.FullName)" 2>$null
+                    } catch {}
+                }
+            }
         }
     }
 

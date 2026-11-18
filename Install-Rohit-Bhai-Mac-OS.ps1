@@ -608,15 +608,15 @@ try {
     )
     foreach ($k in $shellIconsKeys) {
         if (-not (Test-Path $k)) { New-Item -Path $k -Force -ErrorAction SilentlyContinue | Out-Null }
-        if (Test-Path $folderIco)      { Set-ItemProperty -Path $k -Name "3"   -Value $folderIco      -Force -ErrorAction SilentlyContinue }
-        if (Test-Path $folderOpenIco)  { Set-ItemProperty -Path $k -Name "4"   -Value $folderOpenIco  -Force -ErrorAction SilentlyContinue }
-        if (Test-Path $driveIco)       { Set-ItemProperty -Path $k -Name "8"   -Value $driveIco       -Force -ErrorAction SilentlyContinue }
-        if (Test-Path $driveSystemIco) { Set-ItemProperty -Path $k -Name "9"   -Value $driveSystemIco -Force -ErrorAction SilentlyContinue }
-        if (Test-Path $thisPcIco)      { Set-ItemProperty -Path $k -Name "15"  -Value $thisPcIco      -Force -ErrorAction SilentlyContinue }
-        if (Test-Path $trashEmptyIco)  { Set-ItemProperty -Path $k -Name "31"  -Value $trashEmptyIco  -Force -ErrorAction SilentlyContinue }
-        if (Test-Path $trashFullIco)   { Set-ItemProperty -Path $k -Name "32"  -Value $trashFullIco   -Force -ErrorAction SilentlyContinue }
-        if (Test-Path $desktopIco)     { Set-ItemProperty -Path $k -Name "34"  -Value $desktopIco     -Force -ErrorAction SilentlyContinue }
-        if (Test-Path $thisPcIco)      { Set-ItemProperty -Path $k -Name "109" -Value $thisPcIco      -Force -ErrorAction SilentlyContinue }
+        if (Test-Path $folderIco)      { Set-ItemProperty -Path $k -Name "3"   -Value "$folderIco,0"      -Force -ErrorAction SilentlyContinue }
+        if (Test-Path $folderOpenIco)  { Set-ItemProperty -Path $k -Name "4"   -Value "$folderOpenIco,0"  -Force -ErrorAction SilentlyContinue }
+        if (Test-Path $driveIco)       { Set-ItemProperty -Path $k -Name "8"   -Value "$driveIco,0"       -Force -ErrorAction SilentlyContinue }
+        if (Test-Path $driveSystemIco) { Set-ItemProperty -Path $k -Name "9"   -Value "$driveSystemIco,0" -Force -ErrorAction SilentlyContinue }
+        if (Test-Path $thisPcIco)      { Set-ItemProperty -Path $k -Name "15"  -Value "$thisPcIco,0"      -Force -ErrorAction SilentlyContinue }
+        if (Test-Path $trashEmptyIco)  { Set-ItemProperty -Path $k -Name "31"  -Value "$trashEmptyIco,0"  -Force -ErrorAction SilentlyContinue }
+        if (Test-Path $trashFullIco)   { Set-ItemProperty -Path $k -Name "32"  -Value "$trashFullIco,0"   -Force -ErrorAction SilentlyContinue }
+        if (Test-Path $desktopIco)     { Set-ItemProperty -Path $k -Name "34"  -Value "$desktopIco,0"     -Force -ErrorAction SilentlyContinue }
+        if (Test-Path $thisPcIco)      { Set-ItemProperty -Path $k -Name "109" -Value "$thisPcIco,0"      -Force -ErrorAction SilentlyContinue }
     }
 
     # Direct reg.exe injection across 64-bit and 32-bit system keys
@@ -625,20 +625,26 @@ try {
         "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons"
     )
     foreach ($tgt in $hklmShellTargets) {
-        if (Test-Path $folderIco)      { & reg.exe add "$tgt" /v "3" /t REG_SZ /d "$folderIco" /f /reg:64 2>$null; & reg.exe add "$tgt" /v "3" /t REG_SZ /d "$folderIco" /f /reg:32 2>$null }
-        if (Test-Path $folderOpenIco)  { & reg.exe add "$tgt" /v "4" /t REG_SZ /d "$folderOpenIco" /f /reg:64 2>$null; & reg.exe add "$tgt" /v "4" /t REG_SZ /d "$folderOpenIco" /f /reg:32 2>$null }
-        if (Test-Path $driveIco)       { & reg.exe add "$tgt" /v "8" /t REG_SZ /d "$driveIco" /f /reg:64 2>$null; & reg.exe add "$tgt" /v "8" /t REG_SZ /d "$driveIco" /f /reg:32 2>$null }
-        if (Test-Path $driveSystemIco) { & reg.exe add "$tgt" /v "9" /t REG_SZ /d "$driveSystemIco" /f /reg:64 2>$null; & reg.exe add "$tgt" /v "9" /t REG_SZ /d "$driveSystemIco" /f /reg:32 2>$null }
-        if (Test-Path $thisPcIco)      { & reg.exe add "$tgt" /v "15" /t REG_SZ /d "$thisPcIco" /f /reg:64 2>$null; & reg.exe add "$tgt" /v "15" /t REG_SZ /d "$thisPcIco" /f /reg:32 2>$null }
-        if (Test-Path $trashEmptyIco)  { & reg.exe add "$tgt" /v "31" /t REG_SZ /d "$trashEmptyIco" /f /reg:64 2>$null; & reg.exe add "$tgt" /v "31" /t REG_SZ /d "$trashEmptyIco" /f /reg:32 2>$null }
-        if (Test-Path $trashFullIco)   { & reg.exe add "$tgt" /v "32" /t REG_SZ /d "$trashFullIco" /f /reg:64 2>$null; & reg.exe add "$tgt" /v "32" /t REG_SZ /d "$trashFullIco" /f /reg:32 2>$null }
-        if (Test-Path $desktopIco)     { & reg.exe add "$tgt" /v "34" /t REG_SZ /d "$desktopIco" /f /reg:64 2>$null; & reg.exe add "$tgt" /v "34" /t REG_SZ /d "$desktopIco" /f /reg:32 2>$null }
-        if (Test-Path $thisPcIco)      { & reg.exe add "$tgt" /v "109" /t REG_SZ /d "$thisPcIco" /f /reg:64 2>$null; & reg.exe add "$tgt" /v "109" /t REG_SZ /d "$thisPcIco" /f /reg:32 2>$null }
+        if (Test-Path $folderIco)      { & reg.exe add "$tgt" /v "3" /t REG_SZ /d "$folderIco,0" /f /reg:64 2>$null; & reg.exe add "$tgt" /v "3" /t REG_SZ /d "$folderIco,0" /f /reg:32 2>$null }
+        if (Test-Path $folderOpenIco)  { & reg.exe add "$tgt" /v "4" /t REG_SZ /d "$folderOpenIco,0" /f /reg:64 2>$null; & reg.exe add "$tgt" /v "4" /t REG_SZ /d "$folderOpenIco,0" /f /reg:32 2>$null }
+        if (Test-Path $driveIco)       { & reg.exe add "$tgt" /v "8" /t REG_SZ /d "$driveIco,0" /f /reg:64 2>$null; & reg.exe add "$tgt" /v "8" /t REG_SZ /d "$driveIco,0" /f /reg:32 2>$null }
+        if (Test-Path $driveSystemIco) { & reg.exe add "$tgt" /v "9" /t REG_SZ /d "$driveSystemIco,0" /f /reg:64 2>$null; & reg.exe add "$tgt" /v "9" /t REG_SZ /d "$driveSystemIco,0" /f /reg:32 2>$null }
+        if (Test-Path $thisPcIco)      { & reg.exe add "$tgt" /v "15" /t REG_SZ /d "$thisPcIco,0" /f /reg:64 2>$null; & reg.exe add "$tgt" /v "15" /t REG_SZ /d "$thisPcIco,0" /f /reg:32 2>$null }
+        if (Test-Path $trashEmptyIco)  { & reg.exe add "$tgt" /v "31" /t REG_SZ /d "$trashEmptyIco,0" /f /reg:64 2>$null; & reg.exe add "$tgt" /v "31" /t REG_SZ /d "$trashEmptyIco,0" /f /reg:32 2>$null }
+        if (Test-Path $trashFullIco)   { & reg.exe add "$tgt" /v "32" /t REG_SZ /d "$trashFullIco,0" /f /reg:64 2>$null; & reg.exe add "$tgt" /v "32" /t REG_SZ /d "$trashFullIco,0" /f /reg:32 2>$null }
+        if (Test-Path $desktopIco)     { & reg.exe add "$tgt" /v "34" /t REG_SZ /d "$desktopIco,0" /f /reg:64 2>$null; & reg.exe add "$tgt" /v "34" /t REG_SZ /d "$desktopIco,0" /f /reg:32 2>$null }
+        if (Test-Path $thisPcIco)      { & reg.exe add "$tgt" /v "109" /t REG_SZ /d "$thisPcIco,0" /f /reg:64 2>$null; & reg.exe add "$tgt" /v "109" /t REG_SZ /d "$thisPcIco,0" /f /reg:32 2>$null }
     }
 
-    foreach ($c in @("HKCU:\Software\Classes\Folder\DefaultIcon", "HKCU:\Software\Classes\Directory\DefaultIcon")) {
+    $folderClassKeys = @(
+        "HKCU:\Software\Classes\Folder\DefaultIcon",
+        "HKCU:\Software\Classes\Directory\DefaultIcon",
+        "HKCR:\Folder\DefaultIcon",
+        "HKCR:\Directory\DefaultIcon"
+    )
+    foreach ($c in $folderClassKeys) {
         if (-not (Test-Path $c)) { New-Item -Path $c -Force -ErrorAction SilentlyContinue | Out-Null }
-        if (Test-Path $folderIco) { Set-ItemProperty -Path $c -Name "(default)" -Value $folderIco -Force -ErrorAction SilentlyContinue }
+        if (Test-Path $folderIco) { Set-ItemProperty -Path $c -Name "(default)" -Value "$folderIco,0" -Force -ErrorAction SilentlyContinue }
     }
 
     # 2. Drive Icons (Macintosh HD for C:, Generic for others)
@@ -844,6 +850,30 @@ try {
                         [System.IO.File]::WriteAllText($ini, $iniContent, [System.Text.Encoding]::ASCII)
                         attrib.exe +h +s "$ini" 2>$null
                         attrib.exe +r "$p" 2>$null
+                    } catch {}
+                }
+            }
+
+            # Apply macOS Blue folder icon to all folders on Desktop & OneDrive Desktop (Games, etc.)
+            $allDesktopDirs = @(
+                [Environment]::GetFolderPath('Desktop'),
+                "$env:USERPROFILE\Desktop",
+                "$env:USERPROFILE\OneDrive\Desktop",
+                "C:\Users\Public\Desktop"
+            ) | Select-Object -Unique | Where-Object { $_ -and (Test-Path $_) }
+
+            foreach ($dt in $allDesktopDirs) {
+                Get-ChildItem -Path $dt -Directory -Force -ErrorAction SilentlyContinue | ForEach-Object {
+                    $dp = $_.FullName
+                    try {
+                        $dini = Join-Path $dp "desktop.ini"
+                        if (Test-Path -LiteralPath $dini) {
+                            attrib.exe -h -s -r "$dini" 2>$null
+                        }
+                        $diniContent = "[.ShellClassInfo]`r`nIconResource=$folderIco,0`r`n[ViewState]`r`nMode=`r`nVid=`r`nFolderType=Generic`r`n"
+                        [System.IO.File]::WriteAllText($dini, $diniContent, [System.Text.Encoding]::ASCII)
+                        attrib.exe +h +s "$dini" 2>$null
+                        attrib.exe +r "$dp" 2>$null
                     } catch {}
                 }
             }
@@ -1221,6 +1251,51 @@ public static class MacAppShortcutHelper {
         }
     }
 
+    # Dynamic scan of existing pinned Taskbar shortcuts to convert into macOS Squircle icons (Edge, Telegram, ChatGPT, PowerShell, etc.)
+    if (Test-Path $taskbarDir) {
+        $wsh = New-Object -ComObject WScript.Shell
+        Get-ChildItem -Path $taskbarDir -Filter "*.lnk" -Force -ErrorAction SilentlyContinue | ForEach-Object {
+            try {
+                $lnk = $wsh.CreateShortcut($_.FullName)
+                $t = $lnk.TargetPath
+                $a = $lnk.Arguments
+                $n = $_.BaseName
+
+                $assignedIco = $null
+                if ($t -like "*msedge.exe*" -or $n -like "*Edge*") {
+                    $assignedIco = "Safari.ico"
+                } elseif ($t -like "*powershell*" -or $t -like "*pwsh*" -or $t -like "*cmd.exe*" -or $n -like "*PowerShell*" -or $n -like "*Terminal*") {
+                    $assignedIco = "Terminal.ico"
+                } elseif ($t -like "*Telegram*" -or $a -like "*Telegram*" -or $n -like "*Telegram*") {
+                    $assignedIco = "Telegram.ico"
+                } elseif ($t -like "*WhatsApp*" -or $a -like "*WhatsApp*" -or $n -like "*WhatsApp*") {
+                    $assignedIco = "WhatsApp.ico"
+                } elseif ($t -like "*ChatGPT*" -or $a -like "*ChatGPT*" -or $n -like "*ChatGPT*") {
+                    $assignedIco = "ChatGPT.ico"
+                } elseif ($t -like "*Discord*" -or $n -like "*Discord*") {
+                    $assignedIco = "Discord.ico"
+                } elseif ($t -like "*Steam*" -or $n -like "*Steam*") {
+                    $assignedIco = "Steam.ico"
+                } elseif ($t -like "*explorer.exe*" -or $n -like "*Explorer*") {
+                    $assignedIco = "Finder.ico"
+                } elseif ($a -like "*WindowsStore*" -or $n -like "*Store*") {
+                    $assignedIco = "AppStore.ico"
+                } elseif ($a -like "*immersivecontrolpanel*" -or $n -like "*Settings*") {
+                    $assignedIco = "Settings.ico"
+                }
+
+                if ($assignedIco) {
+                    $icoFullPath = Join-Path $appsTarget $assignedIco
+                    if (-not (Test-Path $icoFullPath)) { $icoFullPath = Join-Path $progAppsTarget $assignedIco }
+                    if (Test-Path $icoFullPath) {
+                        $lnk.IconLocation = "$icoFullPath,0"
+                        $lnk.Save()
+                    }
+                }
+            } catch {}
+        }
+    }
+
     # Refresh Windows 11 Start Menu and Search Host cache
     Stop-Process -Name "StartMenuExperienceHost" -Force -ErrorAction SilentlyContinue
     Stop-Process -Name "SearchHost" -Force -ErrorAction SilentlyContinue
@@ -1530,8 +1605,8 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
 
     Write-Host "  [OK] All 8 mods and custom settings activated successfully via Windhawk CLI!" -ForegroundColor Green
 
-    # Ensure Mac Island Top Bar & Bottom Floating Dock are explicitly enabled & styled
-    & $WindhawkCli mod settings set mac-island-dock "taskbarMode=dock" "showIsland=1" "hiding.autoHide=0" "dock.backgroundOpacity=35" "dock.cornerRadius=24" "dock.bottomGap=4" 2>$null
+    # Ensure Mac Island Top Bar & Bottom Floating Dock are explicitly enabled & styled with large icons, magnification & liquid glass shelf
+    & $WindhawkCli mod settings set mac-island-dock "taskbarMode=dock" "showIsland=1" "hiding.autoHide=0" "dock.iconSize=48" "dock.iconGap=12" "dock.bottomGap=6" "dock.cornerRadius=22" "dock.background=1" "dock.backgroundOpacity=65" "icons.magnification=180" "icons.magnificationRange=160" "animations.enabled=1" "animations.speed=120" "dock.dotIndicator=1" 2>$null
 
     # Ensure Liquid Glass styling everywhere across Windhawk mods & set net speed verticalNudge to 16
     & $WindhawkCli mod settings set windows-11-notification-center-styler theme=LiquidGlass 2>$null
@@ -1618,6 +1693,7 @@ try {
     Set-ItemProperty -Path $advKey -Name "TaskbarDa" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $advKey -Name "TaskbarMn" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $advKey -Name "TaskbarAl" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Dsh" -Name "AllowNewsAndInterests" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
 
     # 3. Ensure Always Visible Taskbar (StuckRects3 Byte 8 = 02)
     $stuckKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\StuckRects3"
@@ -1630,11 +1706,24 @@ try {
     }
 } catch {}
 
-# Refresh Shell smoothly without killing Explorer or black screen
-Write-Host "`n[*] Refreshing Windows Desktop, Folders & Dock..." -ForegroundColor Cyan
-try {
-    [ShellIconFlusher]::SHChangeNotify(0x08000000, 0, [IntPtr]::Zero, [IntPtr]::Zero)
-} catch {}
+# Cleanly restart Windows Explorer live so Blue Folders, Weather Hide & Dock take effect immediately
+Write-Host "`n[*] Restarting Windows Explorer to activate Blue Folders, Dock & macOS Theme live..." -ForegroundColor Cyan
+taskkill.exe /f /im explorer.exe 2>$null
+taskkill.exe /f /im StartMenuExperienceHost.exe 2>$null
+taskkill.exe /f /im SearchHost.exe 2>$null
+Start-Sleep -Milliseconds 800
+
+# Flush stale icon caches so Explorer immediately reads new Shell Icons and blue folders
+$expCache = "$env:LOCALAPPDATA\Microsoft\Windows\Explorer"
+if (Test-Path $expCache) {
+    Get-ChildItem -Path $expCache -Filter "*iconcache*.db" -Force -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+    Get-ChildItem -Path $expCache -Filter "*thumbcache*.db" -Force -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+}
+Remove-Item "$env:LOCALAPPDATA\IconCache.db" -Force -ErrorAction SilentlyContinue
+
+Start-Process "explorer.exe"
+Start-Sleep -Seconds 1
+[ShellIconFlusher]::SHChangeNotify(0x08000000, 0x1000, [IntPtr]::Zero, [IntPtr]::Zero)
 try {
     $ie4 = Join-Path ([Environment]::GetFolderPath('System')) "ie4uinit.exe"
     if (Test-Path $ie4) { & $ie4 -show 2>$null }
