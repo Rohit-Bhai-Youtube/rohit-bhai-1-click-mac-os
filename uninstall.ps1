@@ -837,7 +837,7 @@ public class Win32RestoreWall {
 }
 "@ -ErrorAction SilentlyContinue
         [Win32RestoreWall]::SystemParametersInfo(0x0014, 0, $restoredWall, 3) | Out-Null
-        rundll32.exe user32.dll,UpdatePerUserSystemParameters 1, True
+        # rundll32 removed to prevent Explorer freeze on Windows 11
         Write-Host "  [OK] Default Windows 11 wallpaper restored!" -ForegroundColor Green
     }
 } catch {
@@ -888,10 +888,53 @@ try {
     if (Test-Path $ie4) { & $ie4 -show 2>$null }
 } catch {}
 
-# 6. Restart Windows Explorer live with fresh rebuild
+# 6. Restart Windows Explorer live with fresh rebuild (multi-fallback to ensure Desktop Shell restores 100%)
 Write-Host "  [*] Restarting Windows Explorer to rebuild fresh icon cache and restore Desktop..." -ForegroundColor Yellow
-Start-Process "explorer.exe"
-Start-Sleep -Seconds 1
+
+$explorerRestored = $false
+
+# Method A: Launch via Task Scheduler with Limited (non-elevated) token so Windows 11 Desktop Shell loads reliably
+try {
+    $taskName = "RestartExplorerShellTemp"
+    $action = New-ScheduledTaskAction -Execute "$env:WINDIR\explorer.exe"
+    $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Limited
+    Register-ScheduledTask -TaskName $taskName -Action $action -Principal $principal -Force -ErrorAction SilentlyContinue | Out-Null
+    Start-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+    Start-Sleep -Milliseconds 1200
+    Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
+    if (Get-Process explorer -ErrorAction SilentlyContinue) {
+        $explorerRestored = $true
+    }
+} catch {}
+
+# Method B: Start-Process with full system path & user working directory
+if (-not $explorerRestored) {
+    try {
+        Start-Process -FilePath "$env:WINDIR\explorer.exe" -WorkingDirectory $env:USERPROFILE -ErrorAction SilentlyContinue
+        Start-Sleep -Milliseconds 1000
+        if (Get-Process explorer -ErrorAction SilentlyContinue) {
+            $explorerRestored = $true
+        }
+    } catch {}
+}
+
+# Method C: WScript.Shell Run
+if (-not $explorerRestored) {
+    try {
+        $wsh = New-Object -ComObject WScript.Shell
+        $wsh.Run("explorer.exe", 1, $false)
+        Start-Sleep -Milliseconds 1000
+        if (Get-Process explorer -ErrorAction SilentlyContinue) {
+            $explorerRestored = $true
+        }
+    } catch {}
+}
+
+# Method D: cmd.exe fallback
+if (-not (Get-Process explorer -ErrorAction SilentlyContinue)) {
+    & cmd.exe /c start explorer.exe 2>$null
+    Start-Sleep -Milliseconds 1000
+}
 
 # 7. Notify Windows Shell of association and icon changes with SHCNF_FLUSH
 Add-Type -TypeDefinition @"

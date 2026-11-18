@@ -1835,7 +1835,23 @@ if (Test-Path $expCache) {
 }
 Remove-Item "$env:LOCALAPPDATA\IconCache.db" -Force -ErrorAction SilentlyContinue
 
-Start-Process "explorer.exe"
+$explorerRestored = $false
+try {
+    $taskName = "RestartExplorerShellTemp"
+    $action = New-ScheduledTaskAction -Execute "$env:WINDIR\explorer.exe"
+    $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Limited
+    Register-ScheduledTask -TaskName $taskName -Action $action -Principal $principal -Force -ErrorAction SilentlyContinue | Out-Null
+    Start-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+    Start-Sleep -Milliseconds 1200
+    Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
+    if (Get-Process explorer -ErrorAction SilentlyContinue) { $explorerRestored = $true }
+} catch {}
+if (-not $explorerRestored) {
+    try { Start-Process -FilePath "$env:WINDIR\explorer.exe" -WorkingDirectory $env:USERPROFILE -ErrorAction SilentlyContinue } catch {}
+}
+if (-not (Get-Process explorer -ErrorAction SilentlyContinue)) {
+    & cmd.exe /c start explorer.exe 2>$null
+}
 Start-Sleep -Seconds 1
 [ShellIconFlusher]::SHChangeNotify(0x08000000, 0x1000, [IntPtr]::Zero, [IntPtr]::Zero)
 try {
