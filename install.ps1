@@ -1512,11 +1512,19 @@ function Set-AppleNetSpeedStorage {
 }
 
 function Set-FrostedLiquidGlassStorage {
-    # 1. Windows 11 File Explorer Styler: Deep Frosted Liquid Glass (Blur 20, Dark Tint 0.72)
+    # 1. Windows 11 File Explorer Styler: Frosted Liquid Glass (matching Start Menu)
     $feKey = "HKLM\SOFTWARE\Windhawk\Engine\Mods\windows-11-file-explorer-styler\Settings"
     Set-RegString $feKey "theme" "Translucent Explorer11"
     Set-RegString $feKey "backgroundTranslucentEffect" "acrylic"
     Set-RegString $feKey "backgroundTranslucentEffectRegion" "explorerFrame"
+    Set-RegString $feKey "controlStyles[0].target" "Grid#NavigationBarControlGrid"
+    Set-RegString $feKey "controlStyles[0].styles[0]" "Background:=<WindhawkBlur BlurAmount=`"12`" TintColor=`"#141414`" TintOpacity=`"0.25`"/>"
+    Set-RegString $feKey "controlStyles[0].styles[1]" "BorderThickness=0,0,0,0"
+    Set-RegString $feKey "controlStyles[0].styles[2]" "BorderBrush=#30FFFFFF"
+    Set-RegString $feKey "controlStyles[1].target" "Grid#DetailsViewControlRootGrid"
+    Set-RegString $feKey "controlStyles[1].styles[0]" "Background:=<WindhawkBlur BlurAmount=`"12`" TintColor=`"#141414`" TintOpacity=`"0.25`"/>"
+    Set-RegString $feKey "controlStyles[1].styles[1]" "BorderThickness=0,0,1,1"
+    Set-RegString $feKey "controlStyles[1].styles[2]" "BorderBrush=#25FFFFFF"
 
     # 2. Translucent Windows: Frosted Acrylic Blur across CMD, PowerShell, Consoles, Dialogs
     $twKey = "HKLM\SOFTWARE\Windhawk\Engine\Mods\translucent-windows\Settings"
@@ -1524,8 +1532,23 @@ function Set-FrostedLiquidGlassStorage {
     Set-RegDword $twKey "RenderingMod.SysColors" 0
     Set-RegDword $twKey "RenderingMod.AccentColorControls" 1
     Set-RegString $twKey "BackgroundEffects.type" "acrylicblur"
-    Set-RegString $twKey "BackgroundEffects.AccentBlurBehind" "C01A1A1A"
+    Set-RegString $twKey "BackgroundEffects.AccentBlurBehind" "45141414"
     Set-RegDword $twKey "FlyoutsEffects" 1
+    Set-RegString $twKey "RuledPrograms[0].target" "cmd.exe"
+    Set-RegDword $twKey "RuledPrograms[0].RenderingMod.ThemeBackground" 1
+    Set-RegDword $twKey "RuledPrograms[0].RenderingMod.AccentColorControls" 1
+    Set-RegString $twKey "RuledPrograms[0].BackgroundEffects.type" "acrylicblur"
+    Set-RegString $twKey "RuledPrograms[0].BackgroundEffects.AccentBlurBehind" "45141414"
+    Set-RegString $twKey "RuledPrograms[1].target" "powershell.exe"
+    Set-RegDword $twKey "RuledPrograms[1].RenderingMod.ThemeBackground" 1
+    Set-RegDword $twKey "RuledPrograms[1].RenderingMod.AccentColorControls" 1
+    Set-RegString $twKey "RuledPrograms[1].BackgroundEffects.type" "acrylicblur"
+    Set-RegString $twKey "RuledPrograms[1].BackgroundEffects.AccentBlurBehind" "45141414"
+    Set-RegString $twKey "RuledPrograms[2].target" "WindowsTerminal.exe"
+    Set-RegDword $twKey "RuledPrograms[2].RenderingMod.ThemeBackground" 1
+    Set-RegDword $twKey "RuledPrograms[2].RenderingMod.AccentColorControls" 1
+    Set-RegString $twKey "RuledPrograms[2].BackgroundEffects.type" "acrylicblur"
+    Set-RegString $twKey "RuledPrograms[2].BackgroundEffects.AccentBlurBehind" "45141414"
 
     # 3. Windows Terminal: Native Acrylic frosted blur
     try {
@@ -1540,14 +1563,13 @@ function Set-FrostedLiquidGlassStorage {
                         $wtJson.profiles | Add-Member -MemberType NoteProperty -Name "defaults" -Value ([PSCustomObject]@{}) -Force
                     }
                     $wtJson.profiles.defaults | Add-Member -MemberType NoteProperty -Name "useAcrylic" -Value $true -Force
-                    $wtJson.profiles.defaults | Add-Member -MemberType NoteProperty -Name "acrylicOpacity" -Value 0.75 -Force
+                    $wtJson.profiles.defaults | Add-Member -MemberType NoteProperty -Name "acrylicOpacity" -Value 0.65 -Force
                     $wtJson | ConvertTo-Json -Depth 32 | Set-Content $wtSettingsFile -Encoding UTF8 -Force
                 }
             }
         }
     } catch {}
 }
-
 Set-MacIslandStorage
 Set-AppleNetSpeedStorage
 Set-FrostedLiquidGlassStorage
@@ -1645,13 +1667,13 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
     Write-Host "  [OK] Official macOS mods and custom settings activated successfully via Windhawk CLI!" -ForegroundColor Green
 
     # Ensure Mac Island Top Bar & Bottom Floating Dock are explicitly enabled & styled with large icons, magnification & liquid glass shelf, onlyApps=1
-    & $WindhawkCli mod settings set mac-island-dock "taskbarMode=dock" "showIsland=1" "hiding.autoHide=0" "dock.iconSize=52" "dock.iconGap=12" "dock.bottomGap=6" "dock.cornerRadius=22" "dock.background=1" "dock.backgroundOpacity=65" "icons.magnification=180" "icons.magnificationRange=160" "animations.enabled=1" "animations.speed=120" "dock.dotIndicator=1" "icons.onlyApps=1" 2>$null
+    & $WindhawkCli mod settings set mac-island-dock "taskbarMode=dock" "showIsland=1" "hiding.autoHide=0" "dock.iconSize=52" "dock.iconGap=12" "dock.bottomGap=6" "dock.cornerRadius=22" "dock.background=1" "dock.backgroundOpacity=65" "icons.magnification=180" "icons.magnificationRange=160" "animations.enabled=1" "animations.speed=120" "dock.dotIndicator=1" "icons.onlyApps=1" "dock.hideTray=1" "windowsHideTray=1" 2>$null
 
     # Ensure Liquid Glass styling everywhere across Windhawk mods (File Explorer, Start Menu, Notification Center, Windows)
     & $WindhawkCli mod settings set windows-11-notification-center-styler theme=LiquidGlass 2>$null
     & $WindhawkCli mod settings set windows-11-start-menu-styler theme=LiquidGlass 2>$null
-    & $WindhawkCli mod settings set windows-11-file-explorer-styler "theme=Translucent Explorer11" "backgroundTranslucentEffect=acrylic" "backgroundTranslucentEffectRegion=explorerFrame" 2>$null
-    & $WindhawkCli mod settings set translucent-windows "BackgroundEffects.type=acrylicblur" "BackgroundEffects.AccentBlurBehind=C01A1A1A" "RenderingMod.ThemeBackground=1" 2>$null
+    & $WindhawkCli mod settings set windows-11-file-explorer-styler "theme=Translucent Explorer11" "backgroundTranslucentEffect=acrylic" "backgroundTranslucentEffectRegion=explorerFrame" "controlStyles[0].target=Grid#NavigationBarControlGrid" "controlStyles[0].styles[0]=Background:=<WindhawkBlur BlurAmount=`"12`" TintColor=`"#141414`" TintOpacity=`"0.25`"/>" "controlStyles[1].target=Grid#DetailsViewControlRootGrid" "controlStyles[1].styles[0]=Background:=<WindhawkBlur BlurAmount=`"12`" TintColor=`"#141414`" TintOpacity=`"0.25`"/>" 2>$null
+    & $WindhawkCli mod settings set translucent-windows "RenderingMod.ThemeBackground=1" "RenderingMod.SysColors=0" "RenderingMod.AccentColorControls=1" "BackgroundEffects.type=acrylicblur" "BackgroundEffects.AccentBlurBehind=45141414" "FlyoutsEffects=1" "RuledPrograms[0].target=cmd.exe" "RuledPrograms[0].RenderingMod.ThemeBackground=1" "RuledPrograms[0].BackgroundEffects.type=acrylicblur" "RuledPrograms[0].BackgroundEffects.AccentBlurBehind=45141414" "RuledPrograms[1].target=powershell.exe" "RuledPrograms[1].RenderingMod.ThemeBackground=1" "RuledPrograms[1].BackgroundEffects.type=acrylicblur" "RuledPrograms[1].BackgroundEffects.AccentBlurBehind=45141414" "RuledPrograms[2].target=WindowsTerminal.exe" "RuledPrograms[2].RenderingMod.ThemeBackground=1" "RuledPrograms[2].BackgroundEffects.type=acrylicblur" "RuledPrograms[2].BackgroundEffects.AccentBlurBehind=45141414" 2>$null
 
     # Ensure Net Speed is adaptively anchored to the bottom right corner (horizontalPosition=95, rightOffset=0, verticalNudge=14)
     & $WindhawkCli mod settings set local@net-speed-taskbar-apple "horizontalPosition=95" "rightOffset=0" "verticalNudge=14" "theme=Chart" "fontSize=14" 2>$null
@@ -1743,31 +1765,43 @@ try {
     Set-ItemProperty -Path $feedsKey -Name "ShellFeedsTaskbarViewMode" -Value 2 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $feedsKey -Name "HeadlinesOnTaskbar" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
 
-    # Apply to all mounted user profiles in HKEY_USERS
-    Get-ChildItem Registry::HKEY_USERS | Where-Object { $_.Name -match 'S-1-5-21-' -and $_.Name -notmatch '_Classes' } | ForEach-Object {
-        $uAdv = "Registry::$($_.Name)\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
-        if (Test-Path $uAdv) {
-            Set-ItemProperty -Path $uAdv -Name "TaskbarDa" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-            Set-ItemProperty -Path $uAdv -Name "TaskbarMn" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    # Machine-Wide & Multi-User: Disable Windows Widgets / Weather & Chat/Copilot for pure macOS Dock
+    $hkuUsers = reg.exe query "HKU" 2>$null | Select-String "S-1-5-21-" | Where-Object { $_ -notmatch "_Classes" }
+    foreach ($userLine in $hkuUsers) {
+        $uKey = $userLine.ToString().Trim()
+        if ($uKey) {
+            reg.exe add "$uKey\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarDa /t REG_DWORD /d 0 /f 2>$null
+            reg.exe add "$uKey\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarMn /t REG_DWORD /d 0 /f 2>$null
+            reg.exe add "$uKey\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ShowTaskViewButton /t REG_DWORD /d 0 /f 2>$null
+            reg.exe add "$uKey\Software\Microsoft\Windows\CurrentVersion\Feeds" /v ShellFeedsTaskbarViewMode /t REG_DWORD /d 2 /f 2>$null
+            reg.exe add "$uKey\Software\Microsoft\Windows\CurrentVersion\Feeds" /v HeadlinesOnTaskbar /t REG_DWORD /d 0 /f 2>$null
+            reg.exe add "$uKey\SOFTWARE\Policies\Microsoft\Dsh" /v AllowNewsAndInterests /t REG_DWORD /d 0 /f 2>$null
+            reg.exe add "$uKey\SOFTWARE\Policies\Microsoft\Windows\Widgets" /v AllowWidgets /t REG_DWORD /d 0 /f 2>$null
         }
-        $uFeeds = "Registry::$($_.Name)\Software\Microsoft\Windows\CurrentVersion\Feeds"
-        if (-not (Test-Path $uFeeds)) { New-Item -Path $uFeeds -Force | Out-Null }
-        Set-ItemProperty -Path $uFeeds -Name "ShellFeedsTaskbarViewMode" -Value 2 -Type DWord -Force -ErrorAction SilentlyContinue
     }
 
-    $dshHkcu = "HKCU:\SOFTWARE\Policies\Microsoft\Dsh"
-    if (-not (Test-Path $dshHkcu)) { New-Item -Path $dshHkcu -Force | Out-Null }
-    Set-ItemProperty -Path $dshHkcu -Name "AllowNewsAndInterests" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    # Machine-wide & Current User Policies (disables Windows Widgets OS-wide)
+    reg.exe add "HKLM\SOFTWARE\Policies\Microsoft\Dsh" /v AllowNewsAndInterests /t REG_DWORD /d 0 /f 2>$null
+    reg.exe add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Widgets" /v AllowWidgets /t REG_DWORD /d 0 /f 2>$null
+    reg.exe add "HKCU\SOFTWARE\Policies\Microsoft\Dsh" /v AllowNewsAndInterests /t REG_DWORD /d 0 /f 2>$null
+    reg.exe add "HKCU\SOFTWARE\Policies\Microsoft\Windows\Widgets" /v AllowWidgets /t REG_DWORD /d 0 /f 2>$null
 
-    $dshHklm = "HKLM:\SOFTWARE\Policies\Microsoft\Dsh"
-    if (-not (Test-Path $dshHklm)) { New-Item -Path $dshHklm -Force | Out-Null }
-    Set-ItemProperty -Path $dshHklm -Name "AllowNewsAndInterests" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    # Current User Explorer Advanced
+    reg.exe add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarDa /t REG_DWORD /d 0 /f 2>$null
+    reg.exe add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarMn /t REG_DWORD /d 0 /f 2>$null
+    reg.exe add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ShowTaskViewButton /t REG_DWORD /d 0 /f 2>$null
+    reg.exe add "HKCU\Software\Microsoft\Windows\CurrentVersion\Feeds" /v ShellFeedsTaskbarViewMode /t REG_DWORD /d 2 /f 2>$null
+    reg.exe add "HKCU\Software\Microsoft\Windows\CurrentVersion\Feeds" /v HeadlinesOnTaskbar /t REG_DWORD /d 0 /f 2>$null
 
-    $wHklm = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Widgets"
-    if (-not (Test-Path $wHklm)) { New-Item -Path $wHklm -Force | Out-Null }
-    Set-ItemProperty -Path $wHklm -Name "AllowWidgets" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    # Default profile so new users also have Widgets hidden
+    reg.exe add "HKU\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarDa /t REG_DWORD /d 0 /f 2>$null
+    reg.exe add "HKU\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarMn /t REG_DWORD /d 0 /f 2>$null
+    reg.exe add "HKU\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Feeds" /v ShellFeedsTaskbarViewMode /t REG_DWORD /d 2 /f 2>$null
 
-    # Terminate any running widget processes
+    # Kill running widget processes
+    taskkill.exe /f /im WindowsWidgets.exe 2>$null
+    taskkill.exe /f /im WidgetService.exe 2>$null
+    taskkill.exe /f /im Widgets.exe 2>$null
     Get-Process -Name "*widget*" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 
     # 3. Ensure Always Visible Taskbar (StuckRects3 Byte 8 = 02)

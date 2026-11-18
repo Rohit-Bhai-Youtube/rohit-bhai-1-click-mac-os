@@ -723,6 +723,20 @@ public static class MacAppShortcutHelper {
     Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarDa" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarMn" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarAl" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    # Remove widget suppression policies and restore TaskbarDa across all user profiles
+    reg.exe delete "HKLM\SOFTWARE\Policies\Microsoft\Dsh" /v AllowNewsAndInterests /f 2>$null
+    reg.exe delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\Widgets" /v AllowWidgets /f 2>$null
+    reg.exe delete "HKCU\SOFTWARE\Policies\Microsoft\Dsh" /v AllowNewsAndInterests /f 2>$null
+    reg.exe delete "HKCU\SOFTWARE\Policies\Microsoft\Windows\Widgets" /v AllowWidgets /f 2>$null
+    $hkuUsers = reg.exe query "HKU" 2>$null | Select-String "S-1-5-21-" | Where-Object { $_ -notmatch "_Classes" }
+    foreach ($userLine in $hkuUsers) {
+        $uKey = $userLine.ToString().Trim()
+        if ($uKey) {
+            reg.exe add "$uKey\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarDa /t REG_DWORD /d 1 /f 2>$null
+            reg.exe delete "$uKey\SOFTWARE\Policies\Microsoft\Dsh" /v AllowNewsAndInterests /f 2>$null
+            reg.exe delete "$uKey\SOFTWARE\Policies\Microsoft\Windows\Widgets" /v AllowWidgets /f 2>$null
+        }
+    }
 
     Write-Host "  [OK] Original Microsoft Edge, File Explorer, Start Menu, and app icons restored!" -ForegroundColor Green
 } catch {

@@ -1,4 +1,4 @@
-{
+﻿{
     "format":  "windhawk-user-data-v1",
     "appSettings":  {
                         "language":  "en",
@@ -39,7 +39,6 @@
                      "name":  "Mac Island \u0026 Dock",
                      "settings":  {
                                       "taskbarMode":  "dock",
-                                      "windowsHideTray":  0,
                                       "showIsland":  1,
                                       "calendarIcs[0]":  "",
                                       "hiding.autoHide":  0,
@@ -52,7 +51,6 @@
                                       "hiding.fullscreenGuard":  1,
                                       "icons.magnification":  180,
                                       "icons.magnificationRange":  160,
-                                      "icons.onlyApps":  1,
                                       "icons.bounceOnLaunch":  1,
                                       "icons.keepOpenOnLaunch":  1,
                                       "icons.keepOpenDuration":  1500,
@@ -66,11 +64,14 @@
                                       "dock.dotIndicator":  1,
                                       "dock.separator":  0,
                                       "dock.attentionMode":  "icon",
-                                      "dock.hideTray":  0,
                                       "animations.enabled":  1,
                                       "animations.level":  "all",
                                       "animations.speed":  125,
-                                      "animations.frameRate":  "screen"
+                                      "animations.frameRate":  "screen",
+                                      "windowsHideTray":  1,
+                                      "dock.hideTray":  1,
+                                      "icons.onlyApps":  1,
+                                      "islandWeather":  0
                                   }
                  },
                  {
@@ -101,23 +102,23 @@
                                       "RenderingMod.SysColors":  0,
                                       "RenderingMod.AccentColorControls":  1,
                                       "BackgroundEffects.type":  "acrylicblur",
-                                      "BackgroundEffects.AccentBlurBehind":  "C01A1A1A",
                                       "FlyoutsEffects":  1,
                                       "RuledPrograms[0].target":  "cmd.exe",
                                       "RuledPrograms[0].RenderingMod.ThemeBackground":  1,
                                       "RuledPrograms[0].RenderingMod.AccentColorControls":  1,
                                       "RuledPrograms[0].BackgroundEffects.type":  "acrylicblur",
-                                      "RuledPrograms[0].BackgroundEffects.AccentBlurBehind":  "C01A1A1A",
                                       "RuledPrograms[1].target":  "powershell.exe",
                                       "RuledPrograms[1].RenderingMod.ThemeBackground":  1,
                                       "RuledPrograms[1].RenderingMod.AccentColorControls":  1,
                                       "RuledPrograms[1].BackgroundEffects.type":  "acrylicblur",
-                                      "RuledPrograms[1].BackgroundEffects.AccentBlurBehind":  "C01A1A1A",
                                       "RuledPrograms[2].target":  "WindowsTerminal.exe",
                                       "RuledPrograms[2].RenderingMod.ThemeBackground":  1,
                                       "RuledPrograms[2].RenderingMod.AccentColorControls":  1,
                                       "RuledPrograms[2].BackgroundEffects.type":  "acrylicblur",
-                                      "RuledPrograms[2].BackgroundEffects.AccentBlurBehind":  "C01A1A1A"
+                                      "BackgroundEffects.AccentBlurBehind":  "45141414",
+                                      "RuledPrograms[0].BackgroundEffects.AccentBlurBehind":  "45141414",
+                                      "RuledPrograms[1].BackgroundEffects.AccentBlurBehind":  "45141414",
+                                      "RuledPrograms[2].BackgroundEffects.AccentBlurBehind":  "45141414"
                                   }
                  },
                  {
@@ -130,11 +131,9 @@
                                       "backgroundTranslucentEffectRegion":  "explorerFrame",
                                       "styleConstants[0]":  "",
                                       "controlStyles[0].target":  "Grid#NavigationBarControlGrid",
-                                      "controlStyles[0].styles[0]":  "Background:=<WindhawkBlur BlurAmount=\"20\" TintColor=\"#1A1A1A\" TintOpacity=\"0.72\"/>",
                                       "controlStyles[0].styles[1]":  "BorderThickness=0,0,0,0",
                                       "controlStyles[0].styles[2]":  "BorderBrush=#30FFFFFF",
                                       "controlStyles[1].target":  "Grid#DetailsViewControlRootGrid",
-                                      "controlStyles[1].styles[0]":  "Background:=<WindhawkBlur BlurAmount=\"20\" TintColor=\"#1A1A1A\" TintOpacity=\"0.72\"/>",
                                       "controlStyles[1].styles[1]":  "BorderThickness=0,0,1,1",
                                       "controlStyles[1].styles[2]":  "BorderBrush=#25FFFFFF",
                                       "controlStyles[2].target":  "StackPanel#DetailsViewThumbnail",
@@ -147,7 +146,9 @@
                                       "controlStyles[3].styles[2]":  "CornerRadius=2",
                                       "themeResourceVariables[0]":  "",
                                       "explorerFrameContainerHeight":  0,
-                                      "xamlDiagnosticsHandling":  "alert"
+                                      "xamlDiagnosticsHandling":  "alert",
+                                      "controlStyles[0].styles[0]":  "Background:=\u003cWindhawkBlur BlurAmount=\"12\" TintColor=\"#141414\" TintOpacity=\"0.25\"/\u003e",
+                                      "controlStyles[1].styles[0]":  "Background:=\u003cWindhawkBlur BlurAmount=\"12\" TintColor=\"#141414\" TintOpacity=\"0.25\"/\u003e"
                                   }
                  },
                  {
