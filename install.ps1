@@ -1530,13 +1530,12 @@ if ($WindhawkCli -and (Test-Path $WindhawkCli)) {
 
     Write-Host "  [OK] All 8 mods and custom settings activated successfully via Windhawk CLI!" -ForegroundColor Green
 
-    # Ensure Maximize Window Guard (Top Bar Fixed Top-Right & Bottom Dock Always Visible with Zero Overlap)
-    & $WindhawkCli mod settings set mac-island-dock hiding.autoHide=0 2>$null
+    # Ensure Mac Island Top Bar & Bottom Floating Dock are explicitly enabled & styled
+    & $WindhawkCli mod settings set mac-island-dock "taskbarMode=dock" "showIsland=1" "hiding.autoHide=0" "dock.backgroundOpacity=35" "dock.cornerRadius=24" "dock.bottomGap=4" 2>$null
 
     # Ensure Liquid Glass styling everywhere across Windhawk mods & set net speed verticalNudge to 16
     & $WindhawkCli mod settings set windows-11-notification-center-styler theme=LiquidGlass 2>$null
     & $WindhawkCli mod settings set windows-11-start-menu-styler theme=LiquidGlass 2>$null
-    & $WindhawkCli mod settings set mac-island-dock "dock.backgroundOpacity=35" "dock.cornerRadius=24" "dock.bottomGap=4" 2>$null
     & $WindhawkCli mod settings set local@net-speed-taskbar-apple "verticalNudge=16" 2>$null
     & $WindhawkCli mod settings set net-speed-taskbar "verticalNudge=16" "theme=Chart" "fontSize=15" 2>$null
 

@@ -579,7 +579,30 @@ public static class MacAppShortcutHelper {
         Remove-Item -LiteralPath $tgTb -Force -ErrorAction SilentlyContinue
     }
 
-    # 8. Restore System Tools shortcuts to native system binaries
+    # 8. Remove Mac Dock-specific injected shortcuts from Taskbar (Settings, Music, Terminal, Photos, Calc, Notepad)
+    $dockExtraLnks = @(
+        "Settings.lnk",
+        "Apple Music.lnk",
+        "Windows Terminal.lnk",
+        "Photos.lnk",
+        "Calculator.lnk",
+        "Notepad.lnk",
+        "LAUNCHER.lnk"
+    )
+    foreach ($extraLnk in $dockExtraLnks) {
+        $p = Join-Path $taskbarDir $extraLnk
+        if (Test-Path $p) {
+            Remove-Item -LiteralPath $p -Force -ErrorAction SilentlyContinue
+        }
+        foreach ($base in @($userStartDir, $allStartDir)) {
+            $sp = Join-Path $base $extraLnk
+            if (Test-Path $sp) {
+                Remove-Item -LiteralPath $sp -Force -ErrorAction SilentlyContinue
+            }
+        }
+    }
+
+    # 9. Restore System Tools shortcuts to native system binaries
     $sysToolMap = @{
         "System Tools\Command Prompt.lnk"           = "$env:WINDIR\System32\cmd.exe,0"
         "Windows PowerShell\Windows PowerShell.lnk" = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe,0"
@@ -598,7 +621,7 @@ public static class MacAppShortcutHelper {
         }
     }
 
-    # 9. Comprehensive Deep Scan for any remaining shortcuts pointing to RohitBhaiMacOS
+    # 9. Comprehensive Deep Scan for any remaining shortcuts pointing to RohitBhaiMacOS or broken icon paths
     $allShortcutDirs = @($taskbarDir, $userStartDir, $allStartDir, $userDesktop, $commonDesktop)
     foreach ($dir in $allShortcutDirs) {
         if (-not (Test-Path $dir)) { continue }
@@ -607,9 +630,12 @@ public static class MacAppShortcutHelper {
                 $lnk = $wsh.CreateShortcut($_.FullName)
                 $target = $lnk.TargetPath
                 $icon = $lnk.IconLocation
+                $iconFile = if ($icon) { $icon.Split(',')[0].Trim('"', ' ') } else { "" }
+                $isMissingIcon = ($iconFile -and -not (Test-Path $iconFile))
+
                 if ($target -like "*RohitBhaiMacOS*") {
                     Remove-Item -LiteralPath $_.FullName -Force -ErrorAction SilentlyContinue
-                } elseif ($icon -like "*RohitBhaiMacOS*") {
+                } elseif ($icon -like "*RohitBhaiMacOS*" -or $isMissingIcon) {
                     if ($target -like "*explorer.exe*") {
                         $lnk.IconLocation = "$env:WINDIR\explorer.exe,0"
                         $lnk.Save()
@@ -620,7 +646,8 @@ public static class MacAppShortcutHelper {
                         $lnk.IconLocation = "$target,0"
                         $lnk.Save()
                     } else {
-                        Remove-Item -LiteralPath $_.FullName -Force -ErrorAction SilentlyContinue
+                        $lnk.IconLocation = ""
+                        $lnk.Save()
                     }
                 }
             } catch {}
@@ -758,13 +785,24 @@ public class Win32RestoreWall {
 # -------------------------------------------------------------------------
 Write-Host "`n[8/8] Rebuilding Windows Icon Cache & Refreshing Explorer & Start Menu..." -ForegroundColor Cyan
 
-# 1. Clean AppData directory (after all shortcuts are guaranteed restored)
+# 1. Stop Explorer and Start Menu hosts first to unlock all database handles
+Write-Host "  [*] Stopping Windows Explorer & Start Menu to release cached icon files..." -ForegroundColor Yellow
+taskkill.exe /f /im explorer.exe 2>$null
+taskkill.exe /f /im StartMenuExperienceHost.exe 2>$null
+taskkill.exe /f /im SearchHost.exe 2>$null
+Start-Sleep -Milliseconds 800
+
+# 2. Clean AppData and ProgramData directories
 $appDir = "$env:LOCALAPPDATA\RohitBhaiMacOS"
 if (Test-Path $appDir) {
     Remove-Item -Path $appDir -Recurse -Force -ErrorAction SilentlyContinue
 }
+$progDir = "C:\ProgramData\RohitBhaiMacOS"
+if (Test-Path $progDir) {
+    Remove-Item -Path $progDir -Recurse -Force -ErrorAction SilentlyContinue
+}
 
-# 2. Reset icon and thumbnail cache databases
+# 3. Purge unlocked iconcache and thumbcache databases completely
 $iconCache = "$env:LOCALAPPDATA\IconCache.db"
 if (Test-Path $iconCache) { Remove-Item $iconCache -Force -ErrorAction SilentlyContinue }
 
@@ -774,11 +812,24 @@ if (Test-Path $expCache) {
     Get-ChildItem -Path $expCache -Filter "*thumbcache*.db" -Force -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
 }
 
-# 3. Terminate StartMenuExperienceHost and SearchHost to force fresh Start Menu load
-Stop-Process -Name "StartMenuExperienceHost" -Force -ErrorAction SilentlyContinue
-Stop-Process -Name "SearchHost" -Force -ErrorAction SilentlyContinue
+# 4. Clean Start Menu temporary caches
+$startHostPkg = "$env:LOCALAPPDATA\Packages\Microsoft.Windows.StartMenuExperienceHost_cw5n1h2txyewy\TempState"
+if (Test-Path $startHostPkg) {
+    Get-ChildItem -Path $startHostPkg -Recurse -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+}
 
-# 4. Notify Windows Shell of association and icon changes with SHCNF_FLUSH
+# 5. Flush legacy ie4uinit if present
+try {
+    $ie4 = Join-Path ([Environment]::GetFolderPath('System')) "ie4uinit.exe"
+    if (Test-Path $ie4) { & $ie4 -show 2>$null }
+} catch {}
+
+# 6. Restart Windows Explorer live with fresh rebuild
+Write-Host "  [*] Restarting Windows Explorer to rebuild fresh icon cache and restore Desktop..." -ForegroundColor Yellow
+Start-Process "explorer.exe"
+Start-Sleep -Seconds 1
+
+# 7. Notify Windows Shell of association and icon changes with SHCNF_FLUSH
 Add-Type -TypeDefinition @"
 using System;
 using System.Runtime.InteropServices;
@@ -787,18 +838,6 @@ public class Win32IconRefresh {
     public static extern void SHChangeNotify(int wEventId, int uFlags, IntPtr dwItem1, IntPtr dwItem2);
 }
 "@ -ErrorAction SilentlyContinue
-[Win32IconRefresh]::SHChangeNotify(0x08000000, 0x1000, [IntPtr]::Zero, [IntPtr]::Zero)
-try {
-    $ie4 = Join-Path ([Environment]::GetFolderPath('System')) "ie4uinit.exe"
-    if (Test-Path $ie4) { & $ie4 -show 2>$null }
-} catch {}
-
-# 5. Cleanly restart Windows Explorer live so Taskbar, Desktop & Wallpaper are 100% restored immediately
-Write-Host "  [*] Restarting Windows Explorer to restore original Taskbar & Desktop live..." -ForegroundColor Yellow
-Stop-Process -Name "explorer" -Force -ErrorAction SilentlyContinue
-Start-Sleep -Seconds 1
-Start-Process "explorer.exe"
-Start-Sleep -Seconds 1
 [Win32IconRefresh]::SHChangeNotify(0x08000000, 0x1000, [IntPtr]::Zero, [IntPtr]::Zero)
 
 Write-Host ""
