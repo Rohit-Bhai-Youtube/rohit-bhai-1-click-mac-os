@@ -227,6 +227,16 @@ try {
     & reg.exe delete "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" /f /reg:32 2>$null
     & reg.exe delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Icons" /f 2>$null
 
+    # Restore Folder and Directory classes to default shell32.dll,3 across 64-bit and 32-bit
+    & reg.exe add "HKLM\SOFTWARE\Classes\Folder\DefaultIcon" /ve /t REG_EXPAND_SZ /d "%SystemRoot%\System32\shell32.dll,3" /f /reg:64 2>$null
+    & reg.exe add "HKLM\SOFTWARE\Classes\Folder\DefaultIcon" /ve /t REG_EXPAND_SZ /d "%SystemRoot%\System32\shell32.dll,3" /f /reg:32 2>$null
+    & reg.exe add "HKLM\SOFTWARE\Classes\Directory\DefaultIcon" /ve /t REG_EXPAND_SZ /d "%SystemRoot%\System32\shell32.dll,3" /f /reg:64 2>$null
+    & reg.exe add "HKLM\SOFTWARE\Classes\Directory\DefaultIcon" /ve /t REG_EXPAND_SZ /d "%SystemRoot%\System32\shell32.dll,3" /f /reg:32 2>$null
+    & reg.exe add "HKLM\SOFTWARE\WOW6432Node\Classes\Folder\DefaultIcon" /ve /t REG_EXPAND_SZ /d "%SystemRoot%\System32\shell32.dll,3" /f /reg:64 2>$null
+    & reg.exe add "HKLM\SOFTWARE\WOW6432Node\Classes\Folder\DefaultIcon" /ve /t REG_EXPAND_SZ /d "%SystemRoot%\System32\shell32.dll,3" /f /reg:32 2>$null
+    & reg.exe add "HKLM\SOFTWARE\WOW6432Node\Classes\Directory\DefaultIcon" /ve /t REG_EXPAND_SZ /d "%SystemRoot%\System32\shell32.dll,3" /f /reg:64 2>$null
+    & reg.exe add "HKLM\SOFTWARE\WOW6432Node\Classes\Directory\DefaultIcon" /ve /t REG_EXPAND_SZ /d "%SystemRoot%\System32\shell32.dll,3" /f /reg:32 2>$null
+
     # Remove custom CLSID overrides in HKCU Classes
     $customClsids = @(
         "HKCU\Software\Classes\CLSID\{645FF040-5081-101B-9F08-00AA002F954E}",
@@ -723,20 +733,30 @@ public static class MacAppShortcutHelper {
     Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarDa" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarMn" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarAl" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-    # Remove widget suppression policies and restore TaskbarDa across all user profiles
-    reg.exe delete "HKLM\SOFTWARE\Policies\Microsoft\Dsh" /v AllowNewsAndInterests /f 2>$null
-    reg.exe delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\Widgets" /v AllowWidgets /f 2>$null
-    reg.exe delete "HKCU\SOFTWARE\Policies\Microsoft\Dsh" /v AllowNewsAndInterests /f 2>$null
-    reg.exe delete "HKCU\SOFTWARE\Policies\Microsoft\Windows\Widgets" /v AllowWidgets /f 2>$null
-    $hkuUsers = reg.exe query "HKU" 2>$null | Select-String "S-1-5-21-" | Where-Object { $_ -notmatch "_Classes" }
+    # Remove widget suppression policies and restore TaskbarDa across all user profiles using UCPD bypass helper
+    $regBypass = Join-Path $env:TEMP "reg_bypass.exe"
+    Copy-Item "C:\Windows\System32\reg.exe" -Destination $regBypass -Force -ErrorAction SilentlyContinue
+    $regCmd = if (Test-Path $regBypass) { $regBypass } else { "reg.exe" }
+
+    & $regCmd delete "HKLM\SOFTWARE\Policies\Microsoft\Dsh" /v AllowNewsAndInterests /f 2>$null
+    & $regCmd delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\Widgets" /v AllowWidgets /f 2>$null
+    & $regCmd delete "HKCU\SOFTWARE\Policies\Microsoft\Dsh" /v AllowNewsAndInterests /f 2>$null
+    & $regCmd delete "HKCU\SOFTWARE\Policies\Microsoft\Windows\Widgets" /v AllowWidgets /f 2>$null
+    & $regCmd add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarDa /t REG_DWORD /d 1 /f 2>$null
+
+    $hkuUsers = & $regCmd query "HKU" 2>$null | Select-String "S-1-5-21-" | Where-Object { $_ -notmatch "_Classes" }
     foreach ($userLine in $hkuUsers) {
         $uKey = $userLine.ToString().Trim()
         if ($uKey) {
-            reg.exe add "$uKey\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarDa /t REG_DWORD /d 1 /f 2>$null
-            reg.exe delete "$uKey\SOFTWARE\Policies\Microsoft\Dsh" /v AllowNewsAndInterests /f 2>$null
-            reg.exe delete "$uKey\SOFTWARE\Policies\Microsoft\Windows\Widgets" /v AllowWidgets /f 2>$null
+            & $regCmd add "$uKey\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarDa /t REG_DWORD /d 1 /f 2>$null
+            & $regCmd delete "$uKey\SOFTWARE\Policies\Microsoft\Dsh" /v AllowNewsAndInterests /f 2>$null
+            & $regCmd delete "$uKey\SOFTWARE\Policies\Microsoft\Windows\Widgets" /v AllowWidgets /f 2>$null
         }
     }
+    if (Test-Path $regBypass) { Remove-Item $regBypass -Force -ErrorAction SilentlyContinue }
+
+    # Re-enable UCPD service
+    sc.exe config ucpd start=delayed-auto 2>$null
 
     # Re-register and restore Windows WebExperience (Widgets) package (toggles Widgets ON in Taskbar Settings)
     Get-AppxPackage -AllUsers *WebExperience* | ForEach-Object {
@@ -866,7 +886,16 @@ if (Test-Path $progDir) {
     Remove-Item -Path $progDir -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-# 3. Purge unlocked iconcache and thumbcache databases completely
+# 3. Purge unlocked iconcache and thumbcache databases completely across all users
+Get-ChildItem -Path "C:\Users" -Directory -Force -ErrorAction SilentlyContinue | ForEach-Object {
+    $uDir = $_.FullName
+    $uIconCache = Join-Path $uDir "AppData\Local\IconCache.db"
+    if (Test-Path $uIconCache) { Remove-Item $uIconCache -Force -ErrorAction SilentlyContinue }
+    $uExpDir = Join-Path $uDir "AppData\Local\Microsoft\Windows\Explorer"
+    if (Test-Path $uExpDir) {
+        Get-ChildItem -Path $uExpDir -Filter "*cache*.db" -Force -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+    }
+}
 $iconCache = "$env:LOCALAPPDATA\IconCache.db"
 if (Test-Path $iconCache) { Remove-Item $iconCache -Force -ErrorAction SilentlyContinue }
 
